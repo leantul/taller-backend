@@ -7,6 +7,8 @@ import lombok.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Getter
 @Setter
@@ -35,6 +37,9 @@ public class Repair extends BasicEntity {
     @Column(name = "description")
     private String description;
 
+    @Column(name = "order_number")
+    private String orderNumber;
+
     @Column(name = "status")
     @Convert(converter = RepairStatusEnumConverter.class)
     private RepairStatusEnum status;
@@ -47,4 +52,28 @@ public class Repair extends BasicEntity {
 
     @Column(name = "price")
     private BigDecimal price;
+
+    @Column(name = "labor_amount")
+    private BigDecimal laborAmount;
+
+    @Column(name = "extra_amount")
+    private BigDecimal extraAmount;
+
+    @Column(name = "quoted_amount")
+    private BigDecimal quotedAmount;
+
+    @Column(name = "approved")
+    private Boolean approved;
+
+    @Column(name = "rejected")
+    private Boolean rejected;
+
+    @Column(name = "ready_notified_at")
+    private LocalDateTime readyNotifiedAt;
+
+    @OneToMany(mappedBy = "repair", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<RepairPart> parts = new ArrayList<>();
+
+    @OneToMany(mappedBy = "repair", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<RepairPayment> payments = new ArrayList<>();
 }

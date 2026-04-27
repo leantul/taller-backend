@@ -6,10 +6,10 @@ import lombok.Getter;
 
 @Getter
 public enum RepairStatusEnum {
-    RECIBIDA(1, "Recibida"),
-    EN_PROCESO(2, "En proceso"),
+    POR_RECIBIR(1, "Por recibir"),
+    RECIBIDA(2, "Recibida"),
     PRESUPUESTADA_ESPERANDO_RESPUESTA(3, "Presupuestada y esperando respuesta"),
-    DOING(4, "Doing"),
+    HACIENDO(4, "Haciendo"),
     ESPERANDO_RETIRO(5, "Esperando retiro"),
     RETIRADA(6, "Retirada");
 

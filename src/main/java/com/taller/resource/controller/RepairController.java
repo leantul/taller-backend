@@ -1,8 +1,6 @@
 package com.taller.resource.controller;
 
-import com.taller.model.Repair;
 import com.taller.resource.dto.RepairDTO;
-import com.taller.resource.mapper.RepairMapper;
 import com.taller.service.RepairService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -18,37 +16,34 @@ import java.util.List;
 public class RepairController {
 
     private final RepairService repairService;
-    private final RepairMapper repairMapper;
 
     @GetMapping
     public List<RepairDTO> getRepair() {
-        return repairMapper.repairToRepairDTOList(repairService.getAllRepairs());
+        return repairService.getAllRepairs();
     }
 
     @GetMapping("/{id}")
     public RepairDTO getRepairById(@PathVariable String id) {
-        return repairMapper.repairToRepairDTO(repairService.getRepairById(id));
+        return repairService.getRepairById(id);
+    }
+
+    @GetMapping("/search")
+    public List<RepairDTO> search(@RequestParam String term) {
+        return repairService.search(term);
     }
 
     @PostMapping
-    public ResponseEntity<Repair> saveRepair(@RequestBody RepairDTO repairDTO) {
-        repairService.save(repairDTO);
-        return new ResponseEntity<>(HttpStatus.OK);
+    public ResponseEntity<RepairDTO> saveRepair(@RequestBody RepairDTO repairDTO) {
+        return new ResponseEntity<>(repairService.save(repairDTO), HttpStatus.OK);
     }
 
     @PutMapping
-    public ResponseEntity<Repair> updateRepair(@RequestBody RepairDTO repairDTO) {
-        Repair repair = repairService.getRepairById(repairDTO.getId());
-
-        if (repair != null) {
-            repairService.save(repairDTO);
-        }
-
-        return new ResponseEntity<>(HttpStatus.OK);
+    public ResponseEntity<RepairDTO> updateRepair(@RequestBody RepairDTO repairDTO) {
+        return new ResponseEntity<>(repairService.save(repairDTO), HttpStatus.OK);
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Repair> deleteRepair(@PathVariable String id) {
+    public ResponseEntity<Void> deleteRepair(@PathVariable String id) {
         repairService.delete(id);
         return new ResponseEntity<>(HttpStatus.OK);
     }

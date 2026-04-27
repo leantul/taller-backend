@@ -5,6 +5,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 
 @Getter
@@ -17,6 +18,15 @@ public class Client extends BasicEntity {
     @Column(name = "name")
     private String name;
 
+    @Column(name = "last_name")
+    private String lastName;
+
+    @Column(name = "dni")
+    private String dni;
+
+    @Column(name = "email")
+    private String email;
+
     @Column(name = "address")
     private String address;
 
@@ -25,6 +35,19 @@ public class Client extends BasicEntity {
 
     @Column(name = "birth_date")
     private LocalDate birthDate;
+
+    @Column(name = "notes")
+    private String notes;
+
+    @ElementCollection
+    @CollectionTable(name = "client_phones", joinColumns = @JoinColumn(name = "client_id"))
+    @Column(name = "phone")
+    private List<String> phones = new ArrayList<>();
+
+    @ElementCollection
+    @CollectionTable(name = "client_emails", joinColumns = @JoinColumn(name = "client_id"))
+    @Column(name = "email")
+    private List<String> emails = new ArrayList<>();
 
     @OneToMany(mappedBy = "client")
     private List<Repair> repairs;

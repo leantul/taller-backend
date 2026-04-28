@@ -90,6 +90,16 @@ APP_CORS_ALLOWED_ORIGINS=https://<tu-frontend>.vercel.app
 
 Si responde UP (o status OK), backend listo.
 
+
+### Verificación rápida de variables JWT en Render (evita crash al arrancar)
+
+En Render -> Environment revisá que estos dos valores estén en su campo correcto:
+
+- `JWT_SECRET`: texto largo (por ejemplo hexadecimal o random)
+- `JWT_EXPIRATION_MINUTES`: **solo número** (por ejemplo `720`)
+
+> Error típico: pegar el secret en `JWT_EXPIRATION_MINUTES`. Cuando pasa eso, Spring intenta convertirlo a número y falla al iniciar.
+
 ---
 
 ## 4) Deploy del frontend en Vercel
@@ -175,5 +185,6 @@ Flyway va a crear/actualizar tablas automáticamente al iniciar.
 - **401 en endpoints protegidos:** revisar login y token en requests.
 - **CORS error en navegador:** revisar `APP_CORS_ALLOWED_ORIGINS`.
 - **Backend no conecta DB:** revisar `DB_URL`, SSL y credenciales.
+- **Backend cae al iniciar con `NumberFormatException` en JWT:** revisar que `JWT_EXPIRATION_MINUTES` sea numérico (`720`) y que el hash/secret esté en `JWT_SECRET`.
 - **Frontend pega a localhost:** revisar variables `API_URL` y `AUTH_URL` en Vercel.
 

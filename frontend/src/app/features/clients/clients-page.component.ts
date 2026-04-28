@@ -19,7 +19,9 @@ import { Client } from '../../shared/models/client.model';
       <button type="submit">Agregar cliente</button>
     </form>
     <ul>
-      <li *ngFor="let client of clients">{{ client.name }} {{ client.lastName }} · {{ client.dni }}</li>
+      @for (client of clients; track client.dni) {
+        <li>{{ client.name }} {{ client.lastName }} · {{ client.dni }}</li>
+      }
     </ul>
   `
 })

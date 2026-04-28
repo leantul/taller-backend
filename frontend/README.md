@@ -1,15 +1,27 @@
 # Frontend (Angular)
 
-Base inicial del frontend para la release `2.0.0`.
+Base del frontend para la release `2.0.0`.
 
-## Comandos
+## Comandos locales
 
 ```bash
 npm install
 npm run start
 ```
 
-> Nota: en este entorno no se pudo descargar `@angular/cli` desde npm, por lo que se dejó la estructura inicial preparada para instalar dependencias cuando haya acceso al registry.
+## Configuración de backend (importante)
+
+El frontend usa `assets/env.js` para definir a qué backend conectarse:
+
+- `API_URL`
+- `AUTH_URL`
+
+Valores por defecto (desarrollo):
+
+- `http://localhost:8080`
+- `http://localhost:8080/auth`
+
+En Docker/Nginx se inyectan por variables de entorno del contenedor.
 
 ## Primer acceso
 

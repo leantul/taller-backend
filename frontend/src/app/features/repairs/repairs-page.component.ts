@@ -27,7 +27,9 @@ import { Repair } from '../../shared/models/repair.model';
       <button type="submit">Agregar reparación</button>
     </form>
     <ul>
-      <li *ngFor="let repair of repairs">Orden {{ repair.orderNumber }} · {{ repair.status }} · ${{ repair.price }}</li>
+      @for (repair of repairs; track repair.orderNumber) {
+        <li>Orden {{ repair.orderNumber }} · {{ repair.status }} · {{ repair.price }}</li>
+      }
     </ul>
   `
 })

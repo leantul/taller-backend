@@ -25,7 +25,9 @@ import { Device } from '../../shared/models/device.model';
       <button type="submit">Agregar dispositivo</button>
     </form>
     <ul>
-      <li *ngFor="let device of devices">{{ device.deviceType }} · {{ device.brand }} {{ device.model }} · {{ device.serialNumber }}</li>
+      @for (device of devices; track device.serialNumber) {
+        <li>{{ device.deviceType }} · {{ device.brand }} {{ device.model }} · {{ device.serialNumber }}</li>
+      }
     </ul>
   `
 })

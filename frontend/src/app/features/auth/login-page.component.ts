@@ -20,7 +20,9 @@ import { Router } from '@angular/router';
 
         <button type="submit">Entrar</button>
       </form>
-      <p *ngIf="error" class="error">{{ error }}</p>
+      @if (error) {
+        <p class="error">{{ error }}</p>
+      }
     </section>
   `
 })

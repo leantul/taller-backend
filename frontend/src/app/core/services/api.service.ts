@@ -2,12 +2,13 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { Client } from '../../shared/models/client.model';
+import { APP_CONFIG } from '../config/app-config';
 import { Device } from '../../shared/models/device.model';
 import { Repair } from '../../shared/models/repair.model';
 
 @Injectable({ providedIn: 'root' })
 export class ApiService {
-  private readonly baseUrl = 'http://localhost:8080';
+  private readonly baseUrl = APP_CONFIG.apiUrl;
 
   constructor(private readonly http: HttpClient) {}
 

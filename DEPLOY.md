@@ -127,6 +127,8 @@ AUTH_URL=https://<tu-backend>.onrender.com/auth
 
 6. Deploy.
 
+Para que las rutas SPA (por ejemplo `/login`, `/clientes`) no den 404 en refresh/acceso directo, el frontend incluye `frontend/vercel.json` con rewrite hacia `index.html`.
+
 El contenedor frontend genera `assets/env.js` al iniciar con esas variables.
 
 ---

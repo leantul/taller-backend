@@ -38,6 +38,16 @@ Si desplegás desde otra rama (ej. `main`), hace merge primero.
 
 ---
 
+## 1.1) Base nueva: sin migración manual de datos
+
+Este sistema se asume **nuevo** (sin datos previos).
+
+- No hay que migrar datos legacy.
+- Solo crear una base PostgreSQL vacía.
+- Hibernate crea/actualiza el esquema automáticamente al primer arranque del backend (sin migración manual).
+
+---
+
 ## 2) Crear base de datos en Neon
 
 1. Entrá a Neon y creá un proyecto.
@@ -165,7 +175,7 @@ jdbc:postgresql://HOST:PUERTO/DB?sslmode=require
 4. Confirmá que el proveedor permite conexiones externas desde internet.
 5. Re-deploy del backend.
 
-Flyway va a crear/actualizar tablas automáticamente al iniciar.
+Hibernate va a crear/actualizar tablas automáticamente al iniciar. No requiere migración manual de datos.
 
 ---
 

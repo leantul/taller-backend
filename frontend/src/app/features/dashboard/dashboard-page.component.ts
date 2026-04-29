@@ -60,6 +60,12 @@ import { Repair } from '../../shared/models/repair.model';
           <ng-template pTemplate="body" let-item><tr><td>{{ item.orderNumber }}</td><td><p-tag [value]="item.status"></p-tag></td><td>{{ item.price | currency:'USD' }}</td></tr></ng-template>
         </p-table>
       </p-card>
+          <p-card header="Top 5 clientes inactivos">
+        <p-table [value]="inactiveClients" size="small">
+          <ng-template pTemplate="header"><tr><th>Cliente</th><th>Última reparación</th></tr></ng-template>
+          <ng-template pTemplate="body" let-item><tr><td>{{ item.name }}</td><td>{{ item.lastRepair || 'Sin historial' }}</td></tr></ng-template>
+        </p-table>
+      </p-card>
     </section>
   `
 })
@@ -72,6 +78,7 @@ export class DashboardPageComponent implements OnInit {
   recentClients: Client[] = [];
   recentDevices: Device[] = [];
   recentRepairs: Repair[] = [];
+  inactiveClients: { name: string; lastRepair: string | null }[] = [];
 
   devicesByTypeChart: any;
   repairsByStatusChart: any;
@@ -95,7 +102,28 @@ export class DashboardPageComponent implements OnInit {
       this.recentRepairs = [...repairs].slice(-5).reverse();
 
       this.buildCharts();
+      this.buildInactiveClients();
     });
+  }
+
+  private buildInactiveClients(): void {
+    const byClient = new Map<string, Date>();
+    this.repairs.forEach((r) => {
+      if (!r.idClient) return;
+      const date = r.receiveDateTime ? new Date(r.receiveDateTime) : new Date(0);
+      const current = byClient.get(r.idClient);
+      if (!current || date > current) byClient.set(r.idClient, date);
+    });
+
+    this.inactiveClients = this.clients
+      .map((c) => ({
+        name: `${c.name} ${c.lastName}`.trim(),
+        lastRepair: byClient.get(c.id!) ? byClient.get(c.id!)!.toISOString().slice(0, 10) : null,
+        order: byClient.get(c.id!) ? byClient.get(c.id!)!.getTime() : 0
+      }))
+      .sort((a, b) => a.order - b.order)
+      .slice(0, 5)
+      .map(({ name, lastRepair }) => ({ name, lastRepair }));
   }
 
   private buildCharts(): void {

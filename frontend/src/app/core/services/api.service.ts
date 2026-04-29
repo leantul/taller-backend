@@ -12,27 +12,16 @@ export class ApiService {
 
   constructor(private readonly http: HttpClient) {}
 
-  getClients(): Observable<Client[]> {
-    return this.http.get<Client[]>(`${this.baseUrl}/client`);
-  }
+  getClients(): Observable<Client[]> { return this.http.get<Client[]>(`${this.baseUrl}/client`); }
+  searchClients(term: string): Observable<Client[]> { return this.http.get<Client[]>(`${this.baseUrl}/client/search?term=${encodeURIComponent(term)}`); }
+  createClient(payload: Client): Observable<Client> { return this.http.post<Client>(`${this.baseUrl}/client`, payload); }
 
-  createClient(payload: Client): Observable<Client> {
-    return this.http.post<Client>(`${this.baseUrl}/client`, payload);
-  }
+  getDevices(): Observable<Device[]> { return this.http.get<Device[]>(`${this.baseUrl}/device`); }
+  searchDevices(term: string): Observable<Device[]> { return this.http.get<Device[]>(`${this.baseUrl}/device/search?term=${encodeURIComponent(term)}`); }
+  createDevice(payload: Device): Observable<Device> { return this.http.post<Device>(`${this.baseUrl}/device`, payload); }
 
-  getDevices(): Observable<Device[]> {
-    return this.http.get<Device[]>(`${this.baseUrl}/device`);
-  }
-
-  createDevice(payload: Device): Observable<Device> {
-    return this.http.post<Device>(`${this.baseUrl}/device`, payload);
-  }
-
-  getRepairs(): Observable<Repair[]> {
-    return this.http.get<Repair[]>(`${this.baseUrl}/repair`);
-  }
-
-  createRepair(payload: Repair): Observable<Repair> {
-    return this.http.post<Repair>(`${this.baseUrl}/repair`, payload);
-  }
+  getRepairs(): Observable<Repair[]> { return this.http.get<Repair[]>(`${this.baseUrl}/repair`); }
+  searchRepairs(term: string): Observable<Repair[]> { return this.http.get<Repair[]>(`${this.baseUrl}/repair/search?term=${encodeURIComponent(term)}`); }
+  createRepair(payload: Repair): Observable<Repair> { return this.http.post<Repair>(`${this.baseUrl}/repair`, payload); }
+  updateRepair(payload: Repair): Observable<Repair> { return this.http.put<Repair>(`${this.baseUrl}/repair`, payload); }
 }

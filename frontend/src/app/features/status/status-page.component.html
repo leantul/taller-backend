@@ -1,0 +1,30 @@
+<section class="status-board">
+  @for (col of columns; track col.status) {
+    <p-card class="status-column" [header]="col.title + ' (' + col.items.length + ')'">
+      <div cdkDropList [cdkDropListData]="col.items" class="status-list" (cdkDropListDropped)="drop($event, col.status)">
+        @for (item of col.items; track item.id) {
+          <article class="status-card" cdkDrag>
+            <div class="card-head">
+              <strong>#{{ item.orderNumber }}</strong>
+              <p-tag [value]="item.status"></p-tag>
+            </div>
+            <p>{{ item.description || 'Sin descripción' }}</p>
+            <small>Cliente: {{ item.idClient }}</small>
+            <small>Monto: {{ item.price | currency:'ARS':'symbol':'1.2-2':'es-AR' }}</small>
+            @if (col.status === 'ESPERANDO_RETIRO') {
+              <button pButton type="button" size="small" class="p-button-sm" label="Marcar entregada" (click)="openDeliveredModal(item)"></button>
+            }
+          </article>
+        }
+      </div>
+    </p-card>
+  }
+</section>
+
+<p-dialog header="Registrar entrega" [(visible)]="showDeliverModal" [modal]="true" [style]="{width:'30rem'}">
+  <div class="field">
+    <label>¿Cuánto pagó el cliente?</label>
+    <p-inputNumber [(ngModel)]="paidAmount" mode="currency" currency="ARS" locale="es-AR"></p-inputNumber>
+  </div>
+  <button pButton type="button" label="Confirmar entrega" (click)="confirmDelivered()"></button>
+</p-dialog>

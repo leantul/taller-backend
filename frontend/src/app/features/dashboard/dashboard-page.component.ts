@@ -26,16 +26,16 @@ import { Repair } from '../../shared/models/repair.model';
         <div class="metric">{{ repairs.length }}</div>
       </p-card>
       <p-card header="Ingresos estimados" subheader="Suma de reparaciones">
-        <div class="metric">{{ totalRevenue | currency:'USD' }}</div>
+        <div class="metric">{{ totalRevenue | currency:'ARS':'symbol':'1.2-2':'es-AR' }}</div>
       </p-card>
     </section>
 
     <section class="dashboard-grid charts">
-      <p-card header="Equipos por tipo">
-        <p-chart type="bar" [data]="devicesByTypeChart" [options]="chartOptions"></p-chart>
+      <p-card header="Equipos por tipo" class="chart-card" (click)="toggleChart('devices')">
+        <p-chart type="bar" [data]="devicesByTypeChart" [options]="getChartOptions('devices')"></p-chart>
       </p-card>
-      <p-card header="Reparaciones por estado">
-        <p-chart type="doughnut" [data]="repairsByStatusChart" [options]="chartOptions"></p-chart>
+      <p-card header="Reparaciones por estado" class="chart-card" (click)="toggleChart('repairs')">
+        <p-chart type="doughnut" [data]="repairsByStatusChart" [options]="getChartOptions('repairs')"></p-chart>
       </p-card>
     </section>
 
@@ -57,7 +57,7 @@ import { Repair } from '../../shared/models/repair.model';
       <p-card header="Últimas 5 reparaciones">
         <p-table [value]="recentRepairs" size="small">
           <ng-template pTemplate="header"><tr><th>Orden</th><th>Estado</th><th>Monto</th></tr></ng-template>
-          <ng-template pTemplate="body" let-item><tr><td>{{ item.orderNumber }}</td><td><p-tag [value]="item.status"></p-tag></td><td>{{ item.price | currency:'USD' }}</td></tr></ng-template>
+          <ng-template pTemplate="body" let-item><tr><td>{{ item.orderNumber }}</td><td><p-tag [value]="item.status"></p-tag></td><td>{{ item.price | currency:'ARS':'symbol':'1.2-2':'es-AR' }}</td></tr></ng-template>
         </p-table>
       </p-card>
           <p-card header="Top 5 clientes inactivos">
@@ -82,7 +82,8 @@ export class DashboardPageComponent implements OnInit {
 
   devicesByTypeChart: any;
   repairsByStatusChart: any;
-  chartOptions: any = { plugins: { legend: { labels: { color: '#334155' } } } };
+  chartOptions: any = { plugins: { legend: { labels: { color: '#94a3b8' } } }, maintainAspectRatio: false };
+  expandedChart: 'devices' | 'repairs' | null = null;
 
   constructor(private readonly api: ApiService) {}
 
@@ -124,6 +125,14 @@ export class DashboardPageComponent implements OnInit {
       .sort((a, b) => a.order - b.order)
       .slice(0, 5)
       .map(({ name, lastRepair }) => ({ name, lastRepair }));
+  }
+
+  toggleChart(chart: 'devices' | 'repairs'): void {
+    this.expandedChart = this.expandedChart === chart ? null : chart;
+  }
+
+  getChartOptions(chart: 'devices' | 'repairs'): any {
+    return { ...this.chartOptions, aspectRatio: this.expandedChart === chart ? 1.2 : 2.2 };
   }
 
   private buildCharts(): void {

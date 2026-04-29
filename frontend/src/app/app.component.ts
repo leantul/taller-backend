@@ -8,6 +8,7 @@ import { MenuModule } from 'primeng/menu';
 import { ButtonModule } from 'primeng/button';
 import { AvatarModule } from 'primeng/avatar';
 import { MenuItem } from 'primeng/api';
+import { ThemeMode, ThemeService } from './core/services/theme.service';
 
 @Component({
   selector: 'app-root',
@@ -15,14 +16,14 @@ import { MenuItem } from 'primeng/api';
   imports: [RouterOutlet, RouterLink, CommonModule, MenubarModule, MenuModule, ButtonModule, AvatarModule],
   template: `
     <main class="app-shell">
-      <header class="app-header">
-        <h1>Taller de Reparaciones</h1>
-      </header>
-
       @if (auth.isLoggedIn()) {
-        <p-menubar [model]="navItems" styleClass="mb-4">
+        <p-menubar [model]="navItems" styleClass="mb-4 app-menubar">
+          <ng-template #start>
+            <h1 class="brand-title">Taller de Reparaciones</h1>
+          </ng-template>
           <ng-template #end>
             <div class="user-menu-wrap">
+              <button pButton type="button" class="p-button-text p-button-rounded" [icon]="themeMode === 'dark' ? 'pi pi-sun' : 'pi pi-moon'" (click)="toggleTheme()"></button>
               <button pButton type="button" class="p-button-text" (click)="userMenu.toggle($event)">
                 <p-avatar icon="pi pi-user" shape="circle"></p-avatar>
                 <span>{{ username }}</span>
@@ -38,6 +39,7 @@ import { MenuItem } from 'primeng/api';
   `
 })
 export class AppComponent {
+  themeMode: ThemeMode;
   navItems: MenuItem[] = [
     { label: 'Dashboard', icon: 'pi pi-home', routerLink: '/' },
     { label: 'Clientes', icon: 'pi pi-users', routerLink: '/clientes' },
@@ -56,5 +58,11 @@ export class AppComponent {
     return localStorage.getItem('username') || 'Usuario';
   }
 
-  constructor(public readonly auth: AuthService, private readonly router: Router) {}
+  constructor(public readonly auth: AuthService, private readonly router: Router, private readonly themeService: ThemeService) {
+    this.themeMode = this.themeService.initTheme();
+  }
+
+  toggleTheme(): void {
+    this.themeMode = this.themeService.toggleTheme(this.themeMode);
+  }
 }

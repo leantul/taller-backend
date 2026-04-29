@@ -7,6 +7,7 @@ export interface Repair {
   status: 'POR_RECIBIR' | 'RECIBIDA' | 'PRESUPUESTADA_ESPERANDO_RESPUESTA' | 'HACIENDO' | 'ESPERANDO_RETIRO' | 'RETIRADA';
   price: number;
   quotedAmount?: number;
+  quoteNotes?: string;
   receiveDateTime?: string;
   returnDateTime?: string;
 }

@@ -25,6 +25,7 @@ public class RepairDTO {
     private BigDecimal laborAmount;
     private BigDecimal extraAmount;
     private BigDecimal quotedAmount;
+    private String quoteNotes;
     private Boolean approved;
     private Boolean rejected;
     private LocalDateTime readyNotifiedAt;

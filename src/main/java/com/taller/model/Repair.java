@@ -62,6 +62,9 @@ public class Repair extends BasicEntity {
     @Column(name = "quoted_amount")
     private BigDecimal quotedAmount;
 
+    @Column(name = "quote_notes", columnDefinition = "TEXT")
+    private String quoteNotes;
+
     @Column(name = "approved")
     private Boolean approved;
 

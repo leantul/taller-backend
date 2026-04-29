@@ -45,6 +45,7 @@ public class RepairService {
                 .laborAmount(repairDTO.getLaborAmount())
                 .extraAmount(repairDTO.getExtraAmount())
                 .quotedAmount(repairDTO.getQuotedAmount())
+                .quoteNotes(repairDTO.getQuoteNotes())
                 .approved(repairDTO.getApproved())
                 .rejected(repairDTO.getRejected())
                 .readyNotifiedAt(repairDTO.getReadyNotifiedAt())
@@ -115,6 +116,7 @@ public class RepairService {
         dto.setLaborAmount(repair.getLaborAmount());
         dto.setExtraAmount(repair.getExtraAmount());
         dto.setQuotedAmount(repair.getQuotedAmount());
+        dto.setQuoteNotes(repair.getQuoteNotes());
         dto.setApproved(repair.getApproved());
         dto.setRejected(repair.getRejected());
         dto.setReadyNotifiedAt(repair.getReadyNotifiedAt());

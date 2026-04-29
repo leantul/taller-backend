@@ -15,34 +15,24 @@ import { MessageService } from 'primeng/api';
   imports: [CommonModule, FormsModule, InputTextModule, PasswordModule, ButtonModule, CardModule],
   template: `
     <section class="auth-shell">
-      <img src="/assets/logo-light.png" alt="Logo" class="login-logo" />
       <p-card class="auth-card modern-auth" header="Bienvenido">
+        <img src="/assets/logo-light.png" alt="Logo" class="login-logo" />
         <p class="auth-subtitle">Ingresá para gestionar el taller.</p>
         <form (ngSubmit)="submit()" class="p-fluid">
-          <div class="field">
-            <label>Usuario</label>
-            <input pInputText [(ngModel)]="username" name="username" required />
-          </div>
-          <div class="field">
-            <label>Contraseña</label>
-            <p-password [(ngModel)]="password" name="password" [feedback]="false" [toggleMask]="true" required></p-password>
-          </div>
+          <div class="field"><label>Usuario</label><input pInputText [(ngModel)]="username" name="username" required /></div>
+          <div class="field"><label>Contraseña</label><p-password [(ngModel)]="password" name="password" [feedback]="false" [toggleMask]="true" required></p-password></div>
           <button pButton type="submit" label="Entrar" icon="pi pi-sign-in"></button>
         </form>
-        @if (error) {
-          <small class="error"><i class="pi pi-exclamation-circle"></i> {{ error }}</small>
-        }
+        @if (error) { <small class="error"><i class="pi pi-exclamation-circle"></i> {{ error }}</small> }
       </p-card>
     </section>
   `
 })
 export class LoginPageComponent {
-  username = 'admin';
-  password = 'Admin1234!';
+  username = '';
+  password = '';
   error = '';
-
   constructor(private readonly auth: AuthService, private readonly router: Router, private readonly messageService: MessageService) {}
-
   submit(): void {
     this.auth.login(this.username, this.password).subscribe({
       next: () => this.router.navigate(['/']),

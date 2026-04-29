@@ -114,3 +114,15 @@ body { margin: 0; font-family: Inter, Roboto, Arial, sans-serif; background: var
 }
 
 .login-logo { width: min(220px, 58vw); height: auto; margin: 0 auto 1rem; display: block; }
+
+
+:root[data-theme='light'] .p-select-overlay,
+:root[data-theme='light'] .p-select-option,
+:root[data-theme='light'] .p-datepicker-panel,
+:root[data-theme='light'] .p-datepicker-panel *,
+:root[data-theme='light'] .p-paginator,
+:root[data-theme='light'] .p-paginator *,
+:root[data-theme='light'] .p-datatable-emptymessage td {
+  background: #ffffff !important;
+  color: #0f172a !important;
+}

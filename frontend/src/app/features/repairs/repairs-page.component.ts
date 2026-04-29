@@ -9,81 +9,62 @@ import { SelectModule } from 'primeng/select';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { TagModule } from 'primeng/tag';
 import { DatePickerModule } from 'primeng/datepicker';
+import { DialogModule } from 'primeng/dialog';
 import { ApiService } from '../../core/services/api.service';
 import { Repair } from '../../shared/models/repair.model';
+import { Client } from '../../shared/models/client.model';
+import { Device } from '../../shared/models/device.model';
+import { MessageService } from 'primeng/api';
 
 @Component({
   selector: 'app-repairs-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, CardModule, InputTextModule, ButtonModule, TableModule, SelectModule, InputNumberModule, TagModule, DatePickerModule],
-  template: `
-    <div class="page-grid">
-      <p-card header="Nueva reparación">
-        <form class="p-fluid" (ngSubmit)="save()">
-          <div class="field"><label>ID Cliente</label><input pInputText [(ngModel)]="draft.idClient" name="idClient" required /></div>
-          <div class="field"><label>ID Dispositivo</label><input pInputText [(ngModel)]="draft.idDevice" name="idDevice" required /></div>
-          <div class="field"><label>Número de orden</label><input pInputText [(ngModel)]="draft.orderNumber" name="orderNumber" required /></div>
-          <div class="field"><label>Descripción</label><input pInputText [(ngModel)]="draft.description" name="description" /></div>
-          <div class="field"><label>Estado</label><p-select [options]="statusOptions" optionLabel="label" optionValue="value" [(ngModel)]="draft.status" name="status"></p-select></div>
-          <div class="field"><label>Presupuesto enviado</label><p-inputNumber [(ngModel)]="draft.quotedAmount" name="quotedAmount" mode="currency" currency="USD" [min]="0"></p-inputNumber></div>
-          <div class="field"><label>Monto final</label><p-inputNumber [(ngModel)]="draft.price" name="price" mode="currency" currency="USD" [min]="0"></p-inputNumber></div>
-          <button pButton type="submit" label="Guardar reparación" icon="pi pi-check"></button>
-        </form>
-      </p-card>
-
-      <p-card header="Historial de reparaciones">
-        <div class="table-toolbar multi">
-          <span class="p-input-icon-left"><i class="pi pi-search"></i><input pInputText [(ngModel)]="searchTerm" (ngModelChange)="applyFilters()" placeholder="Buscar por cliente, orden, dispositivo" /></span>
-          <p-datepicker [(ngModel)]="fromDate" (ngModelChange)="applyFilters()" dateFormat="yy-mm-dd" placeholder="Desde" appendTo="body"></p-datepicker>
-          <p-datepicker [(ngModel)]="toDate" (ngModelChange)="applyFilters()" dateFormat="yy-mm-dd" placeholder="Hasta" appendTo="body"></p-datepicker>
-        </div>
-
-        <p-table [value]="filteredRepairs" size="small" [paginator]="true" [rows]="10">
-          <ng-template pTemplate="header"><tr><th>Orden</th><th>Cliente</th><th>Estado</th><th>Presupuesto</th><th>Monto</th><th>Acción</th></tr></ng-template>
-          <ng-template pTemplate="body" let-r>
-            <tr>
-              <td>{{ r.orderNumber }}</td><td>{{ r.idClient }}</td><td><p-tag [value]="r.status"></p-tag></td>
-              <td><p-inputNumber [(ngModel)]="r.quotedAmount" mode="currency" currency="USD" [min]="0"></p-inputNumber></td>
-              <td>{{ r.price | currency:'USD' }}</td>
-              <td><button pButton type="button" icon="pi pi-save" label="Actualizar" (click)="updateBudget(r)"></button></td>
-            </tr>
-          </ng-template>
-        </p-table>
-      </p-card>
-    </div>
-  `
+  imports: [CommonModule, FormsModule, CardModule, InputTextModule, ButtonModule, TableModule, SelectModule, InputNumberModule, TagModule, DatePickerModule, DialogModule],
+  templateUrl: './repairs-page.component.html'
 })
 export class RepairsPageComponent implements OnInit {
   repairs: Repair[] = [];
   filteredRepairs: Repair[] = [];
-  draft: Repair = {
-    idDevice: '', idClient: '', orderNumber: '', description: '', status: 'POR_RECIBIR', price: 0, quotedAmount: 0
-  };
+  clients: Client[] = [];
+  clientDevices: Device[] = [];
+  draftDevice: Device = { brand: '', model: '', serialNumber: '', clientId: '', deviceType: 'NOTEBOOK' };
+  showClientModal = false;
+  showDeviceModal = false;
+  clientSearch = '';
+  selectedClientName = '';
+  draft: Repair = { idDevice: '', idClient: '', orderNumber: '', description: '', status: 'POR_RECIBIR', price: 0, quotedAmount: 0 };
   searchTerm = '';
   fromDate: Date | null = null;
   toDate: Date | null = null;
-
   statusOptions = [
-    { label: 'Por recibir', value: 'POR_RECIBIR' }, { label: 'Recibida', value: 'RECIBIDA' },
-    { label: 'Presupuestada', value: 'PRESUPUESTADA_ESPERANDO_RESPUESTA' }, { label: 'Haciendo', value: 'HACIENDO' },
-    { label: 'Esperando retiro', value: 'ESPERANDO_RETIRO' }, { label: 'Retirada', value: 'RETIRADA' }
+    { label: 'Por recibir', value: 'POR_RECIBIR' }, { label: 'Recibida', value: 'RECIBIDA' }, { label: 'Presupuestada', value: 'PRESUPUESTADA_ESPERANDO_RESPUESTA' }, { label: 'Haciendo', value: 'HACIENDO' }, { label: 'Esperando retiro', value: 'ESPERANDO_RETIRO' }, { label: 'Retirada', value: 'RETIRADA' }
+  ];
+  typeOptions = [
+    { label: 'Desktop', value: 'DESKTOP' }, { label: 'Notebook', value: 'NOTEBOOK' }, { label: 'Tablet', value: 'TABLET' }, { label: 'Celular', value: 'CELULAR' }, { label: 'Otros', value: 'OTROS' }
   ];
 
-  constructor(private readonly api: ApiService) {}
+  constructor(private readonly api: ApiService, private readonly messageService: MessageService) {}
+  ngOnInit(): void { this.reload(); this.api.getClients().subscribe(c => this.clients = c); }
 
-  ngOnInit(): void { this.reload(); }
+  selectClient(client: Client): void {
+    this.draft.idClient = client.id || '';
+    this.selectedClientName = `${client.name} ${client.lastName}`.trim();
+    this.showClientModal = false;
+    this.api.getDevices().subscribe((devices) => this.clientDevices = devices.filter(d => d.clientId === this.draft.idClient));
+  }
 
-  save(): void {
-    this.api.createRepair(this.draft).subscribe(() => {
-      this.draft = { idDevice: '', idClient: '', orderNumber: '', description: '', status: 'POR_RECIBIR', price: 0, quotedAmount: 0 };
-      this.reload();
+  createDeviceInline(): void {
+    this.draftDevice.clientId = this.draft.idClient;
+    this.api.createDevice(this.draftDevice).subscribe((device) => {
+      this.clientDevices = [device, ...this.clientDevices];
+      this.draft.idDevice = device.id || '';
+      this.draftDevice = { brand: '', model: '', serialNumber: '', clientId: this.draft.idClient, deviceType: 'NOTEBOOK' };
+      this.showDeviceModal = false;
     });
   }
 
-  updateBudget(repair: Repair): void {
-    this.api.updateRepair(repair).subscribe(() => this.reload());
-  }
-
+  save(): void { this.api.createRepair(this.draft).subscribe({ next: () => { this.messageService.add({ severity: 'success', summary: 'Reparación guardada', detail: 'Alta creada correctamente.' }); this.draft = { idDevice: '', idClient: '', orderNumber: '', description: '', status: 'POR_RECIBIR', price: 0, quotedAmount: 0 }; this.selectedClientName=''; this.clientDevices=[]; this.reload(); }, error: () => this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudo guardar la reparación.' }) }); }
+  updateBudget(repair: Repair): void { this.api.updateRepair(repair).subscribe({ next: () => { this.messageService.add({ severity: 'success', summary: 'Actualizado', detail: 'Presupuesto actualizado.' }); this.reload(); }, error: () => this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudo actualizar.' }) }); }
   applyFilters(): void {
     const term = this.searchTerm.trim().toLowerCase();
     this.filteredRepairs = this.repairs.filter((r) => {
@@ -94,11 +75,11 @@ export class RepairsPageComponent implements OnInit {
       return Boolean(matchesTerm && matchesFrom && matchesTo);
     });
   }
+  private reload(): void { this.api.getRepairs().subscribe((repairs) => { this.repairs = repairs.slice().reverse(); this.applyFilters(); }); }
 
-  private reload(): void {
-    this.api.getRepairs().subscribe((repairs) => {
-      this.repairs = repairs.slice().reverse();
-      this.applyFilters();
-    });
+  get filteredClients(): Client[] {
+    const term = this.clientSearch.trim().toLowerCase();
+    if (!term) return this.clients;
+    return this.clients.filter((c) => `${c.name} ${c.lastName} ${c.phone} ${c.email}`.toLowerCase().includes(term));
   }
 }

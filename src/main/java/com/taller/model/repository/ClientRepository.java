@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import org.springframework.data.domain.Pageable;
 
 @Repository
 public interface ClientRepository extends JpaRepository<Client, String> {
@@ -23,4 +24,7 @@ public interface ClientRepository extends JpaRepository<Client, String> {
                OR lower(c.email) LIKE lower(concat('%', ?1, '%'))
             """)
     List<Client> search(String term);
+
+    @Query("SELECT c FROM Client c WHERE EXISTS (SELECT d FROM Device d WHERE d.clientId = c.id) ORDER BY c.creationDateTime DESC")
+    List<Client> findTop5WithDevices(Pageable pageable);
 }

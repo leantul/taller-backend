@@ -15,6 +15,7 @@ import { MessageService } from 'primeng/api';
   imports: [CommonModule, FormsModule, InputTextModule, PasswordModule, ButtonModule, CardModule],
   template: `
     <section class="auth-shell">
+      <img src="/assets/logo-light.png" alt="Logo" class="login-logo" />
       <p-card class="auth-card modern-auth" header="Bienvenido">
         <p class="auth-subtitle">Ingresá para gestionar el taller.</p>
         <form (ngSubmit)="submit()" class="p-fluid">

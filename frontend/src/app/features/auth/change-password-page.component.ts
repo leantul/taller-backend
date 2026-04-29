@@ -17,7 +17,9 @@ import { AuthService } from '../../core/auth/auth.service';
 
       <button type="submit">Actualizar</button>
     </form>
-    <p *ngIf="message">{{ message }}</p>
+    @if (message) {
+      <p>{{ message }}</p>
+    }
   `
 })
 export class ChangePasswordPageComponent {

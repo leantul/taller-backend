@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { Observable, tap } from 'rxjs';
+import { APP_CONFIG } from '../config/app-config';
 
 interface LoginResponse {
   token: string;
@@ -11,7 +12,7 @@ interface LoginResponse {
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
-  private readonly baseUrl = 'http://localhost:8080/auth';
+  private readonly baseUrl = APP_CONFIG.authUrl;
 
   constructor(private readonly http: HttpClient, private readonly router: Router) {}
 

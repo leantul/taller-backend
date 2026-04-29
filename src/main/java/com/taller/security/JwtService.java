@@ -3,28 +3,32 @@ package com.taller.security;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.stereotype.Service;
-
-import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
+import javax.crypto.SecretKey;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.stereotype.Service;
 
 @Service
 public class JwtService {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(JwtService.class);
+    private static final long DEFAULT_EXPIRATION_MINUTES = 720L;
+
     @Value("${jwt.secret}")
     private String secret;
 
-    @Value("${jwt.expiration-minutes}")
-    private Long expirationMinutes;
+    @Value("${jwt.expiration-minutes:720}")
+    private String expirationMinutesRaw;
 
     public String generateToken(UserDetails userDetails) {
         Instant now = Instant.now();
-        Instant expiration = now.plus(expirationMinutes, ChronoUnit.MINUTES);
+        Instant expiration = now.plus(resolveExpirationMinutes(), ChronoUnit.MINUTES);
 
         return Jwts.builder()
                 .subject(userDetails.getUsername())
@@ -58,5 +62,17 @@ public class JwtService {
     private SecretKey getSigningKey() {
         byte[] keyBytes = secret.getBytes(StandardCharsets.UTF_8);
         return Keys.hmacShaKeyFor(keyBytes);
+    }
+
+    private long resolveExpirationMinutes() {
+        try {
+            return Long.parseLong(expirationMinutesRaw);
+        } catch (NumberFormatException exception) {
+            LOGGER.warn(
+                    "Valor inválido para JWT_EXPIRATION_MINUTES: '{}'. Usando valor por defecto {} minutos.",
+                    expirationMinutesRaw,
+                    DEFAULT_EXPIRATION_MINUTES);
+            return DEFAULT_EXPIRATION_MINUTES;
+        }
     }
 }

@@ -10,6 +10,7 @@ import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { ApiService } from '../../core/services/api.service';
 import { Client } from '../../shared/models/client.model';
+import { MessageService } from 'primeng/api';
 
 @Component({
   selector: 'app-clients-page',

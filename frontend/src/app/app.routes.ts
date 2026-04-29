@@ -5,6 +5,7 @@ import { DevicesPageComponent } from './features/devices/devices-page.component'
 import { RepairsPageComponent } from './features/repairs/repairs-page.component';
 import { NotificationsPageComponent } from './features/notifications/notifications-page.component';
 import { LoginPageComponent } from './features/auth/login-page.component';
+import { StatusPageComponent } from './features/status/status-page.component';
 import { ChangePasswordPageComponent } from './features/auth/change-password-page.component';
 import { authGuard } from './core/auth/auth.guard';
 
@@ -15,6 +16,7 @@ export const routes: Routes = [
   { path: 'dispositivos', component: DevicesPageComponent, canActivate: [authGuard] },
   { path: 'reparaciones', component: RepairsPageComponent, canActivate: [authGuard] },
   { path: 'notificaciones', component: NotificationsPageComponent, canActivate: [authGuard] },
+  { path: 'status', component: StatusPageComponent, canActivate: [authGuard] },
   { path: 'cambiar-password', component: ChangePasswordPageComponent, canActivate: [authGuard] },
   { path: '**', redirectTo: '' }
 ];

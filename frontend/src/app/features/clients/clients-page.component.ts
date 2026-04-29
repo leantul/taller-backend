@@ -7,6 +7,7 @@ import { ButtonModule } from 'primeng/button';
 import { TableModule } from 'primeng/table';
 import { ApiService } from '../../core/services/api.service';
 import { Client } from '../../shared/models/client.model';
+import { MessageService } from 'primeng/api';
 
 @Component({
   selector: 'app-clients-page',
@@ -18,8 +19,8 @@ import { Client } from '../../shared/models/client.model';
         <form class="p-fluid" (ngSubmit)="save()">
           <div class="field"><label>Nombre</label><input pInputText [(ngModel)]="draft.name" name="name" required /></div>
           <div class="field"><label>Apellido</label><input pInputText [(ngModel)]="draft.lastName" name="lastName" required /></div>
-          <div class="field"><label>DNI</label><input pInputText [(ngModel)]="draft.dni" name="dni" required /></div>
-          <div class="field"><label>Email</label><input pInputText [(ngModel)]="draft.email" name="email" required /></div>
+          <div class="field"><label>DNI</label><input pInputText [(ngModel)]="draft.dni" name="dni" pattern="^[0-9]+$" required /></div>
+          <div class="field"><label>Email</label><input pInputText [(ngModel)]="draft.email" name="email" type="email" required /></div>
           <div class="field"><label>Celular</label><input pInputText [(ngModel)]="draft.phone" name="phone" required /></div>
           <button pButton type="submit" label="Guardar cliente" icon="pi pi-check"></button>
         </form>
@@ -42,22 +43,26 @@ export class ClientsPageComponent implements OnInit {
   draft: Client = { name: '', lastName: '', dni: '', email: '', phone: '' };
   searchTerm = '';
 
-  constructor(private readonly api: ApiService) {}
+  constructor(private readonly api: ApiService, private readonly messageService: MessageService) {}
 
   ngOnInit(): void { this.reload(); }
 
   save(): void {
-    this.api.createClient(this.draft).subscribe(() => {
-      this.draft = { name: '', lastName: '', dni: '', email: '', phone: '' };
-      this.reload();
+    this.api.createClient(this.draft).subscribe({
+      next: () => {
+        this.messageService.add({ severity: 'success', summary: 'Cliente guardado', detail: 'El cliente se creó correctamente.' });
+        this.draft = { name: '', lastName: '', dni: '', email: '', phone: '' };
+        this.reload();
+      },
+      error: (error) => {
+        const detail = error?.status === 403 ? 'No autorizado (403). Verificá permisos/token de sesión.' : 'No se pudo guardar el cliente.';
+        this.messageService.add({ severity: 'error', summary: 'Error', detail });
+      }
     });
   }
 
   onSearch(): void {
-    if (!this.searchTerm.trim()) {
-      this.reload();
-      return;
-    }
+    if (!this.searchTerm.trim()) { this.reload(); return; }
     this.api.searchClients(this.searchTerm).subscribe((clients) => (this.clients = clients));
   }
 

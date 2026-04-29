@@ -39,12 +39,12 @@ public class Client extends BasicEntity {
     @Column(name = "notes")
     private String notes;
 
-    @ElementCollection
+    @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "client_phones", joinColumns = @JoinColumn(name = "client_id"))
     @Column(name = "phone")
     private List<String> phones = new ArrayList<>();
 
-    @ElementCollection
+    @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "client_emails", joinColumns = @JoinColumn(name = "client_id"))
     @Column(name = "email")
     private List<String> emails = new ArrayList<>();

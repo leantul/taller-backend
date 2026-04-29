@@ -1,3 +1,5 @@
+@import 'primeicons/primeicons.css';
+
 :root {
   --taller-celeste: #2fa9d8;
   --taller-gris-oscuro: #23303a;
@@ -6,38 +8,44 @@
 body {
   margin: 0;
   font-family: Inter, Roboto, Arial, sans-serif;
-  background: #f5f7f9;
+  background: #f1f5f9;
   color: var(--taller-gris-oscuro);
 }
 
 .app-shell {
-  padding: 1.5rem;
+  padding: 1.2rem 2rem;
 }
 
-header h1 {
-  margin-bottom: 0.3rem;
+.app-header h1 {
+  margin: 0.3rem 0 1rem;
   color: var(--taller-celeste);
 }
 
-nav {
+.user-menu-wrap {
   display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.metric {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 1rem;
-  margin: 1rem 0 2rem;
+  margin-bottom: 1rem;
 }
 
-nav a {
-  color: var(--taller-gris-oscuro);
-  text-decoration: none;
-  font-weight: 600;
+.dashboard-grid.charts {
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
 }
 
-nav button {
-  border: none;
-  background: var(--taller-celeste);
-  color: #fff;
-  border-radius: 6px;
-  padding: 0.4rem 0.8rem;
-  cursor: pointer;
+.dashboard-grid.lists {
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
 }
 
 .auth-card {
@@ -52,10 +60,6 @@ form {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-}
-
-input {
-  padding: 0.45rem;
 }
 
 .error {

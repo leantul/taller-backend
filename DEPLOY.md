@@ -117,15 +117,16 @@ En Render -> Environment revisá que estos dos valores estén en su campo correc
 1. En Vercel: **Add New -> Project**.
 2. Importá el mismo repo.
 3. **Root directory:** `frontend`
-4. Usá build por Docker del repo (el Dockerfile de `frontend`).
-5. Variables de entorno del frontend:
+4. Build command: `npm run build`
+5. Output directory: `dist/taller-frontend/browser`
+6. Variables de entorno del frontend:
 
 ```text
 API_URL=https://<tu-backend>.onrender.com
 AUTH_URL=https://<tu-backend>.onrender.com/auth
 ```
 
-6. Deploy.
+7. Deploy.
 
 Para que las rutas SPA (por ejemplo `/login`, `/clientes`) no den 404 en refresh/acceso directo, el frontend incluye `frontend/vercel.json` con rewrite hacia `index.html`.
 

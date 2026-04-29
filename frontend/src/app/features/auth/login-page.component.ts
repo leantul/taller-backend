@@ -7,6 +7,7 @@ import { InputTextModule } from 'primeng/inputtext';
 import { PasswordModule } from 'primeng/password';
 import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
+import { MessageService } from 'primeng/api';
 
 @Component({
   selector: 'app-login-page',
@@ -39,12 +40,15 @@ export class LoginPageComponent {
   password = 'Admin1234!';
   error = '';
 
-  constructor(private readonly auth: AuthService, private readonly router: Router) {}
+  constructor(private readonly auth: AuthService, private readonly router: Router, private readonly messageService: MessageService) {}
 
   submit(): void {
     this.auth.login(this.username, this.password).subscribe({
       next: () => this.router.navigate(['/']),
-      error: () => (this.error = 'Credenciales inválidas')
+      error: () => {
+        this.error = 'Credenciales inválidas';
+        this.messageService.add({ severity: 'error', summary: 'Login inválido', detail: 'Usuario o contraseña incorrectos.' });
+      }
     });
   }
 }

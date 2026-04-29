@@ -41,7 +41,8 @@
 </div>
 
 <p-dialog header="Seleccionar cliente" [(visible)]="showClientModal" [modal]="true" [style]="{width:'60rem'}">
-  <p-table [value]="clients" [paginator]="true" [rows]="8">
+  <div class="field"><label>Buscar cliente</label><input pInputText [(ngModel)]="clientSearch" placeholder="Nombre, apellido, teléfono o email" /></div>
+  <p-table [value]="filteredClients" [paginator]="true" [rows]="8">
     <ng-template pTemplate="header"><tr><th>Nombre</th><th>Apellido</th><th>Teléfono</th><th>Email</th><th></th></tr></ng-template>
     <ng-template pTemplate="body" let-c><tr><td>{{c.name}}</td><td>{{c.lastName}}</td><td>{{c.phone}}</td><td>{{c.email}}</td><td><button pButton type="button" class="p-button-text" label="Seleccionar" (click)="selectClient(c)"></button></td></tr></ng-template>
   </p-table>

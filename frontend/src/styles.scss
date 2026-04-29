@@ -56,3 +56,5 @@ body { margin: 0; font-family: Inter, Roboto, Arial, sans-serif; background: var
 .status-card { background: var(--surface-soft); border: 1px solid var(--border); border-radius: 10px; padding: .7rem; display:flex; flex-direction:column; gap:.35rem; }
 .card-head { display:flex; justify-content:space-between; align-items:center; gap:.5rem; }
 @media (max-width: 1400px) { .status-board { grid-template-columns: repeat(2, minmax(250px, 1fr)); } }
+
+.app-menubar { margin-bottom: 1.5rem; }

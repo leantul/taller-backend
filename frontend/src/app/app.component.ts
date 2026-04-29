@@ -62,7 +62,7 @@ export class AppComponent {
     { separator: true },
     { label: 'Salir', icon: 'pi pi-sign-out', command: () => this.auth.logout() }
   ];
-  get username(): string { return localStorage.getItem('username') || 'Usuario'; }
+  get username(): string { return localStorage.getItem('fullName') || localStorage.getItem('username') || 'Usuario'; }
 
   constructor(public readonly auth: AuthService, private readonly router: Router, private readonly themeService: ThemeService, public readonly loadingService: LoadingService) {
     this.themeMode = this.themeService.initTheme();

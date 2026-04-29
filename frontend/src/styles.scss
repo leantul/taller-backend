@@ -126,3 +126,36 @@ body { margin: 0; font-family: Inter, Roboto, Arial, sans-serif; background: var
   background: #ffffff !important;
   color: #0f172a !important;
 }
+
+/* Consistent control sizing */
+.p-inputtext,
+.p-select,
+.p-inputnumber,
+.p-datepicker,
+textarea.p-inputtext {
+  width: 100%;
+  min-height: 2.5rem;
+  border-radius: 10px !important;
+  font-size: 0.95rem;
+}
+
+.p-select-label,
+.p-inputnumber-input,
+.p-datepicker-input,
+.p-inputtext {
+  padding: 0.55rem 0.7rem !important;
+}
+
+textarea.p-inputtext {
+  min-height: 6.5rem;
+  resize: vertical;
+  line-height: 1.35;
+}
+
+.field label {
+  font-size: 0.92rem;
+}
+
+.p-card .p-card-body {
+  padding: 1rem 1rem 1.1rem 1rem !important;
+}

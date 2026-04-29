@@ -33,7 +33,7 @@ export class RepairsPageComponent implements OnInit {
   showDeviceModal = false;
   clientSearch = '';
   selectedClientName = '';
-  draft: Repair = { idDevice: '', idClient: '', orderNumber: '', description: '', status: 'POR_RECIBIR', price: 0, quotedAmount: 0 };
+  draft: Repair = { idDevice: '', idClient: '', orderNumber: '', description: '', status: 'POR_RECIBIR', price: 0, quotedAmount: 0, quoteNotes: '' };
   searchTerm = '';
   fromDate: Date | null = null;
   toDate: Date | null = null;
@@ -70,7 +70,7 @@ export class RepairsPageComponent implements OnInit {
     this.api.createRepair(payload).subscribe({
       next: () => {
         this.messageService.add({ severity: 'success', summary: 'Reparación guardada', detail: `Alta creada con orden #${nextOrder}.` });
-        this.draft = { idDevice: '', idClient: '', orderNumber: '', description: '', status: 'POR_RECIBIR', price: 0, quotedAmount: 0 };
+        this.draft = { idDevice: '', idClient: '', orderNumber: '', description: '', status: 'POR_RECIBIR', price: 0, quotedAmount: 0, quoteNotes: '' };
         this.selectedClientName='';
         this.clientDevices=[];
         this.reload();

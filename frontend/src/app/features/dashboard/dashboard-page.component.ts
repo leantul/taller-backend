@@ -75,22 +75,18 @@ export class DashboardPageComponent implements OnInit {
   constructor(private readonly api: ApiService) {}
 
   ngOnInit(): void {
-    forkJoin({ clients: this.api.getClients(), devices: this.api.getDevices(), repairs: this.api.getRepairs() }).subscribe(({ clients, devices, repairs }) => {
+    forkJoin({ clients: this.api.getClients(), devices: this.api.getDevices(), repairs: this.api.getRepairs(), latestClients: this.api.getLatestClients(), latestDevices: this.api.getLatestDevices(), latestRepairs: this.api.getLatestRepairs() }).subscribe(({ clients, devices, repairs, latestClients, latestDevices, latestRepairs }) => {
       this.clients = clients;
       this.devices = devices;
       this.repairs = repairs;
       this.totalRevenue = repairs.reduce((acc, item) => acc + (item.price || 0), 0);
 
-      this.recentClients = [...clients]
-        .filter((c) => devices.some((d) => d.clientId === c.id))
-        .slice(-5)
-        .reverse()
-        .map((c) => ({
+      this.recentClients = latestClients.map((c) => ({
           name: `${c.name} ${c.lastName}`.trim(),
           deviceType: devices.find((d) => d.clientId === c.id)?.deviceType || '-'
         }));
-      this.recentDevices = [...devices].slice(-5).reverse();
-      this.recentRepairs = [...repairs].slice(-5).reverse().map((r) => ({
+      this.recentDevices = latestDevices;
+      this.recentRepairs = latestRepairs.map((r) => ({
         date: r.receiveDateTime ? new Date(r.receiveDateTime).toLocaleDateString('es-AR') : '-',
         client: this.clients.find((c) => c.id === r.idClient) ? `${this.clients.find((c) => c.id === r.idClient)!.name} ${this.clients.find((c) => c.id === r.idClient)!.lastName}` : r.idClient,
         price: r.price || 0

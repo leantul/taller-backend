@@ -62,7 +62,19 @@ export class AppComponent {
     { separator: true },
     { label: 'Salir', icon: 'pi pi-sign-out', command: () => this.auth.logout() }
   ];
-  get username(): string { return localStorage.getItem('fullName') || localStorage.getItem('username') || 'Usuario'; }
+  get username(): string { return localStorage.getItem('fullName') || this.getNameFromToken() || localStorage.getItem('username') || 'Usuario'; }
+
+  private getNameFromToken(): string | null {
+    const token = localStorage.getItem('token');
+    if (!token) return null;
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      return payload.fullName || payload.name || payload.preferred_username || null;
+    } catch {
+      return null;
+    }
+  }
+
 
   constructor(public readonly auth: AuthService, private readonly router: Router, private readonly themeService: ThemeService, public readonly loadingService: LoadingService) {
     this.themeMode = this.themeService.initTheme();

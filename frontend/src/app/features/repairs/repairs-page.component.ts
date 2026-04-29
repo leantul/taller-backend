@@ -63,7 +63,20 @@ export class RepairsPageComponent implements OnInit {
     });
   }
 
-  save(): void { this.api.createRepair(this.draft).subscribe({ next: () => { this.messageService.add({ severity: 'success', summary: 'Reparación guardada', detail: 'Alta creada correctamente.' }); this.draft = { idDevice: '', idClient: '', orderNumber: '', description: '', status: 'POR_RECIBIR', price: 0, quotedAmount: 0 }; this.selectedClientName=''; this.clientDevices=[]; this.reload(); }, error: () => this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudo guardar la reparación.' }) }); }
+  save(): void {
+    const nextOrder = (this.repairs.length + 1).toString();
+    const payload = { ...this.draft, orderNumber: nextOrder };
+    this.api.createRepair(payload).subscribe({
+      next: () => {
+        this.messageService.add({ severity: 'success', summary: 'Reparación guardada', detail: `Alta creada con orden #${nextOrder}.` });
+        this.draft = { idDevice: '', idClient: '', orderNumber: '', description: '', status: 'POR_RECIBIR', price: 0, quotedAmount: 0 };
+        this.selectedClientName='';
+        this.clientDevices=[];
+        this.reload();
+      },
+      error: () => this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudo guardar la reparación.' })
+    });
+  }
   updateBudget(repair: Repair): void { this.api.updateRepair(repair).subscribe({ next: () => { this.messageService.add({ severity: 'success', summary: 'Actualizado', detail: 'Presupuesto actualizado.' }); this.reload(); }, error: () => this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudo actualizar.' }) }); }
   applyFilters(): void {
     const term = this.searchTerm.trim().toLowerCase();

@@ -58,3 +58,30 @@ body { margin: 0; font-family: Inter, Roboto, Arial, sans-serif; background: var
 @media (max-width: 1400px) { .status-board { grid-template-columns: repeat(2, minmax(250px, 1fr)); } }
 
 .app-menubar { margin-bottom: 1.5rem; }
+
+.brand-logo { height: 42px; }
+.p-button { background: var(--brand-500) !important; border-color: var(--brand-500) !important; color: #ffffff !important; }
+.p-button:hover { background: var(--brand-700) !important; border-color: var(--brand-700) !important; }
+.p-button.p-button-text { background: transparent !important; color: var(--brand-500) !important; border-color: transparent !important; }
+
+:root[data-theme='light'] .p-menubar,
+:root[data-theme='light'] .p-menubar *:not(.pi),
+:root[data-theme='light'] .p-card,
+:root[data-theme='light'] .p-card * {
+  color: #0f172a;
+}
+
+:root[data-theme='light'] .p-select,
+:root[data-theme='light'] .p-select * ,
+:root[data-theme='light'] .p-inputtext,
+:root[data-theme='light'] .p-inputnumber,
+:root[data-theme='light'] .p-inputnumber-input,
+:root[data-theme='light'] .p-datepicker,
+:root[data-theme='light'] .p-datepicker-input,
+:root[data-theme='light'] .p-datatable,
+:root[data-theme='light'] .p-datatable * {
+  color: #0f172a !important;
+}
+
+.compact-filter { width: 10rem; }
+.compact-filter .p-inputtext { padding: .4rem .55rem !important; font-size: .88rem !important; }

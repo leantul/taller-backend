@@ -20,7 +20,7 @@ import { MessageService } from 'primeng/api';
 @Component({
   selector: 'app-repairs-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, CardModule, InputTextModule, InputTextareaModule, ButtonModule, TableModule, SelectModule, InputNumberModule, TagModule, DatePickerModule, DialogModule],
+  imports: [CommonModule, FormsModule, CardModule, InputTextModule, ButtonModule, TableModule, SelectModule, InputNumberModule, TagModule, DatePickerModule, DialogModule],
   templateUrl: './repairs-page.component.html'
 })
 export class RepairsPageComponent implements OnInit {

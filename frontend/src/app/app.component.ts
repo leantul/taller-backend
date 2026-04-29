@@ -8,21 +8,31 @@ import { MenuModule } from 'primeng/menu';
 import { ButtonModule } from 'primeng/button';
 import { AvatarModule } from 'primeng/avatar';
 import { MenuItem } from 'primeng/api';
+import { ThemeMode, ThemeService } from './core/services/theme.service';
+import { ProgressSpinnerModule } from 'primeng/progressspinner';
+import { ToastModule } from 'primeng/toast';
+import { LoadingService } from './core/services/loading.service';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet, RouterLink, CommonModule, MenubarModule, MenuModule, ButtonModule, AvatarModule],
+  imports: [RouterOutlet, RouterLink, CommonModule, MenubarModule, MenuModule, ButtonModule, AvatarModule, ProgressSpinnerModule, ToastModule],
   template: `
-    <main class="app-shell">
-      <header class="app-header">
-        <h1>Taller de Reparaciones</h1>
-      </header>
-
+    <p-toast position="top-right"></p-toast>
+    <main class="app-shell" [class.is-loading]="(loadingService.loading$ | async) !== 0">
+      @if ((loadingService.loading$ | async) !== 0) {
+        <div class="global-loading-overlay">
+          <p-progressSpinner strokeWidth="5" ariaLabel="Cargando"></p-progressSpinner>
+        </div>
+      }
       @if (auth.isLoggedIn()) {
-        <p-menubar [model]="navItems" styleClass="mb-4">
+        <p-menubar [model]="navItems" styleClass="mb-4 app-menubar">
+          <ng-template #start>
+            <img class="brand-logo" [src]="themeMode === 'dark' ? '/assets/logo-dark.png' : '/assets/logo-light.png'" alt="Logo Taller" />
+          </ng-template>
           <ng-template #end>
             <div class="user-menu-wrap">
+              <button pButton type="button" class="p-button-text p-button-rounded" [icon]="themeMode === 'dark' ? 'pi pi-sun' : 'pi pi-moon'" (click)="toggleTheme()"></button>
               <button pButton type="button" class="p-button-text" (click)="userMenu.toggle($event)">
                 <p-avatar icon="pi pi-user" shape="circle"></p-avatar>
                 <span>{{ username }}</span>
@@ -38,23 +48,36 @@ import { MenuItem } from 'primeng/api';
   `
 })
 export class AppComponent {
+  themeMode: ThemeMode;
   navItems: MenuItem[] = [
     { label: 'Dashboard', icon: 'pi pi-home', routerLink: '/' },
     { label: 'Clientes', icon: 'pi pi-users', routerLink: '/clientes' },
     { label: 'Dispositivos', icon: 'pi pi-desktop', routerLink: '/dispositivos' },
     { label: 'Reparaciones', icon: 'pi pi-wrench', routerLink: '/reparaciones' },
+    { label: 'Status', icon: 'pi pi-th-large', routerLink: '/status' },
     { label: 'Notificaciones', icon: 'pi pi-bell', routerLink: '/notificaciones' }
   ];
-
   userItems: MenuItem[] = [
     { label: 'Cambiar contraseña', icon: 'pi pi-key', command: () => this.router.navigate(['/cambiar-password']) },
     { separator: true },
     { label: 'Salir', icon: 'pi pi-sign-out', command: () => this.auth.logout() }
   ];
+  get username(): string { return localStorage.getItem('fullName') || this.getNameFromToken() || localStorage.getItem('username') || 'Usuario'; }
 
-  get username(): string {
-    return localStorage.getItem('username') || 'Usuario';
+  private getNameFromToken(): string | null {
+    const token = localStorage.getItem('token');
+    if (!token) return null;
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      return payload.fullName || payload.name || payload.preferred_username || null;
+    } catch {
+      return null;
+    }
   }
 
-  constructor(public readonly auth: AuthService, private readonly router: Router) {}
+
+  constructor(public readonly auth: AuthService, private readonly router: Router, private readonly themeService: ThemeService, public readonly loadingService: LoadingService) {
+    this.themeMode = this.themeService.initTheme();
+  }
+  toggleTheme(): void { this.themeMode = this.themeService.toggleTheme(this.themeMode); }
 }

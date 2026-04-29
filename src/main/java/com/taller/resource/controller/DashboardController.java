@@ -1,11 +1,15 @@
 package com.taller.resource.controller;
 
+import com.taller.resource.dto.ClientDTO;
 import com.taller.resource.dto.DashboardDTO;
+import com.taller.resource.dto.DeviceDTO;
+import com.taller.resource.dto.RepairDTO;
 import com.taller.service.DashboardService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
+import java.util.List;
 
 @CrossOrigin(originPatterns = "*", maxAge = 3600)
 @RestController
@@ -23,4 +27,13 @@ public class DashboardController {
         int targetMonth = month != null ? month : now.getMonthValue();
         return dashboardService.monthSummary(targetYear, targetMonth);
     }
+
+    @GetMapping("/latest-clients")
+    public List<ClientDTO> latestClients() { return dashboardService.latestClientsWithDevices(); }
+
+    @GetMapping("/latest-devices")
+    public List<DeviceDTO> latestDevices() { return dashboardService.latestDevices(); }
+
+    @GetMapping("/latest-repairs")
+    public List<RepairDTO> latestRepairs() { return dashboardService.latestRepairs(); }
 }

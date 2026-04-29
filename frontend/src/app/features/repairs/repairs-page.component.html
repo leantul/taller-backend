@@ -1,0 +1,58 @@
+<div class="page-grid modern-grid">
+  <p-card header="Nueva reparación">
+    <form class="p-fluid" (ngSubmit)="save()">
+      <div class="field">
+        <label>Cliente</label>
+        <div class="inline-row">
+          <input pInputText [ngModel]="selectedClientName" name="selectedClientName" readonly placeholder="Seleccionar cliente" />
+          <button pButton type="button" size="small" class="p-button-sm" icon="pi pi-search" [rounded]="true" [text]="true" (click)="showClientModal=true"></button>
+        </div>
+      </div>
+      <div class="field"><label>Dispositivo</label><p-select [options]="clientDevices" optionLabel="model" optionValue="id" [(ngModel)]="draft.idDevice" name="idDevice"></p-select></div>
+      <div class="field"><button pButton type="button" class="p-button-text" label="Agregar dispositivo" icon="pi pi-plus" [disabled]="!draft.idClient" (click)="showDeviceModal=true"></button></div>
+            <div class="field"><label>Falla reportada</label><textarea pInputTextarea rows="5" [(ngModel)]="draft.description" name="description" required></textarea></div>
+      <div class="field"><label>Estado</label><p-select [options]="statusOptions" optionLabel="label" optionValue="value" [(ngModel)]="draft.status" name="status"></p-select></div>
+      <div class="field"><label>Presupuesto enviado</label><p-inputNumber [(ngModel)]="draft.quotedAmount" name="quotedAmount" mode="currency" currency="ARS" locale="es-AR" [min]="0"></p-inputNumber></div>
+      <div class="field"><label>Detalle del presupuesto</label><textarea pInputTextarea rows="5" [(ngModel)]="draft.quoteNotes" name="quoteNotes" placeholder="Detalle completo del trabajo (acepta texto largo y emojis)"></textarea></div>
+      <div class="field"><label>Monto final</label><p-inputNumber [(ngModel)]="draft.price" name="price" mode="currency" currency="ARS" locale="es-AR" [min]="0"></p-inputNumber></div>
+      <button pButton type="submit" label="Guardar reparación" icon="pi pi-check"></button>
+    </form>
+  </p-card>
+
+  <p-card header="Historial de reparaciones">
+    <div class="table-toolbar multi">
+      <span class="p-input-icon-left"><i class="pi pi-search"></i><input pInputText [(ngModel)]="searchTerm" (ngModelChange)="applyFilters()" placeholder="Buscar por cliente, orden, dispositivo" /></span>
+      <p-datepicker styleClass="compact-filter" [(ngModel)]="fromDate" (ngModelChange)="applyFilters()" dateFormat="dd-mm-yy" placeholder="Desde" appendTo="body"></p-datepicker>
+      <p-datepicker styleClass="compact-filter" [(ngModel)]="toDate" (ngModelChange)="applyFilters()" dateFormat="dd-mm-yy" placeholder="Hasta" appendTo="body"></p-datepicker>
+    </div>
+
+    <p-table [value]="filteredRepairs" size="small" [paginator]="true" [rows]="10">
+      <ng-template pTemplate="header"><tr><th>Orden</th><th>Cliente</th><th>Estado</th><th>Presupuesto</th><th>Monto</th><th>Acción</th></tr></ng-template>
+      <ng-template pTemplate="body" let-r>
+        <tr>
+          <td>{{ r.orderNumber }}</td><td>{{ r.idClient }}</td><td><p-tag [value]="r.status"></p-tag></td>
+          <td><p-inputNumber [(ngModel)]="r.quotedAmount" mode="currency" currency="ARS" locale="es-AR" [min]="0"></p-inputNumber></td>
+          <td>{{ r.price | currency:'ARS':'symbol':'1.2-2':'es-AR' }}</td>
+          <td><button pButton type="button" icon="pi pi-save" label="Actualizar" (click)="updateBudget(r)"></button></td>
+        </tr>
+      </ng-template>
+    </p-table>
+  </p-card>
+</div>
+
+<p-dialog header="Seleccionar cliente" [(visible)]="showClientModal" [modal]="true" [style]="{width:'60rem'}">
+  <div class="field"><label>Buscar cliente</label><input pInputText [(ngModel)]="clientSearch" placeholder="Nombre, apellido, teléfono o email" /></div>
+  <p-table [value]="filteredClients" [paginator]="true" [rows]="8">
+    <ng-template pTemplate="header"><tr><th>Nombre</th><th>Apellido</th><th>Teléfono</th><th>Email</th><th></th></tr></ng-template>
+    <ng-template pTemplate="body" let-c><tr><td>{{c.name}}</td><td>{{c.lastName}}</td><td>{{c.phone}}</td><td>{{c.email}}</td><td><button pButton type="button" class="p-button-text" label="Seleccionar" (click)="selectClient(c)"></button></td></tr></ng-template>
+  </p-table>
+</p-dialog>
+
+<p-dialog header="Nuevo dispositivo" [(visible)]="showDeviceModal" [modal]="true" [style]="{width:'36rem'}">
+  <div class="field"><label>Tipo</label><p-select [options]="typeOptions" optionLabel="label" optionValue="value" [(ngModel)]="draftDevice.deviceType"></p-select></div>
+  <div class="field"><label>Marca</label><input pInputText [(ngModel)]="draftDevice.brand"/></div>
+  <div class="field"><label>Modelo</label><input pInputText [(ngModel)]="draftDevice.model"/></div>
+  <div class="field"><label>Serie</label><input pInputText [(ngModel)]="draftDevice.serialNumber"/></div>
+  <div class="field"><label>Observaciones</label><input pInputText /></div>
+  <button pButton type="button" label="Guardar dispositivo" (click)="createDeviceInline()"></button>
+</p-dialog>

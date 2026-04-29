@@ -5,12 +5,12 @@
         <label>Cliente</label>
         <div class="inline-row">
           <input pInputText [ngModel]="selectedClientName" name="selectedClientName" readonly placeholder="Seleccionar cliente" />
-          <button pButton type="button" size="small" class="p-button-sm" icon="pi pi-search" label="Buscar cliente" (click)="showClientModal=true"></button>
+          <button pButton type="button" size="small" class="p-button-sm" icon="pi pi-search" [rounded]="true" [text]="true" (click)="showClientModal=true"></button>
         </div>
       </div>
       <div class="field"><label>Dispositivo</label><p-select [options]="clientDevices" optionLabel="model" optionValue="id" [(ngModel)]="draft.idDevice" name="idDevice"></p-select></div>
       <div class="field"><button pButton type="button" class="p-button-text" label="Agregar dispositivo" icon="pi pi-plus" [disabled]="!draft.idClient" (click)="showDeviceModal=true"></button></div>
-            <div class="field"><label>Falla reportada</label><input pInputText [(ngModel)]="draft.description" name="description" required /></div>
+            <div class="field"><label>Falla reportada</label><textarea pInputTextarea rows="5" [(ngModel)]="draft.description" name="description" required></textarea></div>
       <div class="field"><label>Estado</label><p-select [options]="statusOptions" optionLabel="label" optionValue="value" [(ngModel)]="draft.status" name="status"></p-select></div>
       <div class="field"><label>Presupuesto enviado</label><p-inputNumber [(ngModel)]="draft.quotedAmount" name="quotedAmount" mode="currency" currency="ARS" locale="es-AR" [min]="0"></p-inputNumber></div>
       <div class="field"><label>Monto final</label><p-inputNumber [(ngModel)]="draft.price" name="price" mode="currency" currency="ARS" locale="es-AR" [min]="0"></p-inputNumber></div>

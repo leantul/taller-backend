@@ -81,10 +81,14 @@ export class DashboardPageComponent implements OnInit {
       this.repairs = repairs;
       this.totalRevenue = repairs.reduce((acc, item) => acc + (item.price || 0), 0);
 
-      this.recentClients = [...clients].slice(-5).reverse().map((c) => ({
-        name: `${c.name} ${c.lastName}`.trim(),
-        deviceType: devices.find((d) => d.clientId === c.id)?.deviceType || 'Sin dispositivo'
-      }));
+      this.recentClients = [...clients]
+        .filter((c) => devices.some((d) => d.clientId === c.id))
+        .slice(-5)
+        .reverse()
+        .map((c) => ({
+          name: `${c.name} ${c.lastName}`.trim(),
+          deviceType: devices.find((d) => d.clientId === c.id)?.deviceType || '-'
+        }));
       this.recentDevices = [...devices].slice(-5).reverse();
       this.recentRepairs = [...repairs].slice(-5).reverse().map((r) => ({
         date: r.receiveDateTime ? new Date(r.receiveDateTime).toLocaleDateString('es-AR') : '-',
@@ -108,6 +112,7 @@ export class DashboardPageComponent implements OnInit {
 
     this.inactiveClients = this.clients
       .map((c) => ({ name: `${c.name} ${c.lastName}`.trim(), lastRepair: byClient.get(c.id!) ? byClient.get(c.id!)!.toLocaleDateString('es-AR') : null, order: byClient.get(c.id!) ? byClient.get(c.id!)!.getTime() : 0 }))
+      .filter((c) => c.lastRepair !== null)
       .sort((a, b) => a.order - b.order)
       .slice(0, 5)
       .map(({ name, lastRepair }) => ({ name, lastRepair }));

@@ -43,7 +43,7 @@ export class AuthService {
   isTokenExpired(token: string): boolean {
     try {
       const payload = this.parseJwtPayload(token);
-      const exp = Number(payload?.exp);
+      const exp = Number(payload?.['exp']);
       if (!exp) return true;
       return Date.now() >= exp * 1000;
     } catch {

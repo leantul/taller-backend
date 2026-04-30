@@ -35,7 +35,7 @@ public enum RepairStatusEnum {
 
             for (RepairStatusEnum repairStatus : values()) {
                 if (repairStatus.name().equalsIgnoreCase(normalized)
-                        || repairStatus.getStatus().equalsIgnoreCase(normalized)) {
+                        || repairStatus.status.equalsIgnoreCase(normalized)) {
                     return repairStatus;
                 }
             }
@@ -55,6 +55,6 @@ public enum RepairStatusEnum {
 
     @JsonValue
     public String getStatus() {
-        return status;
+        return name();
     }
 }

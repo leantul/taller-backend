@@ -1,6 +1,6 @@
 import { Component } from '@angular/core';
 import { Router } from '@angular/router';
-import { RouterLink, RouterOutlet } from '@angular/router';
+import { RouterOutlet } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { AuthService } from './core/auth/auth.service';
 import { MenubarModule } from 'primeng/menubar';
@@ -16,7 +16,7 @@ import { LoadingService } from './core/services/loading.service';
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet, RouterLink, CommonModule, MenubarModule, MenuModule, ButtonModule, AvatarModule, ProgressSpinnerModule, ToastModule],
+  imports: [RouterOutlet, CommonModule, MenubarModule, MenuModule, ButtonModule, AvatarModule, ProgressSpinnerModule, ToastModule],
   template: `
     <p-toast position="top-right"></p-toast>
     <main class="app-shell" [class.is-loading]="(loadingService.loading$ | async) !== 0">

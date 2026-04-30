@@ -64,12 +64,19 @@ export class AppComponent {
   ];
   get username(): string { return localStorage.getItem('fullName') || this.getNameFromToken() || localStorage.getItem('username') || 'Usuario'; }
 
+  private parseJwtPayload(token: string): Record<string, unknown> {
+    const base64Url = token.split('.')[1] || "";
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const padded = base64 + "=".repeat((4 - (base64.length % 4)) % 4);
+    return JSON.parse(atob(padded));
+  }
+
   private getNameFromToken(): string | null {
     const token = localStorage.getItem('token');
     if (!token) return null;
     try {
-      const payload = JSON.parse(atob(token.split('.')[1]));
-      return payload.fullName || payload.name || payload.preferred_username || null;
+      const payload = this.parseJwtPayload(token);
+      return (payload['fullName'] as string) || (payload['name'] as string) || (payload['preferred_username'] as string) || null;
     } catch {
       return null;
     }

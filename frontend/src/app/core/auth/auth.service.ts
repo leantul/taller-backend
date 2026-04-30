@@ -42,7 +42,7 @@ export class AuthService {
 
   isTokenExpired(token: string): boolean {
     try {
-      const payload = JSON.parse(atob(token.split('.')[1]));
+      const payload = this.parseJwtPayload(token);
       const exp = Number(payload?.exp);
       if (!exp) return true;
       return Date.now() >= exp * 1000;
@@ -53,6 +53,13 @@ export class AuthService {
 
   getToken(): string | null {
     return localStorage.getItem('token');
+  }
+
+  private parseJwtPayload(token: string): Record<string, unknown> {
+    const base64Url = token.split('.')[1] || '';
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const padded = base64 + '='.repeat((4 - (base64.length % 4)) % 4);
+    return JSON.parse(atob(padded));
   }
 
   logout(): void {

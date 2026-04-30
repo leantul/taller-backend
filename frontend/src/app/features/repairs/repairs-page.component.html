@@ -48,7 +48,7 @@
 
 <p-dialog header="Cambiar estado" [(visible)]="showStatusModal" [modal]="true" [style]="{width:'28rem'}">
   @if (statusEditingRepair) {
-    <div class="field"><label>Estado</label><p-select [options]="statusOptions" optionLabel="label" optionValue="value" [(ngModel)]="statusEditingRepair.status"></p-select></div>
+    <div class="field"><label>Estado</label><p-select [options]="statusOptions" optionLabel="label" optionValue="value" [(ngModel)]="statusEditingRepair.status" appendTo="body"></p-select></div>
     <button pButton type="button" label="Guardar" icon="pi pi-check" (click)="saveStatus()"></button>
   }
 </p-dialog>
@@ -57,7 +57,7 @@
   <div class="field"><label>Dispositivo</label><input pInputText [(ngModel)]="editingRepair.idDevice" /></div>
   <div class="field"><label>Cliente</label><input pInputText [(ngModel)]="editingRepair.idClient" /></div>
   <div class="field"><label>Falla reportada</label><textarea class="p-inputtext" rows="4" [(ngModel)]="editingRepair.description"></textarea></div>
-  <div class="field"><label>Estado</label><p-select [options]="statusOptions" optionLabel="label" optionValue="value" [(ngModel)]="editingRepair.status"></p-select></div>
+  <div class="field"><label>Estado</label><p-select [options]="statusOptions" optionLabel="label" optionValue="value" [(ngModel)]="editingRepair.status" appendTo="body"></p-select></div>
   <div class="field"><label>Presupuesto enviado</label><p-inputNumber [(ngModel)]="editingRepair.quotedAmount" mode="currency" currency="ARS" locale="es-AR" [min]="0"></p-inputNumber></div>
   <div class="field"><label>Detalle del presupuesto</label><textarea class="p-inputtext" rows="4" [(ngModel)]="editingRepair.quoteNotes"></textarea></div>
   <div class="field"><label>Monto final</label><p-inputNumber [(ngModel)]="editingRepair.price" mode="currency" currency="ARS" locale="es-AR" [min]="0"></p-inputNumber></div>

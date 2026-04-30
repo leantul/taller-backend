@@ -22,6 +22,28 @@ public enum RepairStatusEnum {
     }
 
     @JsonCreator
+    public static RepairStatusEnum fromJson(Object rawValue) {
+        if (rawValue instanceof Number numberValue) {
+            return fromCode(numberValue.intValue());
+        }
+
+        if (rawValue instanceof String stringValue) {
+            String normalized = stringValue.trim();
+            if (normalized.matches("^\\d+$")) {
+                return fromCode(Integer.parseInt(normalized));
+            }
+
+            for (RepairStatusEnum repairStatus : values()) {
+                if (repairStatus.name().equalsIgnoreCase(normalized)
+                        || repairStatus.getStatus().equalsIgnoreCase(normalized)) {
+                    return repairStatus;
+                }
+            }
+        }
+
+        throw new IllegalArgumentException("No enum constant for value " + rawValue);
+    }
+
     public static RepairStatusEnum fromCode(int code) {
         for (RepairStatusEnum repairStatus : values()) {
             if (repairStatus.getCode() == code) {

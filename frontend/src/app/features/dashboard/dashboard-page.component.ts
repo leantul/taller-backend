@@ -88,8 +88,12 @@ export class DashboardPageComponent implements OnInit {
           deviceType: devices.find((d) => d.clientId === c.id)?.deviceType || '-'
         }));
       this.recentDevices = latestDevices;
-      this.recentRepairs = latestRepairs.map((r) => ({
-        date: r.receiveDateTime ? new Date(r.receiveDateTime).toLocaleDateString('es-AR') : '-',
+      const deliveredRepairs = repairs
+        .filter((r) => r.status === 'RETIRADA')
+        .sort((a, b) => new Date(b.returnDateTime || 0).getTime() - new Date(a.returnDateTime || 0).getTime())
+        .slice(0, 5);
+      this.recentRepairs = deliveredRepairs.map((r) => ({
+        date: r.returnDateTime ? new Date(r.returnDateTime).toLocaleDateString('es-AR') : '-',
         client: this.clients.find((c) => c.id === r.idClient) ? `${this.clients.find((c) => c.id === r.idClient)!.name} ${this.clients.find((c) => c.id === r.idClient)!.lastName}` : r.idClient,
         price: r.price || 0
       }));
@@ -102,15 +106,21 @@ export class DashboardPageComponent implements OnInit {
   private buildInactiveClients(): void {
     const byClient = new Map<string, Date>();
     this.repairs.forEach((r) => {
-      if (!r.idClient) return;
-      const date = r.receiveDateTime ? new Date(r.receiveDateTime) : new Date(0);
+      if (!r.idClient || !r.receiveDateTime) return;
+      const date = new Date(r.receiveDateTime);
       const current = byClient.get(r.idClient);
       if (!current || date > current) byClient.set(r.idClient, date);
     });
 
     this.inactiveClients = this.clients
-      .map((c) => ({ name: `${c.name} ${c.lastName}`.trim(), lastRepair: byClient.get(c.id!) ? byClient.get(c.id!)!.toLocaleDateString('es-AR') : null, order: byClient.get(c.id!) ? byClient.get(c.id!)!.getTime() : 0 }))
-      .filter((c) => c.lastRepair !== null)
+      .map((c) => {
+        const last = c.id ? byClient.get(c.id) : undefined;
+        return {
+          name: `${c.name} ${c.lastName}`.trim(),
+          lastRepair: last ? last.toLocaleDateString('es-AR') : 'Sin historial',
+          order: last ? last.getTime() : 0
+        };
+      })
       .sort((a, b) => a.order - b.order)
       .slice(0, 5)
       .map(({ name, lastRepair }) => ({ name, lastRepair }));

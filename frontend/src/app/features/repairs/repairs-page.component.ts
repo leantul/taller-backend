@@ -26,6 +26,7 @@ export class RepairsPageComponent implements OnInit {
   repairs: Repair[] = [];
   filteredRepairs: Repair[] = [];
   clients: Client[] = [];
+  clientsById = new Map<string, Client>();
   clientDevices: Device[] = [];
   allDevices: Device[] = [];
   draftDevice: Device = { brand: '', model: '', serialNumber: '', clientId: '', deviceType: 'NOTEBOOK' };
@@ -49,7 +50,7 @@ export class RepairsPageComponent implements OnInit {
   ];
 
   constructor(private readonly api: ApiService, private readonly messageService: MessageService) {}
-  ngOnInit(): void { this.reload(); this.api.getClients().subscribe(c => this.clients = c); this.api.getDevices().subscribe(d => this.allDevices = d); }
+  ngOnInit(): void { this.reload(); this.api.getClients().subscribe(c => { this.clients = c; this.clientsById = new Map(c.filter(item => !!item.id).map(item => [item.id!, item])); }); this.api.getDevices().subscribe(d => this.allDevices = d); }
 
   selectClient(client: Client): void {
     this.draft.idClient = client.id || '';
@@ -128,6 +129,16 @@ export class RepairsPageComponent implements OnInit {
     });
   }
   private reload(): void { this.api.getRepairs().subscribe((repairs) => { this.repairs = repairs.slice().reverse(); this.applyFilters(); }); }
+
+  clientLabel(repair: Repair): string {
+    const client = this.clientsById.get(repair.idClient);
+    return client ? `${client.name} ${client.lastName}`.trim() : repair.idClient;
+  }
+
+  whatsAppLink(phone: string): string {
+    const digits = (phone || ).replace(/\D/g, );
+    return `https://wa.me/${digits}`;
+  }
 
   get filteredClients(): Client[] {
     const term = this.clientSearch.trim().toLowerCase();

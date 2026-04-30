@@ -20,6 +20,8 @@ export class ApiService {
   getDevices(): Observable<Device[]> { return this.http.get<Device[]>(`${this.baseUrl}/device`); }
   searchDevices(term: string): Observable<Device[]> { return this.http.get<Device[]>(`${this.baseUrl}/device/search?term=${encodeURIComponent(term)}`); }
   createDevice(payload: Device): Observable<Device> { return this.http.post<Device>(`${this.baseUrl}/device`, payload); }
+  updateDevice(payload: Device): Observable<Device> { return this.http.put<Device>(`${this.baseUrl}/device`, payload); }
+  deleteDevice(id: string): Observable<void> { return this.http.delete<void>(`${this.baseUrl}/device/${id}`); }
 
   getRepairs(): Observable<Repair[]> { return this.http.get<Repair[]>(`${this.baseUrl}/repair`); }
   searchRepairs(term: string): Observable<Repair[]> { return this.http.get<Repair[]>(`${this.baseUrl}/repair/search?term=${encodeURIComponent(term)}`); }

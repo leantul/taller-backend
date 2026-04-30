@@ -244,3 +244,31 @@ textarea.p-inputtext {
   border-color: var(--brand-500) !important;
   color: #ffffff !important;
 }
+
+
+:root[data-theme='light'] .p-select,
+:root[data-theme='light'] .p-select-label,
+:root[data-theme='light'] .p-select-dropdown,
+:root[data-theme='light'] .p-select-trigger,
+:root[data-theme='light'] .p-select-option,
+:root[data-theme='light'] .p-inputtext,
+:root[data-theme='light'] textarea.p-inputtext,
+:root[data-theme='light'] .p-dialog,
+:root[data-theme='light'] .p-dialog .p-dialog-header,
+:root[data-theme='light'] .p-dialog .p-dialog-content,
+:root[data-theme='light'] .p-dialog .field,
+:root[data-theme='light'] .p-dialog .field label,
+:root[data-theme='light'] .p-dialog .field div {
+  background: #ffffff !important;
+  color: #0f172a !important;
+  border-color: #d7deea !important;
+}
+:root[data-theme='light'] .p-dialog .p-tag {
+  color: #ffffff !important;
+}
+
+.wa-link { color: #25d366; margin-left: .35rem; text-decoration: none; }
+.wa-link:hover { color: #1da851; }
+.page-grid .p-card .p-card-body { padding: .85rem .9rem !important; }
+.page-grid .field label { font-size: .88rem; }
+.page-grid .p-inputtext, .page-grid .p-select, .page-grid .p-inputnumber { font-size: .9rem; min-height: 2.3rem; }

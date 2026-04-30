@@ -12,6 +12,7 @@ public interface DeviceRepository extends JpaRepository<Device, String> {
             WHERE lower(d.brand) LIKE lower(concat('%', ?1, '%'))
                OR lower(d.model) LIKE lower(concat('%', ?1, '%'))
                OR lower(d.serialNumber) LIKE lower(concat('%', ?1, '%'))
+               OR lower(d.clientId) LIKE lower(concat('%', ?1, '%'))
             """)
     List<Device> search(String term);
 }

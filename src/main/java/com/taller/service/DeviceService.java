@@ -15,16 +15,18 @@ public class DeviceService {
     private final DeviceRepository deviceRepository;
 
     public DeviceDTO save(DeviceDTO deviceDTO) {
-        Device device = Device.builder()
-                .brand(deviceDTO.getBrand())
-                .serialNumber(deviceDTO.getSerialNumber())
-                .model(deviceDTO.getModel())
-                .deviceType(deviceDTO.getDeviceType())
-                .password(deviceDTO.getPassword())
-                .accessories(deviceDTO.getAccessories())
-                .aestheticCondition(deviceDTO.getAestheticCondition())
-                .clientId(deviceDTO.getClientId())
-                .build();
+        Device device = deviceDTO.getId() != null
+                ? deviceRepository.findById(deviceDTO.getId()).orElseGet(Device::new)
+                : new Device();
+        device.setBrand(deviceDTO.getBrand());
+        device.setSerialNumber(deviceDTO.getSerialNumber());
+        device.setModel(deviceDTO.getModel());
+        device.setDeviceType(deviceDTO.getDeviceType());
+        device.setPassword(deviceDTO.getPassword());
+        device.setAccessories(deviceDTO.getAccessories());
+        device.setAestheticCondition(deviceDTO.getAestheticCondition());
+        device.setClientId(deviceDTO.getClientId());
+        if (deviceDTO.getId() != null) device.setId(deviceDTO.getId());
 
         return toDto(deviceRepository.save(device));
     }
@@ -39,6 +41,10 @@ public class DeviceService {
 
     public List<DeviceDTO> search(String term) {
         return deviceRepository.search(term).stream().map(this::toDto).toList();
+    }
+
+    public void delete(String id) {
+        deviceRepository.deleteById(id);
     }
 
     private DeviceDTO toDto(Device device) {

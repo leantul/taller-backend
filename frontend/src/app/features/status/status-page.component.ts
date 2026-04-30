@@ -1,20 +1,20 @@
 import { CdkDragDrop, DragDropModule, moveItemInArray, transferArrayItem } from '@angular/cdk/drag-drop';
 import { CommonModule } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
-import { FormsModule } from '@angular/forms';
-import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
 import { DialogModule } from 'primeng/dialog';
-import { InputNumberModule } from 'primeng/inputnumber';
 import { TagModule } from 'primeng/tag';
 import { MessageService } from 'primeng/api';
 import { ApiService } from '../../core/services/api.service';
 import { Repair } from '../../shared/models/repair.model';
+import { Client } from '../../shared/models/client.model';
+import { Device } from '../../shared/models/device.model';
+import { forkJoin } from 'rxjs';
 
 @Component({
   selector: 'app-status-page',
   standalone: true,
-  imports: [CommonModule, DragDropModule, CardModule, TagModule, ButtonModule, DialogModule, FormsModule, InputNumberModule],
+  imports: [CommonModule, DragDropModule, CardModule, TagModule, DialogModule],
   templateUrl: './status-page.component.html'
 })
 export class StatusPageComponent implements OnInit {
@@ -26,9 +26,10 @@ export class StatusPageComponent implements OnInit {
     { title: 'Entregada', status: 'RETIRADA', items: [] }
   ];
 
-  showDeliverModal = false;
   selectedRepair: Repair | null = null;
-  paidAmount = 0;
+  showDetailModal = false;
+  clientsById = new Map<string, Client>();
+  devicesById = new Map<string, Device>();
 
   constructor(private readonly api: ApiService, private readonly messageService: MessageService) {}
 
@@ -50,27 +51,25 @@ export class StatusPageComponent implements OnInit {
     });
   }
 
-  openDeliveredModal(repair: Repair): void {
-    this.selectedRepair = repair;
-    this.paidAmount = repair.price || 0;
-    this.showDeliverModal = true;
+  openDetail(item: Repair): void {
+    this.selectedRepair = item;
+    this.showDetailModal = true;
   }
 
-  confirmDelivered(): void {
-    if (!this.selectedRepair) return;
-    const payload: Repair = { ...this.selectedRepair, status: 'RETIRADA', price: this.paidAmount };
-    this.api.updateRepair(payload).subscribe({
-      next: () => {
-        this.messageService.add({ severity: 'success', summary: 'Entrega registrada', detail: `Cobrado ${this.paidAmount.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}` });
-        this.showDeliverModal = false;
-        this.reload();
-      },
-      error: () => this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudo registrar la entrega.' })
-    });
+  clientName(item: Repair): string {
+    const client = this.clientsById.get(item.idClient);
+    return client ? `${client.name} ${client.lastName}`.trim() : item.idClient;
+  }
+
+  deviceLabel(item: Repair): string {
+    const device = this.devicesById.get(item.idDevice);
+    return device ? `${device.deviceType} ${device.brand} ${device.model}`.trim() : item.idDevice;
   }
 
   private reload(): void {
-    this.api.getRepairs().subscribe((repairs) => {
+    forkJoin({ repairs: this.api.getRepairs(), clients: this.api.getClients(), devices: this.api.getDevices() }).subscribe(({ repairs, clients, devices }) => {
+      this.clientsById = new Map(clients.map((client) => [client.id!, client]));
+      this.devicesById = new Map(devices.map((device) => [device.id!, device]));
       this.columns.forEach((c) => (c.items = repairs.filter((r) => r.status === c.status)));
     });
   }

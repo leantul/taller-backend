@@ -33,23 +33,25 @@ public class RepairService {
     }
 
     public RepairDTO save(RepairDTO repairDTO) {
-        Repair repair = Repair.builder()
-                .idDevice(resolveDeviceId(repairDTO))
-                .idClient(resolveClientId(repairDTO))
-                .description(repairDTO.getDescription())
-                .orderNumber(repairDTO.getOrderNumber())
-                .status(repairDTO.getStatus())
-                .receiveDateTime(repairDTO.getReceiveDateTime())
-                .returnDateTime(repairDTO.getReturnDateTime())
-                .price(repairDTO.getPrice())
-                .laborAmount(repairDTO.getLaborAmount())
-                .extraAmount(repairDTO.getExtraAmount())
-                .quotedAmount(repairDTO.getQuotedAmount())
-                .quoteNotes(repairDTO.getQuoteNotes())
-                .approved(repairDTO.getApproved())
-                .rejected(repairDTO.getRejected())
-                .readyNotifiedAt(repairDTO.getReadyNotifiedAt())
-                .build();
+        Repair repair = repairDTO.getId() != null
+                ? repairRepository.findById(repairDTO.getId()).orElseGet(Repair::new)
+                : new Repair();
+
+        repair.setIdDevice(resolveDeviceId(repairDTO));
+        repair.setIdClient(resolveClientId(repairDTO));
+        repair.setDescription(repairDTO.getDescription());
+        repair.setOrderNumber(repairDTO.getOrderNumber());
+        repair.setStatus(repairDTO.getStatus());
+        repair.setReceiveDateTime(repairDTO.getReceiveDateTime());
+        repair.setReturnDateTime(repairDTO.getReturnDateTime());
+        repair.setPrice(repairDTO.getPrice());
+        repair.setLaborAmount(repairDTO.getLaborAmount());
+        repair.setExtraAmount(repairDTO.getExtraAmount());
+        repair.setQuotedAmount(repairDTO.getQuotedAmount());
+        repair.setQuoteNotes(repairDTO.getQuoteNotes());
+        repair.setApproved(repairDTO.getApproved());
+        repair.setRejected(repairDTO.getRejected());
+        repair.setReadyNotifiedAt(repairDTO.getReadyNotifiedAt());
 
         if (repairDTO.getId() != null) {
             repair.setId(repairDTO.getId());

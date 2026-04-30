@@ -23,6 +23,7 @@ import { Repair } from '../../shared/models/repair.model';
     </section>
 
     <section class="dashboard-grid charts">
+      <p-card header="Evolución mensual de ingresos" class="chart-card" (click)="toggleChart('income')"><p-chart type="line" [data]="monthlyIncomeChart" [options]="getChartOptions('income')"></p-chart></p-card>
       <p-card header="Equipos por tipo" class="chart-card" (click)="toggleChart('devices')"><p-chart type="bar" [data]="devicesByTypeChart" [options]="getChartOptions('devices')"></p-chart></p-card>
       <p-card header="Reparaciones por estado" class="chart-card" (click)="toggleChart('repairs')"><p-chart type="doughnut" [data]="repairsByStatusChart" [options]="getChartOptions('repairs')"></p-chart></p-card>
     </section>
@@ -69,8 +70,9 @@ export class DashboardPageComponent implements OnInit {
   inactiveClients: { name: string; lastRepair: string | null }[] = [];
   devicesByTypeChart: any;
   repairsByStatusChart: any;
+  monthlyIncomeChart: any;
   chartOptions: any = { plugins: { legend: { labels: { color: '#94a3b8' } } }, maintainAspectRatio: false };
-  expandedChart: 'devices' | 'repairs' | null = null;
+  expandedChart: 'income' | 'devices' | 'repairs' | null = null;
 
   constructor(private readonly api: ApiService) {}
 
@@ -86,8 +88,12 @@ export class DashboardPageComponent implements OnInit {
           deviceType: devices.find((d) => d.clientId === c.id)?.deviceType || '-'
         }));
       this.recentDevices = latestDevices;
-      this.recentRepairs = latestRepairs.map((r) => ({
-        date: r.receiveDateTime ? new Date(r.receiveDateTime).toLocaleDateString('es-AR') : '-',
+      const deliveredRepairs = repairs
+        .filter((r) => r.status === 'RETIRADA')
+        .sort((a, b) => new Date(b.returnDateTime || 0).getTime() - new Date(a.returnDateTime || 0).getTime())
+        .slice(0, 5);
+      this.recentRepairs = deliveredRepairs.map((r) => ({
+        date: r.returnDateTime ? new Date(r.returnDateTime).toLocaleDateString('es-AR') : '-',
         client: this.clients.find((c) => c.id === r.idClient) ? `${this.clients.find((c) => c.id === r.idClient)!.name} ${this.clients.find((c) => c.id === r.idClient)!.lastName}` : r.idClient,
         price: r.price || 0
       }));
@@ -100,28 +106,47 @@ export class DashboardPageComponent implements OnInit {
   private buildInactiveClients(): void {
     const byClient = new Map<string, Date>();
     this.repairs.forEach((r) => {
-      if (!r.idClient) return;
-      const date = r.receiveDateTime ? new Date(r.receiveDateTime) : new Date(0);
+      if (!r.idClient || !r.receiveDateTime) return;
+      const date = new Date(r.receiveDateTime);
       const current = byClient.get(r.idClient);
       if (!current || date > current) byClient.set(r.idClient, date);
     });
 
     this.inactiveClients = this.clients
-      .map((c) => ({ name: `${c.name} ${c.lastName}`.trim(), lastRepair: byClient.get(c.id!) ? byClient.get(c.id!)!.toLocaleDateString('es-AR') : null, order: byClient.get(c.id!) ? byClient.get(c.id!)!.getTime() : 0 }))
-      .filter((c) => c.lastRepair !== null)
+      .map((c) => {
+        const last = c.id ? byClient.get(c.id) : undefined;
+        return {
+          name: `${c.name} ${c.lastName}`.trim(),
+          lastRepair: last ? last.toLocaleDateString('es-AR') : 'Sin historial',
+          order: last ? last.getTime() : 0
+        };
+      })
       .sort((a, b) => a.order - b.order)
       .slice(0, 5)
       .map(({ name, lastRepair }) => ({ name, lastRepair }));
   }
 
-  toggleChart(chart: 'devices' | 'repairs'): void { this.expandedChart = this.expandedChart === chart ? null : chart; }
-  getChartOptions(chart: 'devices' | 'repairs'): any { return { ...this.chartOptions, aspectRatio: this.expandedChart === chart ? 1.2 : 2.2 }; }
+  toggleChart(chart: 'income' | 'devices' | 'repairs'): void { this.expandedChart = this.expandedChart === chart ? null : chart; }
+  getChartOptions(chart: 'income' | 'devices' | 'repairs'): any { return { ...this.chartOptions, aspectRatio: this.expandedChart === chart ? 1.2 : 2.2 }; }
 
   private buildCharts(): void {
     const deviceMap = new Map<string, number>();
     this.devices.forEach((item) => deviceMap.set(item.deviceType, (deviceMap.get(item.deviceType) || 0) + 1));
     const repairMap = new Map<string, number>();
     this.repairs.forEach((item) => repairMap.set(item.status, (repairMap.get(item.status) || 0) + 1));
+
+    const monthlyIncomeMap = new Map<string, number>();
+    this.repairs.forEach((item) => {
+      if (!item.receiveDateTime) return;
+      const date = new Date(item.receiveDateTime);
+      const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      monthlyIncomeMap.set(monthKey, (monthlyIncomeMap.get(monthKey) || 0) + (item.price || 0));
+    });
+    const sortedMonths = Array.from(monthlyIncomeMap.keys()).sort();
+    this.monthlyIncomeChart = {
+      labels: sortedMonths,
+      datasets: [{ label: 'Ingresos (ARS)', data: sortedMonths.map((month) => monthlyIncomeMap.get(month) || 0), borderColor: '#34b6f8', backgroundColor: 'rgba(52,182,248,0.2)', tension: 0.3, fill: true }]
+    };
     this.devicesByTypeChart = { labels: Array.from(deviceMap.keys()), datasets: [{ label: 'Equipos', backgroundColor: '#0ea5e9', data: Array.from(deviceMap.values()) }] };
     this.repairsByStatusChart = { labels: Array.from(repairMap.keys()), datasets: [{ data: Array.from(repairMap.values()), backgroundColor: ['#0ea5e9', '#22c55e', '#f59e0b', '#ef4444', '#6366f1', '#14b8a6'] }] };
   }

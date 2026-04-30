@@ -31,11 +31,35 @@ export class AuthService {
   }
 
   isLoggedIn(): boolean {
-    return Boolean(localStorage.getItem('token'));
+    const token = localStorage.getItem('token');
+    if (!token) return false;
+    if (this.isTokenExpired(token)) {
+      this.logout();
+      return false;
+    }
+    return true;
+  }
+
+  isTokenExpired(token: string): boolean {
+    try {
+      const payload = this.parseJwtPayload(token);
+      const exp = Number(payload?.['exp']);
+      if (!exp) return true;
+      return Date.now() >= exp * 1000;
+    } catch {
+      return true;
+    }
   }
 
   getToken(): string | null {
     return localStorage.getItem('token');
+  }
+
+  private parseJwtPayload(token: string): Record<string, unknown> {
+    const base64Url = token.split('.')[1] || '';
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const padded = base64 + '='.repeat((4 - (base64.length % 4)) % 4);
+    return JSON.parse(atob(padded));
   }
 
   logout(): void {

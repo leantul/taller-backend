@@ -4,6 +4,18 @@
   --brand-500: #34b6f8;
   --brand-700: #1f8fc7;
   --neutral-500: #5a5950;
+
+  --p-primary-50: #e6f6fe;
+  --p-primary-100: #cceefd;
+  --p-primary-200: #99ddfb;
+  --p-primary-300: #66ccf9;
+  --p-primary-400: #34b6f8;
+  --p-primary-500: #34b6f8;
+  --p-primary-600: #1f8fc7;
+  --p-primary-700: #19749f;
+  --p-primary-color: #34b6f8;
+  --p-highlight-background: rgba(52, 182, 248, 0.18);
+  --p-highlight-color: #34b6f8;
 }
 :root[data-theme='dark'] {
   --bg: #0b0f1a;
@@ -53,7 +65,8 @@ body { margin: 0; font-family: Inter, Roboto, Arial, sans-serif; background: var
 
 .status-board { display:grid; grid-template-columns: repeat(5, minmax(220px, 1fr)); gap: 1rem; align-items:start; }
 .status-list { min-height: 240px; display:flex; flex-direction:column; gap:.7rem; }
-.status-card { background: var(--surface-soft); border: 1px solid var(--border); border-radius: 10px; padding: .7rem; display:flex; flex-direction:column; gap:.35rem; }
+.status-card { background: var(--surface-soft); border: 1px solid var(--border); border-radius: 10px; padding: .7rem; display:flex; flex-direction:column; gap:.35rem; cursor: pointer; transition: border-color .2s ease, transform .2s ease; }
+.status-card:hover { border-color: var(--brand-500); transform: translateY(-1px); }
 .card-head { display:flex; justify-content:space-between; align-items:center; gap:.5rem; }
 @media (max-width: 1400px) { .status-board { grid-template-columns: repeat(2, minmax(250px, 1fr)); } }
 
@@ -159,3 +172,103 @@ textarea.p-inputtext {
 .p-card .p-card-body {
   padding: 1rem 1rem 1.1rem 1rem !important;
 }
+
+
+.repairs-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .65rem;
+}
+.repairs-filters .filter-search { width: min(30rem, 100%); }
+.repairs-filters .compact-filter { width: 11rem; min-width: 11rem; }
+@media (max-width: 900px) {
+  .repairs-filters .filter-search,
+  .repairs-filters .compact-filter { width: 100%; min-width: 0; }
+}
+
+
+:root[data-theme='light'] .p-menubar .p-menubar-item-link,
+:root[data-theme='light'] .p-menubar .p-menuitem-text,
+:root[data-theme='light'] .p-menubar .pi,
+:root[data-theme='light'] .user-menu-wrap .p-button,
+:root[data-theme='light'] .user-menu-wrap span {
+  color: #1f2937 !important;
+}
+:root[data-theme='light'] .p-menu,
+:root[data-theme='light'] .p-menu .p-menuitem-link,
+:root[data-theme='light'] .p-menu .p-menuitem-text,
+:root[data-theme='light'] .p-menu .pi {
+  background: #f8fafc !important;
+  color: #1f2937 !important;
+}
+.repairs-filters .filter-search .p-inputtext,
+.repairs-filters .compact-filter .p-inputtext,
+.repairs-filters .compact-filter .p-datepicker-input {
+  height: 2.5rem;
+}
+.repairs-filters .filter-search,
+.repairs-filters .compact-filter {
+  display: flex;
+  align-items: center;
+}
+.action-buttons {
+  display: inline-flex;
+  align-items: center;
+  gap: .25rem;
+}
+
+
+.auth-card .p-card-body,
+.auth-card .p-card-content,
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.auth-form { width: 100%; }
+.auth-field { width: min(360px, 100%); text-align: left; }
+.auth-field .p-password,
+.auth-field .p-password-input,
+.auth-field .auth-password-input {
+  width: 100% !important;
+}
+.auth-form .p-button { width: min(360px, 100%); justify-content: center; }
+
+.p-select-option.p-select-option-selected,
+.p-select-option.p-focus,
+.p-datepicker .p-highlight,
+.p-paginator-page.p-paginator-page-selected,
+.p-tag {
+  background: var(--brand-500) !important;
+  border-color: var(--brand-500) !important;
+  color: #ffffff !important;
+}
+
+
+:root[data-theme='light'] .p-select,
+:root[data-theme='light'] .p-select-label,
+:root[data-theme='light'] .p-select-dropdown,
+:root[data-theme='light'] .p-select-trigger,
+:root[data-theme='light'] .p-select-option,
+:root[data-theme='light'] .p-inputtext,
+:root[data-theme='light'] textarea.p-inputtext,
+:root[data-theme='light'] .p-dialog,
+:root[data-theme='light'] .p-dialog .p-dialog-header,
+:root[data-theme='light'] .p-dialog .p-dialog-content,
+:root[data-theme='light'] .p-dialog .field,
+:root[data-theme='light'] .p-dialog .field label,
+:root[data-theme='light'] .p-dialog .field div {
+  background: #ffffff !important;
+  color: #0f172a !important;
+  border-color: #d7deea !important;
+}
+:root[data-theme='light'] .p-dialog .p-tag {
+  color: #ffffff !important;
+}
+
+.wa-link { color: #25d366; margin-left: .35rem; text-decoration: none; }
+.wa-link:hover { color: #1da851; }
+.page-grid .p-card .p-card-body { padding: .85rem .9rem !important; }
+.page-grid .field label { font-size: .88rem; }
+.page-grid .p-inputtext, .page-grid .p-select, .page-grid .p-inputnumber { font-size: .9rem; min-height: 2.3rem; }

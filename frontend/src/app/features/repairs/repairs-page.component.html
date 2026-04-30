@@ -25,7 +25,7 @@
       <p-datepicker styleClass="compact-filter" [(ngModel)]="toDate" (ngModelChange)="applyFilters()" dateFormat="dd-mm-yy" placeholder="Hasta" [showIcon]="true" iconDisplay="input" appendTo="body"></p-datepicker>
     </div>
 
-    <p-table [value]="filteredRepairs" size="small" [paginator]="true" [rows]="10" [sortMode]="multiple">
+    <p-table [value]="filteredRepairs" size="small" [paginator]="true" [rows]="10" sortMode="multiple">
       <ng-template pTemplate="header"><tr><th pSortableColumn="orderNumber">Orden <p-sortIcon field="orderNumber"></p-sortIcon></th><th pSortableColumn="idClient">Cliente <p-sortIcon field="idClient"></p-sortIcon></th><th pSortableColumn="status">Estado <p-sortIcon field="status"></p-sortIcon></th><th pSortableColumn="quotedAmount">Presupuesto <p-sortIcon field="quotedAmount"></p-sortIcon></th><th pSortableColumn="price">Monto <p-sortIcon field="price"></p-sortIcon></th><th>Acción</th></tr></ng-template>
       <ng-template pTemplate="body" let-r>
         <tr>

@@ -136,7 +136,7 @@ export class RepairsPageComponent implements OnInit {
   }
 
   whatsAppLink(phone: string): string {
-    const digits = (phone || ).replace(/\D/g, );
+    const digits = (phone || "").replace(/\D/g, "");
     return `https://wa.me/${digits}`;
   }
 

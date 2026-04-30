@@ -20,10 +20,10 @@
   </p-card>
 
   <p-card header="Historial de reparaciones">
-    <div class="table-toolbar multi">
-      <span class="p-input-icon-left"><i class="pi pi-search"></i><input pInputText [(ngModel)]="searchTerm" (ngModelChange)="applyFilters()" placeholder="Buscar por cliente, orden, dispositivo" /></span>
-      <p-datepicker styleClass="compact-filter" [(ngModel)]="fromDate" (ngModelChange)="applyFilters()" dateFormat="dd-mm-yy" placeholder="Desde" appendTo="body"></p-datepicker>
-      <p-datepicker styleClass="compact-filter" [(ngModel)]="toDate" (ngModelChange)="applyFilters()" dateFormat="dd-mm-yy" placeholder="Hasta" appendTo="body"></p-datepicker>
+    <div class="table-toolbar multi repairs-filters">
+      <span class="p-input-icon-left filter-search"><i class="pi pi-search"></i><input pInputText [(ngModel)]="searchTerm" (ngModelChange)="applyFilters()" placeholder="Buscar por cliente, orden, dispositivo" /></span>
+      <p-datepicker styleClass="compact-filter" [(ngModel)]="fromDate" (ngModelChange)="applyFilters()" dateFormat="dd-mm-yy" placeholder="Desde" [showIcon]="true" iconDisplay="input" appendTo="body"></p-datepicker>
+      <p-datepicker styleClass="compact-filter" [(ngModel)]="toDate" (ngModelChange)="applyFilters()" dateFormat="dd-mm-yy" placeholder="Hasta" [showIcon]="true" iconDisplay="input" appendTo="body"></p-datepicker>
     </div>
 
     <p-table [value]="filteredRepairs" size="small" [paginator]="true" [rows]="10">

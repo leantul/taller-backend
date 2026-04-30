@@ -25,6 +25,7 @@ export class ApiService {
   searchRepairs(term: string): Observable<Repair[]> { return this.http.get<Repair[]>(`${this.baseUrl}/repair/search?term=${encodeURIComponent(term)}`); }
   createRepair(payload: Repair): Observable<Repair> { return this.http.post<Repair>(`${this.baseUrl}/repair`, payload); }
   updateRepair(payload: Repair): Observable<Repair> { return this.http.put<Repair>(`${this.baseUrl}/repair`, payload); }
+  deleteRepair(id: string): Observable<void> { return this.http.delete<void>(`${this.baseUrl}/repair/${id}`); }
 
   getLatestClients(): Observable<Client[]> { return this.http.get<Client[]>(`${this.baseUrl}/dashboard/latest-clients`); }
   getLatestDevices(): Observable<Device[]> { return this.http.get<Device[]>(`${this.baseUrl}/dashboard/latest-devices`); }

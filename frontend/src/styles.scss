@@ -159,3 +159,65 @@ textarea.p-inputtext {
 .p-card .p-card-body {
   padding: 1rem 1rem 1.1rem 1rem !important;
 }
+
+
+.repairs-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .65rem;
+}
+.repairs-filters .filter-search { width: min(30rem, 100%); }
+.repairs-filters .compact-filter { width: 11rem; min-width: 11rem; }
+@media (max-width: 900px) {
+  .repairs-filters .filter-search,
+  .repairs-filters .compact-filter { width: 100%; min-width: 0; }
+}
+
+
+:root[data-theme='light'] .p-menubar .p-menubar-item-link,
+:root[data-theme='light'] .p-menubar .p-menuitem-text,
+:root[data-theme='light'] .p-menubar .pi,
+:root[data-theme='light'] .user-menu-wrap .p-button,
+:root[data-theme='light'] .user-menu-wrap span {
+  color: #1f2937 !important;
+}
+:root[data-theme='light'] .p-menu,
+:root[data-theme='light'] .p-menu .p-menuitem-link,
+:root[data-theme='light'] .p-menu .p-menuitem-text,
+:root[data-theme='light'] .p-menu .pi {
+  background: #f8fafc !important;
+  color: #1f2937 !important;
+}
+.repairs-filters .filter-search .p-inputtext,
+.repairs-filters .compact-filter .p-inputtext,
+.repairs-filters .compact-filter .p-datepicker-input {
+  height: 2.5rem;
+}
+.repairs-filters .filter-search,
+.repairs-filters .compact-filter {
+  display: flex;
+  align-items: center;
+}
+.action-buttons {
+  display: inline-flex;
+  align-items: center;
+  gap: .25rem;
+}
+
+
+.auth-card .p-card-body,
+.auth-card .p-card-content,
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.auth-form { width: 100%; }
+.auth-field { width: min(360px, 100%); text-align: left; }
+.auth-field .p-password,
+.auth-field .p-password-input,
+.auth-field .auth-password-input {
+  width: 100% !important;
+}
+.auth-form .p-button { width: min(360px, 100%); justify-content: center; }

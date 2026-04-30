@@ -3,7 +3,6 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { CardModule } from 'primeng/card';
 import { InputTextModule } from 'primeng/inputtext';
-import { InputTextareaModule } from 'primeng/inputtextarea';
 import { ButtonModule } from 'primeng/button';
 import { TableModule } from 'primeng/table';
 import { SelectModule } from 'primeng/select';
@@ -28,12 +27,17 @@ export class RepairsPageComponent implements OnInit {
   filteredRepairs: Repair[] = [];
   clients: Client[] = [];
   clientDevices: Device[] = [];
+  allDevices: Device[] = [];
   draftDevice: Device = { brand: '', model: '', serialNumber: '', clientId: '', deviceType: 'NOTEBOOK' };
   showClientModal = false;
   showDeviceModal = false;
+  showStatusModal = false;
+  showEditModal = false;
   clientSearch = '';
   selectedClientName = '';
   draft: Repair = { idDevice: '', idClient: '', orderNumber: '', description: '', status: 'POR_RECIBIR', price: 0, quotedAmount: 0, quoteNotes: '' };
+  editingRepair: Repair = { idDevice: '', idClient: '', orderNumber: '', description: '', status: 'POR_RECIBIR', price: 0, quotedAmount: 0, quoteNotes: '' };
+  statusEditingRepair: Repair | null = null;
   searchTerm = '';
   fromDate: Date | null = null;
   toDate: Date | null = null;
@@ -45,7 +49,7 @@ export class RepairsPageComponent implements OnInit {
   ];
 
   constructor(private readonly api: ApiService, private readonly messageService: MessageService) {}
-  ngOnInit(): void { this.reload(); this.api.getClients().subscribe(c => this.clients = c); }
+  ngOnInit(): void { this.reload(); this.api.getClients().subscribe(c => this.clients = c); this.api.getDevices().subscribe(d => this.allDevices = d); }
 
   selectClient(client: Client): void {
     this.draft.idClient = client.id || '';
@@ -58,6 +62,7 @@ export class RepairsPageComponent implements OnInit {
     this.draftDevice.clientId = this.draft.idClient;
     this.api.createDevice(this.draftDevice).subscribe((device) => {
       this.clientDevices = [device, ...this.clientDevices];
+      this.allDevices = [device, ...this.allDevices];
       this.draft.idDevice = device.id || '';
       this.draftDevice = { brand: '', model: '', serialNumber: '', clientId: this.draft.idClient, deviceType: 'NOTEBOOK' };
       this.showDeviceModal = false;
@@ -75,10 +80,43 @@ export class RepairsPageComponent implements OnInit {
         this.clientDevices=[];
         this.reload();
       },
-      error: () => this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudo guardar la reparación.' })
+      error: (error) => this.messageService.add({ severity: 'error', summary: 'Error', detail: `No se pudo guardar la reparación (${error?.status || 'sin código'}).` })
     });
   }
-  updateBudget(repair: Repair): void { this.api.updateRepair(repair).subscribe({ next: () => { this.messageService.add({ severity: 'success', summary: 'Actualizado', detail: 'Presupuesto actualizado.' }); this.reload(); }, error: () => this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudo actualizar.' }) }); }
+
+  openStatusModal(repair: Repair): void {
+    this.statusEditingRepair = { ...repair };
+    this.showStatusModal = true;
+  }
+
+  saveStatus(): void {
+    if (!this.statusEditingRepair) return;
+    this.api.updateRepair(this.statusEditingRepair).subscribe({
+      next: () => { this.messageService.add({ severity: 'success', summary: 'Estado actualizado', detail: 'Se actualizó el estado.' }); this.showStatusModal = false; this.statusEditingRepair = null; this.reload(); },
+      error: (error) => this.messageService.add({ severity: 'error', summary: 'Error', detail: `No se pudo actualizar el estado (${error?.status || 'sin código'}).` })
+    });
+  }
+
+  openEditModal(repair: Repair): void {
+    this.editingRepair = { ...repair };
+    this.showEditModal = true;
+  }
+
+  saveRepairChanges(): void {
+    this.api.updateRepair(this.editingRepair).subscribe({
+      next: () => { this.messageService.add({ severity: 'success', summary: 'Reparación actualizada', detail: 'Los cambios fueron guardados.' }); this.showEditModal = false; this.reload(); },
+      error: (error) => this.messageService.add({ severity: 'error', summary: 'Error', detail: `No se pudo actualizar la reparación (${error?.status || 'sin código'}).` })
+    });
+  }
+
+  deleteRepair(repair: Repair): void {
+    if (!repair.id) return;
+    this.api.deleteRepair(repair.id).subscribe({
+      next: () => { this.messageService.add({ severity: 'success', summary: 'Reparación eliminada', detail: `Orden #${repair.orderNumber} eliminada.` }); this.reload(); },
+      error: (error) => this.messageService.add({ severity: 'error', summary: 'Error', detail: `No se pudo eliminar (${error?.status || 'sin código'}).` })
+    });
+  }
+
   applyFilters(): void {
     const term = this.searchTerm.trim().toLowerCase();
     this.filteredRepairs = this.repairs.filter((r) => {

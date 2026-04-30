@@ -18,12 +18,12 @@ import org.springframework.stereotype.Service;
 public class JwtService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(JwtService.class);
-    private static final long DEFAULT_EXPIRATION_MINUTES = 720L;
+    private static final long DEFAULT_EXPIRATION_MINUTES = 60L;
 
     @Value("${jwt.secret}")
     private String secret;
 
-    @Value("${jwt.expiration-minutes:720}")
+    @Value("${jwt.expiration-minutes:60}")
     private String expirationMinutesRaw;
 
     public String generateToken(UserDetails userDetails) {

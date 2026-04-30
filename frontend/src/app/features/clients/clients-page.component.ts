@@ -10,7 +10,7 @@ import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { ApiService } from '../../core/services/api.service';
 import { Client } from '../../shared/models/client.model';
-import { MessageService } from 'primeng/api';
+import { Repair } from '../../shared/models/repair.model';
 
 @Component({
   selector: 'app-clients-page',
@@ -35,13 +35,14 @@ import { MessageService } from 'primeng/api';
         <div class="table-toolbar">
           <span class="p-input-icon-left"><i class="pi pi-search"></i><input pInputText [(ngModel)]="searchTerm" (ngModelChange)="onSearch()" placeholder="Buscar por nombre, DNI o email" /></span>
         </div>
-        <p-table [value]="clients" size="small" [paginator]="true" [rows]="10">
-          <ng-template pTemplate="header"><tr><th>Nombre</th><th>DNI</th><th>Email</th><th>Teléfono</th><th>Acciones</th></tr></ng-template>
+        <p-table [value]="clients" size="small" [paginator]="true" [rows]="10" [sortMode]="multiple">
+          <ng-template pTemplate="header"><tr><th pSortableColumn="name">Nombre <p-sortIcon field="name"></p-sortIcon></th><th pSortableColumn="dni">DNI <p-sortIcon field="dni"></p-sortIcon></th><th pSortableColumn="email">Email <p-sortIcon field="email"></p-sortIcon></th><th pSortableColumn="phone">Teléfono <p-sortIcon field="phone"></p-sortIcon></th><th>Acciones</th></tr></ng-template>
           <ng-template pTemplate="body" let-c>
             <tr>
-              <td>{{ c.name }} {{ c.lastName }}</td><td>{{ c.dni }}</td><td>{{ c.email }}</td><td>{{ c.phone }}</td>
+              <td>{{ c.name }} {{ c.lastName }}</td><td>{{ c.dni }}</td><td>{{ c.email }}</td><td>{{ c.phone }} <a [href]="whatsAppLink(c.phone)" target="_blank" rel="noopener" class="wa-link"><i class="pi pi-whatsapp"></i></a></td>
               <td>
                 <button pButton type="button" class="p-button-text p-button-sm" icon="pi pi-pencil" (click)="openEdit(c)"></button>
+                <button pButton type="button" class="p-button-text p-button-sm" icon="pi pi-history" (click)="openRepairs(c)"></button>
                 <button pButton type="button" class="p-button-text p-button-sm" icon="pi pi-trash" (click)="confirmDelete(c)"></button>
               </td>
             </tr>
@@ -58,6 +59,18 @@ import { MessageService } from 'primeng/api';
       <div class="field"><label>Celular</label><input pInputText [(ngModel)]="editing.phone" /></div>
       <button pButton type="button" label="Guardar cambios" icon="pi pi-check" (click)="updateClient()"></button>
     </p-dialog>
+
+
+    <p-dialog header="Reparaciones del cliente" [(visible)]="repairsVisible" [modal]="true" [style]="{width:'56rem'}">
+      <p-table [value]="clientRepairs" size="small" [sortMode]="multiple">
+        <ng-template pTemplate="header"><tr><th pSortableColumn="orderNumber">Orden <p-sortIcon field="orderNumber"></p-sortIcon></th><th pSortableColumn="status">Estado <p-sortIcon field="status"></p-sortIcon></th><th pSortableColumn="receiveDateTime">Ingreso <p-sortIcon field="receiveDateTime"></p-sortIcon></th><th pSortableColumn="returnDateTime">Entrega <p-sortIcon field="returnDateTime"></p-sortIcon></th><th>Detalle</th></tr></ng-template>
+        <ng-template pTemplate="body" let-r><tr><td>#{{ r.orderNumber }}</td><td>{{ r.status }}</td><td>{{ r.receiveDateTime ? (r.receiveDateTime | date:'dd/MM/yyyy HH:mm') : '-' }}</td><td>{{ r.returnDateTime ? (r.returnDateTime | date:'dd/MM/yyyy HH:mm') : '-' }}</td><td><button pButton type="button" class="p-button-text p-button-sm" icon="pi pi-eye" (click)="selectedRepair=r"></button></td></tr></ng-template>
+      </p-table>
+      @if (selectedRepair) {
+        <div class="field"><label>Descripción</label><div>{{ selectedRepair.description || 'Sin descripción' }}</div></div>
+        <div class="field"><label>Presupuesto</label><div>{{ (selectedRepair.quotedAmount || 0) | currency:'ARS':'symbol':'1.2-2':'es-AR' }}</div></div>
+      }
+    </p-dialog>
   `
 })
 export class ClientsPageComponent implements OnInit {
@@ -66,6 +79,9 @@ export class ClientsPageComponent implements OnInit {
   editing: Client = { name: '', lastName: '', dni: '', email: '', phone: '' };
   editVisible = false;
   searchTerm = '';
+  repairsVisible = false;
+  clientRepairs: Repair[] = [];
+  selectedRepair: Repair | null = null;
 
   constructor(private readonly api: ApiService, private readonly messageService: MessageService, private readonly confirmationService: ConfirmationService) {}
 
@@ -87,6 +103,16 @@ export class ClientsPageComponent implements OnInit {
     });
   }
 
+  openRepairs(client: Client): void {
+    this.api.getRepairs().subscribe((repairs) => {
+      this.clientRepairs = repairs
+        .filter((repair) => repair.idClient === client.id)
+        .sort((a, b) => new Date(b.receiveDateTime || 0).getTime() - new Date(a.receiveDateTime || 0).getTime());
+      this.selectedRepair = this.clientRepairs[0] || null;
+      this.repairsVisible = true;
+    });
+  }
+
   confirmDelete(client: Client): void {
     this.confirmationService.confirm({
       message: `¿Eliminar a ${client.name} ${client.lastName}?`,
@@ -105,5 +131,6 @@ export class ClientsPageComponent implements OnInit {
   }
 
   onSearch(): void { if (!this.searchTerm.trim()) { this.reload(); return; } this.api.searchClients(this.searchTerm).subscribe((clients) => (this.clients = clients)); }
+  whatsAppLink(phone: string): string { const digits = (phone || "").replace(/\D/g, ""); return `https://wa.me/${digits}`; }
   private reload(): void { this.api.getClients().subscribe((clients) => (this.clients = clients.slice().reverse())); }
 }

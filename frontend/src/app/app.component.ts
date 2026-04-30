@@ -1,6 +1,6 @@
 import { Component } from '@angular/core';
 import { Router } from '@angular/router';
-import { RouterLink, RouterOutlet } from '@angular/router';
+import { RouterOutlet } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { AuthService } from './core/auth/auth.service';
 import { MenubarModule } from 'primeng/menubar';
@@ -16,7 +16,7 @@ import { LoadingService } from './core/services/loading.service';
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet, RouterLink, CommonModule, MenubarModule, MenuModule, ButtonModule, AvatarModule, ProgressSpinnerModule, ToastModule],
+  imports: [RouterOutlet, CommonModule, MenubarModule, MenuModule, ButtonModule, AvatarModule, ProgressSpinnerModule, ToastModule],
   template: `
     <p-toast position="top-right"></p-toast>
     <main class="app-shell" [class.is-loading]="(loadingService.loading$ | async) !== 0">
@@ -64,12 +64,19 @@ export class AppComponent {
   ];
   get username(): string { return localStorage.getItem('fullName') || this.getNameFromToken() || localStorage.getItem('username') || 'Usuario'; }
 
+  private parseJwtPayload(token: string): Record<string, unknown> {
+    const base64Url = token.split('.')[1] || "";
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const padded = base64 + "=".repeat((4 - (base64.length % 4)) % 4);
+    return JSON.parse(atob(padded));
+  }
+
   private getNameFromToken(): string | null {
     const token = localStorage.getItem('token');
     if (!token) return null;
     try {
-      const payload = JSON.parse(atob(token.split('.')[1]));
-      return payload.fullName || payload.name || payload.preferred_username || null;
+      const payload = this.parseJwtPayload(token);
+      return (payload['fullName'] as string) || (payload['name'] as string) || (payload['preferred_username'] as string) || null;
     } catch {
       return null;
     }

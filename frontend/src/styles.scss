@@ -159,3 +159,17 @@ textarea.p-inputtext {
 .p-card .p-card-body {
   padding: 1rem 1rem 1.1rem 1rem !important;
 }
+
+
+.repairs-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .65rem;
+}
+.repairs-filters .filter-search { width: min(30rem, 100%); }
+.repairs-filters .compact-filter { width: 11rem; min-width: 11rem; }
+@media (max-width: 900px) {
+  .repairs-filters .filter-search,
+  .repairs-filters .compact-filter { width: 100%; min-width: 0; }
+}

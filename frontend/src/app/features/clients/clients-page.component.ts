@@ -1,4 +1,5 @@
 import { Component, OnInit } from '@angular/core';
+import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { CardModule } from 'primeng/card';
@@ -35,7 +36,7 @@ import { Repair } from '../../shared/models/repair.model';
         <div class="table-toolbar">
           <span class="p-input-icon-left"><i class="pi pi-search"></i><input pInputText [(ngModel)]="searchTerm" (ngModelChange)="onSearch()" placeholder="Buscar por nombre, DNI o email" /></span>
         </div>
-        <p-table [value]="clients" size="small" [paginator]="true" [rows]="10" [sortMode]="multiple">
+        <p-table [value]="clients" size="small" [paginator]="true" [rows]="10" sortMode="multiple">
           <ng-template pTemplate="header"><tr><th pSortableColumn="name">Nombre <p-sortIcon field="name"></p-sortIcon></th><th pSortableColumn="dni">DNI <p-sortIcon field="dni"></p-sortIcon></th><th pSortableColumn="email">Email <p-sortIcon field="email"></p-sortIcon></th><th pSortableColumn="phone">Teléfono <p-sortIcon field="phone"></p-sortIcon></th><th>Acciones</th></tr></ng-template>
           <ng-template pTemplate="body" let-c>
             <tr>
@@ -62,9 +63,9 @@ import { Repair } from '../../shared/models/repair.model';
 
 
     <p-dialog header="Reparaciones del cliente" [(visible)]="repairsVisible" [modal]="true" [style]="{width:'56rem'}">
-      <p-table [value]="clientRepairs" size="small" [sortMode]="multiple">
+      <p-table [value]="clientRepairs" size="small" sortMode="multiple">
         <ng-template pTemplate="header"><tr><th pSortableColumn="orderNumber">Orden <p-sortIcon field="orderNumber"></p-sortIcon></th><th pSortableColumn="status">Estado <p-sortIcon field="status"></p-sortIcon></th><th pSortableColumn="receiveDateTime">Ingreso <p-sortIcon field="receiveDateTime"></p-sortIcon></th><th pSortableColumn="returnDateTime">Entrega <p-sortIcon field="returnDateTime"></p-sortIcon></th><th>Detalle</th></tr></ng-template>
-        <ng-template pTemplate="body" let-r><tr><td>#{{ r.orderNumber }}</td><td>{{ r.status }}</td><td>{{ r.receiveDateTime ? (r.receiveDateTime | date:'dd/MM/yyyy HH:mm') : '-' }}</td><td>{{ r.returnDateTime ? (r.returnDateTime | date:'dd/MM/yyyy HH:mm') : '-' }}</td><td><button pButton type="button" class="p-button-text p-button-sm" icon="pi pi-eye" (click)="selectedRepair=r"></button></td></tr></ng-template>
+        <ng-template pTemplate="body" let-r><tr><td>#{{ r.orderNumber }}</td><td>{{ r.status }}</td><td>{{ r.receiveDateTime ? (r.receiveDateTime | date:'dd/MM/yyyy HH:mm') : '-' }}</td><td>{{ r.returnDateTime ? (r.returnDateTime | date:'dd/MM/yyyy HH:mm') : '-' }}</td><td><button pButton type="button" class="p-button-text p-button-sm" icon="pi pi-eye" (click)="goToRepair(r)"></button></td></tr></ng-template>
       </p-table>
       @if (selectedRepair) {
         <div class="field"><label>Descripción</label><div>{{ selectedRepair.description || 'Sin descripción' }}</div></div>
@@ -83,7 +84,7 @@ export class ClientsPageComponent implements OnInit {
   clientRepairs: Repair[] = [];
   selectedRepair: Repair | null = null;
 
-  constructor(private readonly api: ApiService, private readonly messageService: MessageService, private readonly confirmationService: ConfirmationService) {}
+  constructor(private readonly api: ApiService, private readonly messageService: MessageService, private readonly confirmationService: ConfirmationService, private readonly router: Router) {}
 
   ngOnInit(): void { this.reload(); }
 
@@ -99,7 +100,7 @@ export class ClientsPageComponent implements OnInit {
   updateClient(): void {
     this.api.createClient(this.editing).subscribe({
       next: () => { this.messageService.add({ severity: 'success', summary: 'Cliente actualizado', detail: 'Cambios guardados.' }); this.editVisible = false; this.reload(); },
-      error: () => this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudo actualizar el cliente.' })
+      error: (error) => { const detail = error?.status === 403 ? 'No autorizado (403). Verificá permisos/token de sesión.' : 'No se pudo actualizar el cliente.'; this.messageService.add({ severity: 'error', summary: 'Error', detail }); }
     });
   }
 
@@ -113,6 +114,13 @@ export class ClientsPageComponent implements OnInit {
     });
   }
 
+
+  goToRepair(repair: Repair): void {
+    this.selectedRepair = repair;
+    this.repairsVisible = false;
+    const term = repair.orderNumber || repair.id || '';
+    this.router.navigate(['/reparaciones'], { queryParams: term ? { q: term } : undefined });
+  }
   confirmDelete(client: Client): void {
     this.confirmationService.confirm({
       message: `¿Eliminar a ${client.name} ${client.lastName}?`,
@@ -126,7 +134,7 @@ export class ClientsPageComponent implements OnInit {
   deleteClient(client: Client): void {
     this.api.deleteClient(client.id!).subscribe({
       next: () => { this.messageService.add({ severity: 'success', summary: 'Cliente eliminado', detail: 'Se eliminó correctamente.' }); this.reload(); },
-      error: () => this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudo eliminar el cliente.' })
+      error: (error) => { const detail = error?.status === 403 ? 'No autorizado (403). Verificá permisos/token de sesión.' : 'No se pudo eliminar el cliente.'; this.messageService.add({ severity: 'error', summary: 'Error', detail }); }
     });
   }
 

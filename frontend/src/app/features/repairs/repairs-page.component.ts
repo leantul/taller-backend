@@ -11,6 +11,8 @@ import { InputNumberModule } from 'primeng/inputnumber';
 import { TagModule } from 'primeng/tag';
 import { DatePickerModule } from 'primeng/datepicker';
 import { DialogModule } from 'primeng/dialog';
+import { ConfirmDialogModule } from 'primeng/confirmdialog';
+import { ConfirmationService } from 'primeng/api';
 import { ApiService } from '../../core/services/api.service';
 import { Repair } from '../../shared/models/repair.model';
 import { Client } from '../../shared/models/client.model';
@@ -20,7 +22,8 @@ import { MessageService } from 'primeng/api';
 @Component({
   selector: 'app-repairs-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, CardModule, InputTextModule, ButtonModule, TableModule, SelectModule, InputNumberModule, TagModule, DatePickerModule, DialogModule],
+  imports: [CommonModule, FormsModule, CardModule, InputTextModule, ButtonModule, TableModule, SelectModule, InputNumberModule, TagModule, DatePickerModule, DialogModule, ConfirmDialogModule],
+  providers: [ConfirmationService],
   templateUrl: './repairs-page.component.html'
 })
 export class RepairsPageComponent implements OnInit {
@@ -41,6 +44,9 @@ export class RepairsPageComponent implements OnInit {
   editingRepair: Repair = { idDevice: '', idClient: '', orderNumber: '', description: '', status: 'POR_RECIBIR', price: 0, quotedAmount: 0, quoteNotes: '' };
   statusEditingRepair: Repair | null = null;
   searchTerm = '';
+  isSaving = false;
+  isUpdating = false;
+  isDeleting = false;
   fromDate: Date | null = null;
   toDate: Date | null = null;
   statusOptions = [
@@ -50,7 +56,11 @@ export class RepairsPageComponent implements OnInit {
     { label: 'Desktop', value: 'DESKTOP' }, { label: 'Notebook', value: 'NOTEBOOK' }, { label: 'Tablet', value: 'TABLET' }, { label: 'Celular', value: 'CELULAR' }, { label: 'Otros', value: 'OTROS' }
   ];
 
+<<<<<<< codex/implement-editable-records-in-devices-page-ouxfpt
+  constructor(private readonly api: ApiService, private readonly messageService: MessageService, private readonly route: ActivatedRoute, private readonly confirmationService: ConfirmationService) {}
+=======
   constructor(private readonly api: ApiService, private readonly messageService: MessageService, private readonly route: ActivatedRoute) {}
+>>>>>>> master
   ngOnInit(): void { this.reload(); this.api.getClients().subscribe(c => { this.clients = c; this.clientsById = new Map(c.filter(item => !!item.id).map(item => [item.id!, item])); }); this.api.getDevices().subscribe(d => this.allDevices = d); this.route.queryParamMap.subscribe((params) => { const q = params.get('q') || ''; if (q !== this.searchTerm) { this.searchTerm = q; this.applyFilters(); } }); }
 
   selectClient(client: Client): void {
@@ -72,17 +82,22 @@ export class RepairsPageComponent implements OnInit {
   }
 
   save(): void {
-    const nextOrder = (this.repairs.length + 1).toString();
-    const payload = { ...this.draft, orderNumber: nextOrder };
+    if (!this.draft.idClient || !this.draft.idDevice || !this.draft.description?.trim()) {
+      this.messageService.add({ severity: 'warn', summary: 'Faltan datos', detail: 'Cliente, dispositivo y falla reportada son obligatorios.' });
+      return;
+    }
+    const payload = { ...this.draft, orderNumber: this.draft.orderNumber || '' };
+    this.isSaving = true;
     this.api.createRepair(payload).subscribe({
       next: () => {
-        this.messageService.add({ severity: 'success', summary: 'Reparación guardada', detail: `Alta creada con orden #${nextOrder}.` });
+        this.isSaving = false;
+        this.messageService.add({ severity: 'success', summary: 'Reparación guardada', detail: 'Alta creada correctamente.' });
         this.draft = { idDevice: '', idClient: '', orderNumber: '', description: '', status: 'POR_RECIBIR', price: 0, quotedAmount: 0, quoteNotes: '' };
         this.selectedClientName='';
         this.clientDevices=[];
         this.reload();
       },
-      error: (error) => this.messageService.add({ severity: 'error', summary: 'Error', detail: `No se pudo guardar la reparación (${error?.status || 'sin código'}).` })
+      error: (error) => { this.isSaving = false; this.messageService.add({ severity: 'error', summary: 'Error', detail: this.errorDetail(error, 'No se pudo guardar la reparación.') }); }
     });
   }
 
@@ -93,9 +108,11 @@ export class RepairsPageComponent implements OnInit {
 
   saveStatus(): void {
     if (!this.statusEditingRepair) return;
+    this.isUpdating = true;
     this.api.updateRepair(this.statusEditingRepair).subscribe({
-      next: () => { this.messageService.add({ severity: 'success', summary: 'Estado actualizado', detail: 'Se actualizó el estado.' }); this.showStatusModal = false; this.statusEditingRepair = null; this.reload(); },
-      error: (error) => this.messageService.add({ severity: 'error', summary: 'Error', detail: `No se pudo actualizar el estado (${error?.status || 'sin código'}).` })
+      next: () => {
+        this.isUpdating = false; this.messageService.add({ severity: 'success', summary: 'Estado actualizado', detail: 'Se actualizó el estado.' }); this.showStatusModal = false; this.statusEditingRepair = null; this.reload(); },
+      error: (error) => { this.isUpdating = false; this.messageService.add({ severity: 'error', summary: 'Error', detail: this.errorDetail(error, 'No se pudo actualizar el estado.') }); }
     });
   }
 
@@ -105,18 +122,37 @@ export class RepairsPageComponent implements OnInit {
   }
 
   saveRepairChanges(): void {
+    this.isUpdating = true;
     this.api.updateRepair(this.editingRepair).subscribe({
-      next: () => { this.messageService.add({ severity: 'success', summary: 'Reparación actualizada', detail: 'Los cambios fueron guardados.' }); this.showEditModal = false; this.reload(); },
-      error: (error) => this.messageService.add({ severity: 'error', summary: 'Error', detail: `No se pudo actualizar la reparación (${error?.status || 'sin código'}).` })
+      next: () => {
+        this.isUpdating = false; this.messageService.add({ severity: 'success', summary: 'Reparación actualizada', detail: 'Los cambios fueron guardados.' }); this.showEditModal = false; this.reload(); },
+      error: (error) => { this.isUpdating = false; this.messageService.add({ severity: 'error', summary: 'Error', detail: this.errorDetail(error, 'No se pudo actualizar la reparación.') }); }
+    });
+  }
+
+  confirmDeleteRepair(repair: Repair): void {
+    this.confirmationService.confirm({
+      message: `¿Eliminar la orden #${repair.orderNumber}?`,
+      header: 'Confirmar eliminación',
+      acceptLabel: 'Eliminar',
+      rejectLabel: 'Cancelar',
+      accept: () => this.deleteRepair(repair)
     });
   }
 
   deleteRepair(repair: Repair): void {
     if (!repair.id) return;
+    this.isDeleting = true;
     this.api.deleteRepair(repair.id).subscribe({
-      next: () => { this.messageService.add({ severity: 'success', summary: 'Reparación eliminada', detail: `Orden #${repair.orderNumber} eliminada.` }); this.reload(); },
-      error: (error) => this.messageService.add({ severity: 'error', summary: 'Error', detail: `No se pudo eliminar (${error?.status || 'sin código'}).` })
+      next: () => {
+        this.isDeleting = false; this.messageService.add({ severity: 'success', summary: 'Reparación eliminada', detail: `Orden #${repair.orderNumber} eliminada.` }); this.reload(); },
+      error: (error) => { this.isDeleting = false; this.messageService.add({ severity: 'error', summary: 'Error', detail: this.errorDetail(error, 'No se pudo eliminar la reparación.') }); }
     });
+  }
+
+  private errorDetail(error: any, fallback: string): string {
+    if (error?.status === 403) return 'No autorizado (403). Verificá permisos/token de sesión.';
+    return `${fallback} (${error?.status || 'sin código'}).`;
   }
 
   applyFilters(): void {

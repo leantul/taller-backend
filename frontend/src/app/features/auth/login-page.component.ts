@@ -23,6 +23,7 @@ import { ThemeMode, ThemeService } from '../../core/services/theme.service';
           <div class="field auth-field"><label>Usuario</label><input pInputText [(ngModel)]="username" name="username" required /></div>
           <div class="field auth-field"><label>Contraseña</label><p-password [(ngModel)]="password" name="password" [feedback]="false" [toggleMask]="true" [style]="{ width: '100%' }" inputStyleClass="auth-password-input" required></p-password></div>
           <button pButton type="submit" label="Entrar" icon="pi pi-sign-in"></button>
+          <button pButton type="button" [icon]="themeMode === 'dark' ? 'pi pi-sun' : 'pi pi-moon'" class="p-button-text p-button-rounded login-theme-icon" (click)="toggleTheme()"></button>
         </form>
         @if (error) { <small class="error"><i class="pi pi-exclamation-circle"></i> {{ error }}</small> }
       </p-card>

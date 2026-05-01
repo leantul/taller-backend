@@ -42,7 +42,11 @@ public class RepairService {
         repair.setIdDevice(resolveDeviceId(repairDTO));
         repair.setIdClient(resolveClientId(repairDTO));
         repair.setDescription(repairDTO.getDescription());
-        repair.setOrderNumber(repairDTO.getOrderNumber());
+        if (isNew && (repairDTO.getOrderNumber() == null || repairDTO.getOrderNumber().isBlank())) {
+            repair.setOrderNumber(nextOrderNumber());
+        } else {
+            repair.setOrderNumber(repairDTO.getOrderNumber());
+        }
         repair.setStatus(repairDTO.getStatus());
 
         LocalDateTime receiveDateTime = repairDTO.getReceiveDateTime() != null
@@ -118,6 +122,23 @@ public class RepairService {
                 .map(Repair::getPrice)
                 .filter(v -> v != null)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+
+    private String nextOrderNumber() {
+        int max = repairRepository.findAll().stream()
+                .map(Repair::getOrderNumber)
+                .filter(v -> v != null && !v.isBlank())
+                .map(v -> {
+                    try {
+                        return Integer.parseInt(v.trim());
+                    } catch (NumberFormatException ex) {
+                        return 0;
+                    }
+                })
+                .max(Integer::compareTo)
+                .orElse(0);
+        return String.valueOf(max + 1);
     }
 
     private RepairDTO toDto(Repair repair) {

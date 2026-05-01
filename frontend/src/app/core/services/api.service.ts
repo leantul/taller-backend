@@ -4,7 +4,7 @@ import { Observable } from 'rxjs';
 import { Client } from '../../shared/models/client.model';
 import { APP_CONFIG } from '../config/app-config';
 import { Device } from '../../shared/models/device.model';
-import { Repair } from '../../shared/models/repair.model';
+import { Repair, RepairCreateDTO, RepairUpdateDTO } from '../../shared/models/repair.model';
 
 @Injectable({ providedIn: 'root' })
 export class ApiService {
@@ -25,8 +25,8 @@ export class ApiService {
 
   getRepairs(): Observable<Repair[]> { return this.http.get<Repair[]>(`${this.baseUrl}/repair`); }
   searchRepairs(term: string): Observable<Repair[]> { return this.http.get<Repair[]>(`${this.baseUrl}/repair/search?term=${encodeURIComponent(term)}`); }
-  createRepair(payload: Repair): Observable<Repair> { return this.http.post<Repair>(`${this.baseUrl}/repair`, payload); }
-  updateRepair(payload: Repair): Observable<Repair> { return this.http.put<Repair>(`${this.baseUrl}/repair`, payload); }
+  createRepair(payload: RepairCreateDTO): Observable<Repair> { return this.http.post<Repair>(`${this.baseUrl}/repair`, payload); }
+  updateRepair(payload: RepairUpdateDTO): Observable<Repair> { return this.http.put<Repair>(`${this.baseUrl}/repair`, payload); }
   deleteRepair(id: string): Observable<void> { return this.http.delete<void>(`${this.baseUrl}/repair/${id}`); }
 
   getLatestClients(): Observable<Client[]> { return this.http.get<Client[]>(`${this.baseUrl}/dashboard/latest-clients`); }

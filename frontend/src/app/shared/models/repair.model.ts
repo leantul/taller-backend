@@ -11,3 +11,7 @@ export interface Repair {
   receiveDateTime?: string;
   returnDateTime?: string;
 }
+
+
+export type RepairCreateDTO = Omit<Repair, "id" | "receiveDateTime" | "returnDateTime"> & { orderNumber?: string };
+export type RepairUpdateDTO = Partial<Repair> & Pick<Repair, "id">;

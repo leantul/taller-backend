@@ -44,6 +44,9 @@ export class RepairsPageComponent implements OnInit {
   editingRepair: Repair = { idDevice: '', idClient: '', orderNumber: '', description: '', status: 'POR_RECIBIR', price: 0, quotedAmount: 0, quoteNotes: '' };
   statusEditingRepair: Repair | null = null;
   searchTerm = '';
+  isSaving = false;
+  isUpdating = false;
+  isDeleting = false;
   fromDate: Date | null = null;
   toDate: Date | null = null;
   statusOptions = [
@@ -80,15 +83,17 @@ export class RepairsPageComponent implements OnInit {
       return;
     }
     const payload = { ...this.draft, orderNumber: this.draft.orderNumber || '' };
+    this.isSaving = true;
     this.api.createRepair(payload).subscribe({
       next: () => {
+        this.isSaving = false;
         this.messageService.add({ severity: 'success', summary: 'Reparación guardada', detail: 'Alta creada correctamente.' });
         this.draft = { idDevice: '', idClient: '', orderNumber: '', description: '', status: 'POR_RECIBIR', price: 0, quotedAmount: 0, quoteNotes: '' };
         this.selectedClientName='';
         this.clientDevices=[];
         this.reload();
       },
-      error: (error) => this.messageService.add({ severity: 'error', summary: 'Error', detail: this.errorDetail(error, 'No se pudo guardar la reparación.') })
+      error: (error) => { this.isSaving = false; this.messageService.add({ severity: 'error', summary: 'Error', detail: this.errorDetail(error, 'No se pudo guardar la reparación.') }); }
     });
   }
 
@@ -99,9 +104,11 @@ export class RepairsPageComponent implements OnInit {
 
   saveStatus(): void {
     if (!this.statusEditingRepair) return;
+    this.isUpdating = true;
     this.api.updateRepair(this.statusEditingRepair).subscribe({
-      next: () => { this.messageService.add({ severity: 'success', summary: 'Estado actualizado', detail: 'Se actualizó el estado.' }); this.showStatusModal = false; this.statusEditingRepair = null; this.reload(); },
-      error: (error) => this.messageService.add({ severity: 'error', summary: 'Error', detail: this.errorDetail(error, 'No se pudo actualizar el estado.') })
+      next: () => {
+        this.isUpdating = false; this.messageService.add({ severity: 'success', summary: 'Estado actualizado', detail: 'Se actualizó el estado.' }); this.showStatusModal = false; this.statusEditingRepair = null; this.reload(); },
+      error: (error) => { this.isUpdating = false; this.messageService.add({ severity: 'error', summary: 'Error', detail: this.errorDetail(error, 'No se pudo actualizar el estado.') }); }
     });
   }
 
@@ -111,9 +118,11 @@ export class RepairsPageComponent implements OnInit {
   }
 
   saveRepairChanges(): void {
+    this.isUpdating = true;
     this.api.updateRepair(this.editingRepair).subscribe({
-      next: () => { this.messageService.add({ severity: 'success', summary: 'Reparación actualizada', detail: 'Los cambios fueron guardados.' }); this.showEditModal = false; this.reload(); },
-      error: (error) => this.messageService.add({ severity: 'error', summary: 'Error', detail: this.errorDetail(error, 'No se pudo actualizar la reparación.') })
+      next: () => {
+        this.isUpdating = false; this.messageService.add({ severity: 'success', summary: 'Reparación actualizada', detail: 'Los cambios fueron guardados.' }); this.showEditModal = false; this.reload(); },
+      error: (error) => { this.isUpdating = false; this.messageService.add({ severity: 'error', summary: 'Error', detail: this.errorDetail(error, 'No se pudo actualizar la reparación.') }); }
     });
   }
 
@@ -129,9 +138,11 @@ export class RepairsPageComponent implements OnInit {
 
   deleteRepair(repair: Repair): void {
     if (!repair.id) return;
+    this.isDeleting = true;
     this.api.deleteRepair(repair.id).subscribe({
-      next: () => { this.messageService.add({ severity: 'success', summary: 'Reparación eliminada', detail: `Orden #${repair.orderNumber} eliminada.` }); this.reload(); },
-      error: (error) => this.messageService.add({ severity: 'error', summary: 'Error', detail: this.errorDetail(error, 'No se pudo eliminar la reparación.') })
+      next: () => {
+        this.isDeleting = false; this.messageService.add({ severity: 'success', summary: 'Reparación eliminada', detail: `Orden #${repair.orderNumber} eliminada.` }); this.reload(); },
+      error: (error) => { this.isDeleting = false; this.messageService.add({ severity: 'error', summary: 'Error', detail: this.errorDetail(error, 'No se pudo eliminar la reparación.') }); }
     });
   }
 

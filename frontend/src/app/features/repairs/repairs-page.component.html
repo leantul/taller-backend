@@ -15,7 +15,7 @@
       <div class="field"><label>Presupuesto enviado</label><p-inputNumber [(ngModel)]="draft.quotedAmount" name="quotedAmount" mode="currency" currency="ARS" locale="es-AR" [min]="0"></p-inputNumber></div>
       <div class="field"><label>Detalle del presupuesto</label><textarea class="p-inputtext" rows="5" [(ngModel)]="draft.quoteNotes" name="quoteNotes" placeholder="Detalle completo del trabajo"></textarea></div>
       <div class="field"><label>Monto final</label><p-inputNumber [(ngModel)]="draft.price" name="price" mode="currency" currency="ARS" locale="es-AR" [min]="0"></p-inputNumber></div>
-      <button pButton type="submit" label="Guardar reparación" icon="pi pi-check"></button>
+      <button pButton type="submit" label="Guardar reparación" icon="pi pi-check" [disabled]="isSaving" [loading]="isSaving"></button>
     </form>
   </p-card>
 
@@ -35,9 +35,9 @@
           <td>{{ (r.price || 0) | currency:'ARS':'symbol':'1.2-2':'es-AR' }}</td>
           <td>
             <div class="action-buttons">
-              <button pButton type="button" class="p-button-text p-button-rounded" icon="pi pi-sync" (click)="openStatusModal(r)"></button>
-              <button pButton type="button" class="p-button-text p-button-rounded" icon="pi pi-pencil" (click)="openEditModal(r)"></button>
-              <button pButton type="button" class="p-button-text p-button-rounded p-button-danger" icon="pi pi-trash" (click)="confirmDeleteRepair(r)"></button>
+              <button pButton type="button" class="p-button-text p-button-rounded" icon="pi pi-sync" ariaLabel="Cambiar estado" (click)="openStatusModal(r)"></button>
+              <button pButton type="button" class="p-button-text p-button-rounded" icon="pi pi-pencil" ariaLabel="Editar reparación" (click)="openEditModal(r)"></button>
+              <button pButton type="button" class="p-button-text p-button-rounded p-button-danger" icon="pi pi-trash" ariaLabel="Eliminar reparación" [disabled]="isDeleting" (click)="confirmDeleteRepair(r)"></button>
             </div>
           </td>
         </tr>
@@ -49,7 +49,7 @@
 <p-dialog header="Cambiar estado" [(visible)]="showStatusModal" [modal]="true" [style]="{width:'28rem'}">
   @if (statusEditingRepair) {
     <div class="field"><label>Estado</label><p-select [options]="statusOptions" optionLabel="label" optionValue="value" [(ngModel)]="statusEditingRepair.status" appendTo="body"></p-select></div>
-    <button pButton type="button" label="Guardar" icon="pi pi-check" (click)="saveStatus()"></button>
+    <button pButton type="button" label="Guardar" icon="pi pi-check" [disabled]="isUpdating" [loading]="isUpdating" (click)="saveStatus()"></button>
   }
 </p-dialog>
 

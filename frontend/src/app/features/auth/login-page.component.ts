@@ -17,6 +17,7 @@ import { ThemeMode, ThemeService } from '../../core/services/theme.service';
   template: `
     <section class="auth-shell">
       <p-card class="auth-card modern-auth">
+        <div class="login-theme-toggle"><button pButton type="button" [label]="themeMode === 'dark' ? 'Tema claro' : 'Tema oscuro'" [icon]="themeMode === 'dark' ? 'pi pi-sun' : 'pi pi-moon'" class="p-button-text p-button-sm" (click)="toggleTheme()"></button></div>
         <img [src]="themeMode === 'dark' ? '/assets/logo-dark.png' : '/assets/logo-light.png'" alt="Logo" class="login-logo" />
         <form (ngSubmit)="submit()" class="p-fluid auth-form">
           <div class="field auth-field"><label>Usuario</label><input pInputText [(ngModel)]="username" name="username" required /></div>
@@ -36,6 +37,10 @@ export class LoginPageComponent {
   constructor(private readonly auth: AuthService, private readonly router: Router, private readonly messageService: MessageService, private readonly themeService: ThemeService) {
     this.themeMode = this.themeService.initTheme();
   }
+  toggleTheme(): void {
+    this.themeMode = this.themeService.toggleTheme(this.themeMode);
+  }
+
   submit(): void {
     this.auth.login(this.username, this.password).subscribe({
       next: () => this.router.navigate(['/']),

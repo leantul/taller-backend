@@ -272,3 +272,9 @@ textarea.p-inputtext {
 .page-grid .p-card .p-card-body { padding: .85rem .9rem !important; }
 .page-grid .field label { font-size: .88rem; }
 .page-grid .p-inputtext, .page-grid .p-select, .page-grid .p-inputnumber { font-size: .9rem; min-height: 2.3rem; }
+
+
+.device-inline-row { align-items: stretch; }
+.device-inline-row .device-select { flex: 1 1 auto; min-width: 0; }
+.device-inline-row .device-add-btn { flex: 0 0 auto; }
+.login-theme-toggle { width: 100%; display: flex; justify-content: flex-end; margin-bottom: .25rem; }

@@ -98,7 +98,7 @@ export class ClientsPageComponent implements OnInit {
   openEdit(client: Client): void { this.editing = { ...client }; this.editVisible = true; }
 
   updateClient(): void {
-    this.api.updateClient(this.editing).subscribe({
+    this.api.createClient(this.editing).subscribe({
       next: () => { this.messageService.add({ severity: 'success', summary: 'Cliente actualizado', detail: 'Cambios guardados.' }); this.editVisible = false; this.reload(); },
       error: (error) => { const detail = error?.status === 403 ? 'No autorizado (403). Verificá permisos/token de sesión.' : 'No se pudo actualizar el cliente.'; this.messageService.add({ severity: 'error', summary: 'Error', detail }); }
     });

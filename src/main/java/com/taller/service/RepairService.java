@@ -126,19 +126,8 @@ public class RepairService {
 
 
     private String nextOrderNumber() {
-        int max = repairRepository.findAll().stream()
-                .map(Repair::getOrderNumber)
-                .filter(v -> v != null && !v.isBlank())
-                .map(v -> {
-                    try {
-                        return Integer.parseInt(v.trim());
-                    } catch (NumberFormatException ex) {
-                        return 0;
-                    }
-                })
-                .max(Integer::compareTo)
-                .orElse(0);
-        return String.valueOf(max + 1);
+        Long value = repairRepository.nextOrderValue();
+        return String.valueOf(value);
     }
 
     private RepairDTO toDto(Repair repair) {

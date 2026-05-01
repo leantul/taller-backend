@@ -56,11 +56,7 @@ export class RepairsPageComponent implements OnInit {
     { label: 'Desktop', value: 'DESKTOP' }, { label: 'Notebook', value: 'NOTEBOOK' }, { label: 'Tablet', value: 'TABLET' }, { label: 'Celular', value: 'CELULAR' }, { label: 'Otros', value: 'OTROS' }
   ];
 
-<<<<<<< codex/implement-editable-records-in-devices-page-ouxfpt
   constructor(private readonly api: ApiService, private readonly messageService: MessageService, private readonly route: ActivatedRoute, private readonly confirmationService: ConfirmationService) {}
-=======
-  constructor(private readonly api: ApiService, private readonly messageService: MessageService, private readonly route: ActivatedRoute) {}
->>>>>>> master
   ngOnInit(): void { this.reload(); this.api.getClients().subscribe(c => { this.clients = c; this.clientsById = new Map(c.filter(item => !!item.id).map(item => [item.id!, item])); }); this.api.getDevices().subscribe(d => this.allDevices = d); this.route.queryParamMap.subscribe((params) => { const q = params.get('q') || ''; if (q !== this.searchTerm) { this.searchTerm = q; this.applyFilters(); } }); }
 
   selectClient(client: Client): void {

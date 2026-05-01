@@ -38,9 +38,7 @@ class RepairServiceTest {
 
     @Test
     void save_newRepair_assignsNextOrderAndReceiveDate() {
-        Repair existing = new Repair();
-        existing.setOrderNumber("1");
-        when(repairRepository.findAll()).thenReturn(List.of(existing));
+        when(repairRepository.nextOrderValue()).thenReturn(2L);
         when(repairRepository.save(any(Repair.class))).thenAnswer(inv -> {
             Repair r = inv.getArgument(0);
             r.setId("new-id");
@@ -63,7 +61,7 @@ class RepairServiceTest {
 
     @Test
     void save_retiradaWithoutReturnDate_assignsReturnDate() {
-        when(repairRepository.findAll()).thenReturn(List.of());
+        when(repairRepository.nextOrderValue()).thenReturn(1L);
         when(repairRepository.save(any(Repair.class))).thenAnswer(inv -> {
             Repair r = inv.getArgument(0);
             r.setId("id-1");

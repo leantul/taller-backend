@@ -100,7 +100,7 @@ export class ClientsPageComponent implements OnInit {
   updateClient(): void {
     this.api.updateClient(this.editing).subscribe({
       next: () => { this.messageService.add({ severity: 'success', summary: 'Cliente actualizado', detail: 'Cambios guardados.' }); this.editVisible = false; this.reload(); },
-      error: () => this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudo actualizar el cliente.' })
+      error: (error) => { const detail = error?.status === 403 ? 'No autorizado (403). Verificá permisos/token de sesión.' : 'No se pudo actualizar el cliente.'; this.messageService.add({ severity: 'error', summary: 'Error', detail }); }
     });
   }
 
@@ -134,7 +134,7 @@ export class ClientsPageComponent implements OnInit {
   deleteClient(client: Client): void {
     this.api.deleteClient(client.id!).subscribe({
       next: () => { this.messageService.add({ severity: 'success', summary: 'Cliente eliminado', detail: 'Se eliminó correctamente.' }); this.reload(); },
-      error: () => this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudo eliminar el cliente.' })
+      error: (error) => { const detail = error?.status === 403 ? 'No autorizado (403). Verificá permisos/token de sesión.' : 'No se pudo eliminar el cliente.'; this.messageService.add({ severity: 'error', summary: 'Error', detail }); }
     });
   }
 

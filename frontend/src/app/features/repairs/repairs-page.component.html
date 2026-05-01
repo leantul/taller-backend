@@ -54,8 +54,8 @@
 </p-dialog>
 
 <p-dialog header="Editar reparación" [(visible)]="showEditModal" [modal]="true" [style]="{width:'36rem'}">
-  <div class="field"><label>Dispositivo</label><input pInputText [(ngModel)]="editingRepair.idDevice" /></div>
-  <div class="field"><label>Cliente</label><input pInputText [(ngModel)]="editingRepair.idClient" /></div>
+  <div class="field"><label>Dispositivo</label><p-select [options]="deviceOptions" optionLabel="label" optionValue="value" [(ngModel)]="editingRepair.idDevice" appendTo="body"></p-select></div>
+  <div class="field"><label>Cliente</label><p-select [options]="clientOptions" optionLabel="label" optionValue="value" [(ngModel)]="editingRepair.idClient" appendTo="body"></p-select></div>
   <div class="field"><label>Falla reportada</label><textarea class="p-inputtext" rows="4" [(ngModel)]="editingRepair.description"></textarea></div>
   <div class="field"><label>Estado</label><p-select [options]="statusOptions" optionLabel="label" optionValue="value" [(ngModel)]="editingRepair.status" appendTo="body"></p-select></div>
   <div class="field"><label>Presupuesto enviado</label><p-inputNumber [(ngModel)]="editingRepair.quotedAmount" mode="currency" currency="ARS" locale="es-AR" [min]="0"></p-inputNumber></div>

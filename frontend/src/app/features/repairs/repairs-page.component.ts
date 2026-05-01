@@ -175,6 +175,14 @@ export class RepairsPageComponent implements OnInit {
 
 
 
+  get clientOptions(): { label: string; value: string }[] {
+    return this.clients.map((c) => ({ label: `${c.name} ${c.lastName}`.trim(), value: c.id || '' })).filter((c) => !!c.value);
+  }
+
+  get deviceOptions(): { label: string; value: string }[] {
+    return this.allDevices.map((d) => ({ label: `${d.brand || '-'} - ${d.model || '-'}` , value: d.id || '' })).filter((d) => !!d.value);
+  }
+
   get clientDeviceOptions(): { label: string; value: string }[] {
     return this.clientDevices.map((d) => ({
       label: `${d.brand || '-'} - ${d.model || '-'}` ,

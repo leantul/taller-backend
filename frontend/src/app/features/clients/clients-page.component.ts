@@ -21,7 +21,7 @@ import { Repair } from '../../shared/models/repair.model';
   template: `
     <p-confirmdialog></p-confirmdialog>
     <div class="page-grid">
-      <p-card header="Nuevo cliente" subheader="Alta rápida">
+      <p-card header="Nuevo cliente">
         <form class="p-fluid" (ngSubmit)="save()">
           <div class="field"><label>Nombre</label><input pInputText [(ngModel)]="draft.name" name="name" required /></div>
           <div class="field"><label>Apellido</label><input pInputText [(ngModel)]="draft.lastName" name="lastName" required /></div>

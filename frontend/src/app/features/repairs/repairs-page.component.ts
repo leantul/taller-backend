@@ -141,6 +141,15 @@ export class RepairsPageComponent implements OnInit {
     return `https://wa.me/${digits}`;
   }
 
+
+
+  get clientDeviceOptions(): { label: string; value: string }[] {
+    return this.clientDevices.map((d) => ({
+      label: `${d.brand || '-'} - ${d.model || '-'}` ,
+      value: d.id || ''
+    })).filter((d) => !!d.value);
+  }
+
   get filteredClients(): Client[] {
     const term = this.clientSearch.trim().toLowerCase();
     if (!term) return this.clients;

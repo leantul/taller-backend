@@ -20,4 +20,7 @@ public interface RepairRepository extends JpaRepository<Repair, String> {
 
     @Query("SELECT r FROM Repair r ORDER BY r.creationDateTime DESC")
     List<Repair> findLatest(Pageable pageable);
+
+    @Query(value = "SELECT nextval('repair_order_seq')", nativeQuery = true)
+    Long nextOrderValue();
 }

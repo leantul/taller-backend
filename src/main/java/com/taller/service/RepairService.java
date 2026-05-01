@@ -3,6 +3,7 @@ package com.taller.service;
 import com.taller.model.Repair;
 import com.taller.model.RepairPart;
 import com.taller.model.RepairPayment;
+import com.taller.model.enums.RepairStatusEnum;
 import com.taller.model.repository.RepairPaymentRepository;
 import com.taller.model.repository.RepairPartRepository;
 import com.taller.model.repository.RepairRepository;
@@ -36,14 +37,29 @@ public class RepairService {
         Repair repair = repairDTO.getId() != null
                 ? repairRepository.findById(repairDTO.getId()).orElseGet(Repair::new)
                 : new Repair();
+        boolean isNew = repair.getId() == null;
 
         repair.setIdDevice(resolveDeviceId(repairDTO));
         repair.setIdClient(resolveClientId(repairDTO));
         repair.setDescription(repairDTO.getDescription());
         repair.setOrderNumber(repairDTO.getOrderNumber());
         repair.setStatus(repairDTO.getStatus());
-        repair.setReceiveDateTime(repairDTO.getReceiveDateTime());
-        repair.setReturnDateTime(repairDTO.getReturnDateTime());
+
+        LocalDateTime receiveDateTime = repairDTO.getReceiveDateTime() != null
+                ? repairDTO.getReceiveDateTime()
+                : repair.getReceiveDateTime();
+        if (receiveDateTime == null && isNew) {
+            receiveDateTime = LocalDateTime.now();
+        }
+        repair.setReceiveDateTime(receiveDateTime);
+
+        LocalDateTime returnDateTime = repairDTO.getReturnDateTime() != null
+                ? repairDTO.getReturnDateTime()
+                : repair.getReturnDateTime();
+        if (returnDateTime == null && repairDTO.getStatus() == RepairStatusEnum.RETIRADA) {
+            returnDateTime = LocalDateTime.now();
+        }
+        repair.setReturnDateTime(returnDateTime);
         repair.setPrice(repairDTO.getPrice());
         repair.setLaborAmount(repairDTO.getLaborAmount());
         repair.setExtraAmount(repairDTO.getExtraAmount());

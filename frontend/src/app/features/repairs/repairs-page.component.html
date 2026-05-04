@@ -5,8 +5,9 @@
       <div class="field">
         <label>Cliente</label>
         <div class="inline-row">
-          <input pInputText [ngModel]="selectedClientName" name="selectedClientName" readonly placeholder="Seleccionar cliente" />
+          <p-autoComplete [(ngModel)]="selectedClientName" name="selectedClientName" [suggestions]="clientSuggestions" (completeMethod)="filterClientSuggestions($event.query)" (onSelect)="onClientAutocompleteSelect($event.value)" optionLabel="label" [forceSelection]="false" placeholder="Seleccionar cliente" styleClass="client-autocomplete"></p-autoComplete>
           <button pButton type="button" size="small" class="p-button-sm" icon="pi pi-search" [rounded]="true" [text]="true" (click)="showClientModal=true"></button>
+          <button pButton type="button" size="small" class="p-button-sm" icon="pi pi-user-plus" [rounded]="true" [text]="true" (click)="showNewClientModal=true"></button>
         </div>
       </div>
       <div class="field"><label>Dispositivo</label><div class="inline-row device-inline-row"><p-select styleClass="device-select" [options]="clientDeviceOptions" optionLabel="label" optionValue="value" [(ngModel)]="draft.idDevice" name="idDevice"></p-select><button pButton type="button" icon="pi pi-plus" class="p-button-sm device-add-btn" [disabled]="!draft.idClient" (click)="showDeviceModal=true"></button></div></div>
@@ -30,7 +31,7 @@
       <ng-template pTemplate="header"><tr><th pSortableColumn="orderNumber">Orden <p-sortIcon field="orderNumber"></p-sortIcon></th><th pSortableColumn="idClient">Cliente <p-sortIcon field="idClient"></p-sortIcon></th><th pSortableColumn="status">Estado <p-sortIcon field="status"></p-sortIcon></th><th pSortableColumn="quotedAmount">Presupuesto <p-sortIcon field="quotedAmount"></p-sortIcon></th><th pSortableColumn="price">Monto <p-sortIcon field="price"></p-sortIcon></th><th>Acción</th></tr></ng-template>
       <ng-template pTemplate="body" let-r>
         <tr>
-          <td>{{ r.orderNumber }}</td><td>{{ clientLabel(r) }}</td><td><p-tag [value]="r.status"></p-tag></td>
+          <td>{{ r.orderNumber }}</td><td>{{ clientLabel(r) }}</td><td><p-tag [value]="statusLabel(r.status)" [severity]="statusSeverity(r.status)"></p-tag></td>
           <td>{{ (r.quotedAmount || 0) | currency:'ARS':'symbol':'1.2-2':'es-AR' }}</td>
           <td>{{ (r.price || 0) | currency:'ARS':'symbol':'1.2-2':'es-AR' }}</td>
           <td>
@@ -57,10 +58,29 @@
   <div class="field"><label>Dispositivo</label><p-select [options]="deviceOptions" optionLabel="label" optionValue="value" [(ngModel)]="editingRepair.idDevice" appendTo="body"></p-select></div>
   <div class="field"><label>Cliente</label><p-select [options]="clientOptions" optionLabel="label" optionValue="value" [(ngModel)]="editingRepair.idClient" appendTo="body"></p-select></div>
   <div class="field"><label>Falla reportada</label><textarea class="p-inputtext" rows="4" [(ngModel)]="editingRepair.description"></textarea></div>
-  <div class="field"><label>Estado</label><p-select [options]="statusOptions" optionLabel="label" optionValue="value" [(ngModel)]="editingRepair.status" appendTo="body"></p-select></div>
+  <div class="field"><label>Estado</label><p-select [options]="statusOptions" optionLabel="label" optionValue="value" [(ngModel)]="editingRepair.status" (ngModelChange)="onEditStatusChange()" appendTo="body"></p-select></div>
+  @if (editingRepair.status === 'RETIRADA') {
+    <div class="field"><label>Fecha y hora de retiro</label><p-datepicker [(ngModel)]="editReturnDate" [showTime]="true" hourFormat="24" dateFormat="dd-mm-yy" appendTo="body"></p-datepicker></div>
+  }
   <div class="field"><label>Presupuesto enviado</label><p-inputNumber [(ngModel)]="editingRepair.quotedAmount" mode="currency" currency="ARS" locale="es-AR" [min]="0"></p-inputNumber></div>
   <div class="field"><label>Detalle del presupuesto</label><textarea class="p-inputtext" rows="4" [(ngModel)]="editingRepair.quoteNotes"></textarea></div>
+  <div class="field"><label>Mano de obra</label><p-inputNumber [(ngModel)]="editingRepair.laborAmount" mode="currency" currency="ARS" locale="es-AR" [min]="0"></p-inputNumber></div>
   <div class="field"><label>Monto final</label><p-inputNumber [(ngModel)]="editingRepair.price" mode="currency" currency="ARS" locale="es-AR" [min]="0"></p-inputNumber></div>
+  <div class="field">
+    <div class="inline-row" style="justify-content:space-between;align-items:center;">
+      <label>Repuestos cambiados</label>
+      <button pButton type="button" icon="pi pi-plus" class="p-button-sm" label="Agregar" (click)="addPartRow()"></button>
+    </div>
+    @for (part of editingRepair.parts || []; track $index) {
+      <div class="inline-row" style="gap:.5rem; margin-bottom:.5rem;">
+        <input pInputText [(ngModel)]="part.name" [ngModelOptions]="{standalone:true}" placeholder="Repuesto" />
+        <p-inputNumber [(ngModel)]="part.quantity" [ngModelOptions]="{standalone:true}" [min]="1" placeholder="Cant."></p-inputNumber>
+        <p-inputNumber [(ngModel)]="part.cost" [ngModelOptions]="{standalone:true}" mode="currency" currency="ARS" locale="es-AR" [min]="0" placeholder="Costo"></p-inputNumber>
+        <p-inputNumber [(ngModel)]="part.salePrice" [ngModelOptions]="{standalone:true}" mode="currency" currency="ARS" locale="es-AR" [min]="0" placeholder="Venta"></p-inputNumber>
+        <button pButton type="button" icon="pi pi-trash" class="p-button-danger p-button-text" (click)="removePartRow($index)"></button>
+      </div>
+    }
+  </div>
   <button pButton type="button" label="Guardar cambios" icon="pi pi-check" (click)="saveRepairChanges()"></button>
 </p-dialog>
 
@@ -78,4 +98,14 @@
   <div class="field"><label>Modelo</label><input pInputText [(ngModel)]="draftDevice.model"/></div>
   <div class="field"><label>Serie</label><input pInputText [(ngModel)]="draftDevice.serialNumber"/></div>
   <button pButton type="button" label="Guardar dispositivo" (click)="createDeviceInline()"></button>
+</p-dialog>
+
+
+<p-dialog header="Nuevo cliente" [(visible)]="showNewClientModal" [modal]="true" [style]="{width:'34rem'}">
+  <div class="field"><label>Nombre</label><input pInputText [(ngModel)]="draftClient.name" /></div>
+  <div class="field"><label>Apellido</label><input pInputText [(ngModel)]="draftClient.lastName" /></div>
+  <div class="field"><label>DNI</label><input pInputText [(ngModel)]="draftClient.dni" /></div>
+  <div class="field"><label>Email</label><input pInputText [(ngModel)]="draftClient.email" /></div>
+  <div class="field"><label>Celular</label><input pInputText [(ngModel)]="draftClient.phone" /></div>
+  <button pButton type="button" label="Guardar cliente" icon="pi pi-check" (click)="createClientInline()"></button>
 </p-dialog>

@@ -119,8 +119,22 @@ public class RepairService {
 
     public BigDecimal totalIncome(LocalDateTime from, LocalDateTime to) {
         return repairRepository.findByReturnDateTimeBetween(from, to).stream()
-                .map(Repair::getPrice)
-                .filter(v -> v != null)
+                .map(repair -> {
+                    BigDecimal laborIncome = repair.getLaborAmount() != null
+                            ? repair.getLaborAmount()
+                            : (repair.getPrice() != null ? repair.getPrice() : BigDecimal.ZERO);
+
+                    BigDecimal partsIncome = repairPartRepository.findByRepairId(repair.getId()).stream()
+                            .map(part -> {
+                                BigDecimal cost = part.getCost() != null ? part.getCost() : BigDecimal.ZERO;
+                                BigDecimal sale = part.getSalePrice() != null ? part.getSalePrice() : BigDecimal.ZERO;
+                                BigDecimal qty = BigDecimal.valueOf(part.getQuantity() != null ? part.getQuantity() : 1);
+                                return sale.subtract(cost).multiply(qty);
+                            })
+                            .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+                    return laborIncome.add(partsIncome);
+                })
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 

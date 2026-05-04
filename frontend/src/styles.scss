@@ -278,3 +278,21 @@ textarea.p-inputtext {
 .device-inline-row .device-select { flex: 1 1 auto; min-width: 0; }
 .device-inline-row .device-add-btn { flex: 0 0 auto; }
 .login-theme-icon { margin: .55rem auto 0; display: inline-flex; }
+
+.client-autocomplete,
+.client-autocomplete .p-autocomplete,
+.client-autocomplete .p-autocomplete-input {
+  width: 100%;
+}
+
+:root[data-theme='light'] .p-datatable .p-datatable-thead > tr > th,
+:root[data-theme='light'] .p-datatable .p-datatable-tbody > tr > td,
+:root[data-theme='light'] .action-buttons .p-button {
+  color: #0f172a !important;
+}
+
+.p-datatable .p-datatable-thead > tr > th,
+.p-datatable .p-datatable-tbody > tr > td,
+.action-buttons .p-button {
+  color: var(--text-color, inherit) !important;
+}

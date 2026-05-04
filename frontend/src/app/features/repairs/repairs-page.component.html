@@ -5,7 +5,7 @@
       <div class="field">
         <label>Cliente</label>
         <div class="inline-row">
-          <p-autoComplete [(ngModel)]="selectedClientName" name="selectedClientName" [suggestions]="clientSuggestions" (completeMethod)="filterClientSuggestions($event.query)" (onSelect)="onClientAutocompleteSelect($event.value)" optionLabel="label" [forceSelection]="false" placeholder="Seleccionar cliente" styleClass="client-autocomplete"></p-autoComplete>
+          <p-autoComplete [(ngModel)]="selectedClientName" (ngModelChange)="onClientInputChange($event)" name="selectedClientName" [suggestions]="clientSuggestions" (completeMethod)="filterClientSuggestions($event.query)" (onSelect)="onClientAutocompleteSelect($event.value)" optionLabel="label" [forceSelection]="false" placeholder="Seleccionar cliente" styleClass="client-autocomplete"></p-autoComplete>
           <button pButton type="button" size="small" class="p-button-sm" icon="pi pi-search" [rounded]="true" [text]="true" (click)="showClientModal=true"></button>
           <button pButton type="button" size="small" class="p-button-sm" icon="pi pi-user-plus" [rounded]="true" [text]="true" (click)="showNewClientModal=true"></button>
         </div>

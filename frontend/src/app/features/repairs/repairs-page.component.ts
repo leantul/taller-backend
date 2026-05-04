@@ -102,6 +102,21 @@ export class RepairsPageComponent implements OnInit {
   }
 
 
+
+  onClientInputChange(value: string): void {
+    this.selectedClientName = value;
+    const exactClient = this.clients.find((c) => `${c.name} ${c.lastName}`.trim().toLowerCase() === value.trim().toLowerCase());
+    if (exactClient?.id) {
+      this.draft.idClient = exactClient.id;
+      this.api.getDevices().subscribe((devices) => this.clientDevices = devices.filter(d => d.clientId === this.draft.idClient));
+      return;
+    }
+
+    this.draft.idClient = '';
+    this.draft.idDevice = '';
+    this.clientDevices = [];
+  }
+
   createClientInline(): void {
     if (!this.draftClient.name?.trim() || !this.draftClient.lastName?.trim() || !this.draftClient.phone?.trim()) {
       this.messageService.add({ severity: 'warn', summary: 'Faltan datos', detail: 'Completá al menos nombre, apellido y teléfono.' });
@@ -160,7 +175,10 @@ export class RepairsPageComponent implements OnInit {
   }
 
   openEditModal(repair: Repair): void {
-    this.editingRepair = { ...repair };
+    this.editingRepair = {
+      ...repair,
+      parts: (repair.parts || []).map((part) => ({ ...part }))
+    };
     this.showEditModal = true;
   }
 

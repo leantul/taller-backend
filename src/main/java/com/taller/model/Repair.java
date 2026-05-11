@@ -34,7 +34,7 @@ public class Repair extends BasicEntity {
     @Column(name = "id_client")
     private String idClient;
 
-    @Column(name = "description")
+    @Column(name = "description", columnDefinition = "TEXT")
     private String description;
 
     @Column(name = "order_number")

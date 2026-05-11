@@ -1,4 +1,5 @@
 import { Component, OnInit } from '@angular/core';
+import { forkJoin } from 'rxjs';
 import { ActivatedRoute } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -61,7 +62,23 @@ export class RepairsPageComponent implements OnInit {
   ];
 
   constructor(private readonly api: ApiService, private readonly messageService: MessageService, private readonly route: ActivatedRoute, private readonly confirmationService: ConfirmationService) {}
-  ngOnInit(): void { this.reload(); this.api.getClients().subscribe(c => { this.clients = c; this.clientsById = new Map(c.filter(item => !!item.id).map(item => [item.id!, item])); }); this.api.getDevices().subscribe(d => this.allDevices = d); this.route.queryParamMap.subscribe((params) => { const q = params.get('q') || ''; if (q !== this.searchTerm) { this.searchTerm = q; this.applyFilters(); } }); }
+  ngOnInit(): void {
+    forkJoin({ repairs: this.api.getRepairs(), clients: this.api.getClients(), devices: this.api.getDevices() }).subscribe(({ repairs, clients, devices }) => {
+      this.repairs = repairs.slice().reverse();
+      this.clients = clients;
+      this.clientsById = new Map(clients.filter(item => !!item.id).map(item => [item.id!, item]));
+      this.allDevices = devices;
+      this.applyFilters();
+    });
+
+    this.route.queryParamMap.subscribe((params) => {
+      const q = params.get('q') || '';
+      if (q !== this.searchTerm) {
+        this.searchTerm = q;
+        this.applyFilters();
+      }
+    });
+  }
 
   selectClient(client: Client): void {
     this.draft.idClient = client.id || '';

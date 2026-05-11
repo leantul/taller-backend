@@ -50,7 +50,7 @@ import { Repair } from '../../shared/models/repair.model';
         </p-table>
       </p-card>
 
-      <p-card header="Top 5 clientes inactivos">
+      <p-card header="Top 5 equipos inactivos">
         <p-table [value]="inactiveClients" size="small">
           <ng-template pTemplate="header"><tr><th>Cliente</th><th>Fecha</th></tr></ng-template>
           <ng-template pTemplate="body" let-item><tr><td>{{ item.name }}</td><td>{{ item.lastRepair || 'Sin historial' }}</td></tr></ng-template>
@@ -88,12 +88,12 @@ export class DashboardPageComponent implements OnInit {
           deviceType: devices.find((d) => d.clientId === c.id)?.deviceType || '-'
         }));
       this.recentDevices = latestDevices;
-      const deliveredRepairs = repairs
+      const latestDeliveredRepairs = repairs
         .filter((r) => r.status === 'RETIRADA')
-        .sort((a, b) => new Date(b.returnDateTime || 0).getTime() - new Date(a.returnDateTime || 0).getTime())
+        .sort((a, b) => new Date(b.returnDateTime || b.receiveDateTime || 0).getTime() - new Date(a.returnDateTime || a.receiveDateTime || 0).getTime())
         .slice(0, 5);
-      this.recentRepairs = deliveredRepairs.map((r) => ({
-        date: r.returnDateTime ? new Date(r.returnDateTime).toLocaleDateString('es-AR') : '-',
+      this.recentRepairs = latestDeliveredRepairs.map((r) => ({
+        date: (r.returnDateTime || r.receiveDateTime) ? new Date(r.returnDateTime || r.receiveDateTime!).toLocaleDateString('es-AR') : '-',
         client: this.clients.find((c) => c.id === r.idClient) ? `${this.clients.find((c) => c.id === r.idClient)!.name} ${this.clients.find((c) => c.id === r.idClient)!.lastName}` : r.idClient,
         price: r.price || 0
       }));
@@ -104,21 +104,28 @@ export class DashboardPageComponent implements OnInit {
   }
 
   private buildInactiveClients(): void {
-    const byClient = new Map<string, Date>();
+    const byDevice = new Map<string, Date>();
     this.repairs.forEach((r) => {
-      if (!r.idClient || !r.receiveDateTime) return;
+      if (!r.idDevice || !r.receiveDateTime) return;
       const date = new Date(r.receiveDateTime);
-      const current = byClient.get(r.idClient);
-      if (!current || date > current) byClient.set(r.idClient, date);
+      const current = byDevice.get(r.idDevice);
+      if (!current || date > current) byDevice.set(r.idDevice, date);
     });
 
-    this.inactiveClients = this.clients
-      .map((c) => {
-        const last = c.id ? byClient.get(c.id) : undefined;
+    const devicesById = new Map(this.devices.filter((d) => !!d.id).map((d) => [d.id!, d]));
+
+    this.inactiveClients = Array.from(byDevice.entries())
+      .map(([deviceId, lastDate]) => {
+        const device = devicesById.get(deviceId);
+        const client = device ? this.clients.find((c) => c.id === device.clientId) : undefined;
+        const deviceLabel = device
+          ? `${device.deviceType || 'Equipo'} ${device.brand || ''} ${device.model || ''}`.replace(/\s+/g, ' ').trim()
+          : deviceId;
+        const ownerLabel = client ? `${client.name} ${client.lastName}`.trim() : 'Cliente sin datos';
         return {
-          name: `${c.name} ${c.lastName}`.trim(),
-          lastRepair: last ? last.toLocaleDateString('es-AR') : 'Sin historial',
-          order: last ? last.getTime() : 0
+          name: `${deviceLabel} · ${ownerLabel}`,
+          lastRepair: lastDate.toLocaleDateString('es-AR'),
+          order: lastDate.getTime()
         };
       })
       .sort((a, b) => a.order - b.order)

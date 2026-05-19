@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { CardModule } from 'primeng/card';
@@ -39,7 +39,7 @@ import { Client } from '../../shared/models/client.model';
         </div>
         <p-table [value]="filteredDevices" size="small" [paginator]="true" [rows]="10" sortMode="multiple">
           <ng-template pTemplate="header"><tr><th pSortableColumn="deviceType">Tipo <p-sortIcon field="deviceType"></p-sortIcon></th><th pSortableColumn="brand">Marca <p-sortIcon field="brand"></p-sortIcon></th><th pSortableColumn="model">Modelo <p-sortIcon field="model"></p-sortIcon></th><th pSortableColumn="serialNumber">Serie <p-sortIcon field="serialNumber"></p-sortIcon></th><th pSortableColumn="clientName">Cliente <p-sortIcon field="clientName"></p-sortIcon></th><th>Acciones</th></tr></ng-template>
-          <ng-template pTemplate="body" let-d><tr><td>{{ d.deviceType }}</td><td>{{ d.brand }}</td><td>{{ d.model }}</td><td>{{ d.serialNumber }}</td><td>{{ getClientName(d.clientId) }}</td><td><button pButton type="button" class="p-button-text p-button-sm" icon="pi pi-pencil" (click)="openEdit(d)"></button><button pButton type="button" class="p-button-text p-button-sm p-button-danger" icon="pi pi-trash" (click)="confirmRemove(d)"></button></td></tr></ng-template>
+          <ng-template pTemplate="body" let-d><tr><td>{{ d.deviceType }}</td><td>{{ d.brand }}</td><td>{{ d.model }}</td><td>{{ d.serialNumber }}</td><td>{{ getClientName(d.clientId) }}</td><td><button pButton type="button" class="p-button-text p-button-sm" icon="pi pi-pencil" ariaLabel="Editar dispositivo" (click)="openEdit(d)"></button><button pButton type="button" class="p-button-text p-button-sm p-button-danger" icon="pi pi-trash" ariaLabel="Eliminar dispositivo" (click)="confirmRemove(d)"></button></td></tr></ng-template>
         </p-table>
       </p-card>
     </div>
@@ -67,7 +67,7 @@ export class DevicesPageComponent implements OnInit {
     { label: 'Desktop', value: 'DESKTOP' }, { label: 'Notebook', value: 'NOTEBOOK' }, { label: 'Tablet', value: 'TABLET' }, { label: 'Celular', value: 'CELULAR' }, { label: 'Otros', value: 'OTROS' }
   ];
 
-  constructor(private readonly api: ApiService, private readonly confirmationService: ConfirmationService) {}
+  constructor(private readonly api: ApiService, private readonly confirmationService: ConfirmationService, private readonly changeDetector: ChangeDetectorRef) {}
 
   ngOnInit(): void { this.api.getClients().subscribe((clients) => { this.clients = clients; this.reload(); }); }
 
@@ -119,5 +119,5 @@ export class DevicesPageComponent implements OnInit {
     return client ? `${client.name} ${client.lastName}` : clientId;
   }
 
-  private reload(): void { this.api.getDevices().subscribe((devices) => { this.devices = devices.slice().reverse(); this.applyFilters(); }); }
+  private reload(): void { this.api.getDevices().subscribe((devices) => { this.devices = devices.slice().reverse(); this.applyFilters(); this.changeDetector.detectChanges(); }); }
 }

@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { forkJoin } from 'rxjs';
 import { CardModule } from 'primeng/card';
@@ -15,11 +15,19 @@ import { Repair } from '../../shared/models/repair.model';
   standalone: true,
   imports: [CommonModule, CardModule, TableModule, TagModule, ChartModule],
   template: `
-    <section class="dashboard-grid">
-      <p-card header="Clientes" subheader="Total"><div class="metric">{{ clients.length }}</div></p-card>
-      <p-card header="Dispositivos" subheader="Total"><div class="metric">{{ devices.length }}</div></p-card>
-      <p-card header="Reparaciones" subheader="Total"><div class="metric">{{ repairs.length }}</div></p-card>
-      <p-card header="Ingresos estimados" subheader="Suma de reparaciones"><div class="metric">{{ totalRevenue | currency:'ARS':'symbol':'1.2-2':'es-AR' }}</div></p-card>
+    <section class="page-heading">
+      <div>
+        <span class="eyebrow">Taller activo</span>
+        <h1>Resumen operativo</h1>
+      </div>
+      <p>Lectura rápida de carga de trabajo, ingresos y últimos movimientos.</p>
+    </section>
+
+    <section class="dashboard-grid metrics-grid">
+      <p-card styleClass="metric-card"><span class="metric-label">Clientes</span><div class="metric">{{ clients.length }}</div><small>Total registrados</small></p-card>
+      <p-card styleClass="metric-card"><span class="metric-label">Dispositivos</span><div class="metric">{{ devices.length }}</div><small>Equipos cargados</small></p-card>
+      <p-card styleClass="metric-card"><span class="metric-label">Reparaciones</span><div class="metric">{{ repairs.length }}</div><small>Ordenes históricas</small></p-card>
+      <p-card styleClass="metric-card revenue"><span class="metric-label">Ingresos estimados</span><div class="metric">{{ totalRevenue | currency:'ARS':'symbol':'1.2-2':'es-AR' }}</div><small>Suma de reparaciones</small></p-card>
     </section>
 
     <section class="dashboard-grid charts">
@@ -74,7 +82,7 @@ export class DashboardPageComponent implements OnInit {
   chartOptions: any = { plugins: { legend: { labels: { color: '#94a3b8' } } }, maintainAspectRatio: false };
   expandedChart: 'income' | 'devices' | 'repairs' | null = null;
 
-  constructor(private readonly api: ApiService) {}
+  constructor(private readonly api: ApiService, private readonly changeDetector: ChangeDetectorRef) {}
 
   ngOnInit(): void {
     forkJoin({ clients: this.api.getClients(), devices: this.api.getDevices(), repairs: this.api.getRepairs(), latestClients: this.api.getLatestClients(), latestDevices: this.api.getLatestDevices(), latestRepairs: this.api.getLatestRepairs() }).subscribe(({ clients, devices, repairs, latestClients, latestDevices, latestRepairs }) => {
@@ -100,6 +108,7 @@ export class DashboardPageComponent implements OnInit {
 
       this.buildCharts();
       this.buildInactiveClients();
+      this.changeDetector.detectChanges();
     });
   }
 

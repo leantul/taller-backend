@@ -1,6 +1,6 @@
 import { CdkDragDrop, DragDropModule, moveItemInArray, transferArrayItem } from '@angular/cdk/drag-drop';
 import { CommonModule } from '@angular/common';
-import { Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { CardModule } from 'primeng/card';
 import { DialogModule } from 'primeng/dialog';
 import { TagModule } from 'primeng/tag';
@@ -31,7 +31,7 @@ export class StatusPageComponent implements OnInit {
   clientsById = new Map<string, Client>();
   devicesById = new Map<string, Device>();
 
-  constructor(private readonly api: ApiService, private readonly messageService: MessageService) {}
+  constructor(private readonly api: ApiService, private readonly messageService: MessageService, private readonly changeDetector: ChangeDetectorRef) {}
 
   ngOnInit(): void { this.reload(); }
 
@@ -70,7 +70,11 @@ export class StatusPageComponent implements OnInit {
     forkJoin({ repairs: this.api.getRepairs(), clients: this.api.getClients(), devices: this.api.getDevices() }).subscribe(({ repairs, clients, devices }) => {
       this.clientsById = new Map(clients.map((client) => [client.id!, client]));
       this.devicesById = new Map(devices.map((device) => [device.id!, device]));
-      this.columns.forEach((c) => (c.items = repairs.filter((r) => r.status === c.status)));
+      this.columns = this.columns.map((column) => ({
+        ...column,
+        items: repairs.filter((repair) => repair.status === column.status)
+      }));
+      this.changeDetector.detectChanges();
     });
   }
 }

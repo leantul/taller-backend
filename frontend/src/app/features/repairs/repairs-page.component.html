@@ -1,6 +1,13 @@
 <p-confirmdialog></p-confirmdialog>
+<section class="page-heading repairs-heading">
+  <div>
+    <span class="eyebrow">Mesa de entrada</span>
+    <h1>Reparaciones</h1>
+  </div>
+  <p>Alta de ordenes, seguimiento de estado y control de importes.</p>
+</section>
 <div class="page-grid modern-grid">
-  <p-card header="Nueva reparación">
+  <p-card header="Nueva reparación" styleClass="workbench-card">
     <form class="p-fluid" (ngSubmit)="save()">
       <div class="field">
         <label>Cliente</label>
@@ -20,7 +27,7 @@
     </form>
   </p-card>
 
-  <p-card header="Historial de reparaciones">
+  <p-card header="Historial de reparaciones" styleClass="workbench-card history-card">
     <div class="table-toolbar multi repairs-filters">
       <span class="p-input-icon-left filter-search"><i class="pi pi-search"></i><input pInputText [(ngModel)]="searchTerm" (ngModelChange)="applyFilters()" placeholder="Buscar por cliente, orden, dispositivo" /></span>
       <p-datepicker styleClass="compact-filter" [(ngModel)]="fromDate" (ngModelChange)="applyFilters()" dateFormat="dd-mm-yy" placeholder="Desde" [showIcon]="true" iconDisplay="input" appendTo="body"></p-datepicker>

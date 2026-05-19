@@ -17,13 +17,16 @@ import { ThemeMode, ThemeService } from '../../core/services/theme.service';
   template: `
     <section class="auth-shell">
       <p-card class="auth-card modern-auth">
-        <div class="login-theme-toggle"><button pButton type="button" [label]="themeMode === 'dark' ? 'Tema claro' : 'Tema oscuro'" [icon]="themeMode === 'dark' ? 'pi pi-sun' : 'pi pi-moon'" class="p-button-text p-button-sm" (click)="toggleTheme()"></button></div>
+        <div class="login-theme-toggle"><button pButton type="button" [icon]="themeMode === 'dark' ? 'pi pi-sun' : 'pi pi-moon'" class="p-button-text p-button-rounded" [ariaLabel]="themeMode === 'dark' ? 'Usar tema claro' : 'Usar tema oscuro'" (click)="toggleTheme()"></button></div>
         <img [src]="themeMode === 'dark' ? '/assets/logo-dark.png' : '/assets/logo-light.png'" alt="Logo" class="login-logo" />
+        <div class="auth-copy">
+          <h1>Panel operativo</h1>
+          <p>Clientes, equipos y reparaciones en una sola mesa de trabajo.</p>
+        </div>
         <form (ngSubmit)="submit()" class="p-fluid auth-form">
-          <div class="field auth-field"><label>Usuario</label><input pInputText [(ngModel)]="username" name="username" required /></div>
-          <div class="field auth-field"><label>Contraseña</label><p-password [(ngModel)]="password" name="password" [feedback]="false" [toggleMask]="true" [style]="{ width: '100%' }" inputStyleClass="auth-password-input" required></p-password></div>
+          <div class="field auth-field"><label for="login-username">Usuario</label><input id="login-username" pInputText [(ngModel)]="username" name="username" autocomplete="username" required /></div>
+          <div class="field auth-field"><label for="login-password">Contraseña</label><p-password inputId="login-password" [(ngModel)]="password" name="password" [feedback]="false" [toggleMask]="true" [style]="{ width: '100%' }" inputStyleClass="auth-password-input" required></p-password></div>
           <button pButton type="submit" label="Entrar" icon="pi pi-sign-in"></button>
-          <button pButton type="button" [icon]="themeMode === 'dark' ? 'pi pi-sun' : 'pi pi-moon'" class="p-button-text p-button-rounded login-theme-icon" (click)="toggleTheme()"></button>
         </form>
         @if (error) { <small class="error"><i class="pi pi-exclamation-circle"></i> {{ error }}</small> }
       </p-card>

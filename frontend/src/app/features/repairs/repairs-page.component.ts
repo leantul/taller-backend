@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { forkJoin } from 'rxjs';
 import { ActivatedRoute } from '@angular/router';
 import { CommonModule } from '@angular/common';
@@ -61,7 +61,7 @@ export class RepairsPageComponent implements OnInit {
     { label: 'Desktop', value: 'DESKTOP' }, { label: 'Notebook', value: 'NOTEBOOK' }, { label: 'Tablet', value: 'TABLET' }, { label: 'Celular', value: 'CELULAR' }, { label: 'Otros', value: 'OTROS' }
   ];
 
-  constructor(private readonly api: ApiService, private readonly messageService: MessageService, private readonly route: ActivatedRoute, private readonly confirmationService: ConfirmationService) {}
+  constructor(private readonly api: ApiService, private readonly messageService: MessageService, private readonly route: ActivatedRoute, private readonly confirmationService: ConfirmationService, private readonly changeDetector: ChangeDetectorRef) {}
   ngOnInit(): void {
     forkJoin({ repairs: this.api.getRepairs(), clients: this.api.getClients(), devices: this.api.getDevices() }).subscribe(({ repairs, clients, devices }) => {
       this.repairs = repairs.slice().reverse();
@@ -69,6 +69,7 @@ export class RepairsPageComponent implements OnInit {
       this.clientsById = new Map(clients.filter(item => !!item.id).map(item => [item.id!, item]));
       this.allDevices = devices;
       this.applyFilters();
+      this.changeDetector.detectChanges();
     });
 
     this.route.queryParamMap.subscribe((params) => {
@@ -84,7 +85,7 @@ export class RepairsPageComponent implements OnInit {
     this.draft.idClient = client.id || '';
     this.selectedClientName = `${client.name} ${client.lastName}`.trim();
     this.showClientModal = false;
-    this.api.getDevices().subscribe((devices) => this.clientDevices = devices.filter(d => d.clientId === this.draft.idClient));
+    this.api.getDevices().subscribe((devices) => { this.clientDevices = devices.filter(d => d.clientId === this.draft.idClient); this.changeDetector.detectChanges(); });
   }
 
   createDeviceInline(): void {
@@ -95,6 +96,7 @@ export class RepairsPageComponent implements OnInit {
       this.draft.idDevice = device.id || '';
       this.draftDevice = { brand: '', model: '', serialNumber: '', clientId: this.draft.idClient, deviceType: 'NOTEBOOK' };
       this.showDeviceModal = false;
+      this.changeDetector.detectChanges();
     });
   }
 
@@ -125,7 +127,7 @@ export class RepairsPageComponent implements OnInit {
     const exactClient = this.clients.find((c) => `${c.name} ${c.lastName}`.trim().toLowerCase() === value.trim().toLowerCase());
     if (exactClient?.id) {
       this.draft.idClient = exactClient.id;
-      this.api.getDevices().subscribe((devices) => this.clientDevices = devices.filter(d => d.clientId === this.draft.idClient));
+      this.api.getDevices().subscribe((devices) => { this.clientDevices = devices.filter(d => d.clientId === this.draft.idClient); this.changeDetector.detectChanges(); });
       return;
     }
 
@@ -147,6 +149,7 @@ export class RepairsPageComponent implements OnInit {
         this.selectClient(client);
         this.draftClient = { name: '', lastName: '', dni: '', email: '', phone: '' };
         this.showNewClientModal = false;
+        this.changeDetector.detectChanges();
       },
       error: (error) => this.messageService.add({ severity: 'error', summary: 'Error', detail: this.errorDetail(error, 'No se pudo crear el cliente.') })
     });
@@ -257,7 +260,7 @@ export class RepairsPageComponent implements OnInit {
       return Boolean(matchesTerm && matchesFrom && matchesTo);
     });
   }
-  private reload(): void { this.api.getRepairs().subscribe((repairs) => { this.repairs = repairs.slice().reverse(); this.applyFilters(); }); }
+  private reload(): void { this.api.getRepairs().subscribe((repairs) => { this.repairs = repairs.slice().reverse(); this.applyFilters(); this.changeDetector.detectChanges(); }); }
 
   clientLabel(repair: Repair): string {
     const client = this.clientsById.get(repair.idClient);

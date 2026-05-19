@@ -34,7 +34,8 @@
         "serve": {
           "builder": "@angular-devkit/build-angular:dev-server",
           "options": {
-            "buildTarget": "taller-frontend:build"
+            "buildTarget": "taller-frontend:build",
+            "proxyConfig": "proxy.conf.cjs"
           }
         }
       }

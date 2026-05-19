@@ -18,7 +18,7 @@ public class AdminBootstrap implements CommandLineRunner {
     @Value("${app.bootstrap.admin.username:admin}")
     private String defaultUsername;
 
-    @Value("${app.bootstrap.admin.password:Admin1234!}")
+    @Value("${app.bootstrap.admin.password:}")
     private String defaultPassword;
 
     @Value("${app.bootstrap.admin.fullname:Administrador Taller}")
@@ -26,6 +26,10 @@ public class AdminBootstrap implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
+        if (defaultPassword == null || defaultPassword.isBlank()) {
+            return;
+        }
+
         appUserRepository.findByUsername(defaultUsername).orElseGet(() -> {
             AppUser appUser = AppUser.builder()
                     .username(defaultUsername)

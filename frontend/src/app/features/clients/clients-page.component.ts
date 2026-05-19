@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -42,9 +42,9 @@ import { Repair } from '../../shared/models/repair.model';
             <tr>
               <td>{{ c.name }} {{ c.lastName }}</td><td>{{ c.dni }}</td><td>{{ c.email }}</td><td>{{ c.phone }} <a [href]="whatsAppLink(c.phone)" target="_blank" rel="noopener" class="wa-link"><i class="pi pi-whatsapp"></i></a></td>
               <td>
-                <button pButton type="button" class="p-button-text p-button-sm" icon="pi pi-pencil" (click)="openEdit(c)"></button>
-                <button pButton type="button" class="p-button-text p-button-sm" icon="pi pi-history" (click)="openRepairs(c)"></button>
-                <button pButton type="button" class="p-button-text p-button-sm" icon="pi pi-trash" (click)="confirmDelete(c)"></button>
+                <button pButton type="button" class="p-button-text p-button-sm" icon="pi pi-pencil" ariaLabel="Editar cliente" (click)="openEdit(c)"></button>
+                <button pButton type="button" class="p-button-text p-button-sm" icon="pi pi-history" ariaLabel="Ver reparaciones del cliente" (click)="openRepairs(c)"></button>
+                <button pButton type="button" class="p-button-text p-button-sm" icon="pi pi-trash" ariaLabel="Eliminar cliente" (click)="confirmDelete(c)"></button>
               </td>
             </tr>
           </ng-template>
@@ -65,7 +65,7 @@ import { Repair } from '../../shared/models/repair.model';
     <p-dialog header="Reparaciones del cliente" [(visible)]="repairsVisible" [modal]="true" [style]="{width:'56rem'}">
       <p-table [value]="clientRepairs" size="small" sortMode="multiple">
         <ng-template pTemplate="header"><tr><th pSortableColumn="orderNumber">Orden <p-sortIcon field="orderNumber"></p-sortIcon></th><th pSortableColumn="status">Estado <p-sortIcon field="status"></p-sortIcon></th><th pSortableColumn="receiveDateTime">Ingreso <p-sortIcon field="receiveDateTime"></p-sortIcon></th><th pSortableColumn="returnDateTime">Entrega <p-sortIcon field="returnDateTime"></p-sortIcon></th><th>Detalle</th></tr></ng-template>
-        <ng-template pTemplate="body" let-r><tr><td>#{{ r.orderNumber }}</td><td>{{ r.status }}</td><td>{{ r.receiveDateTime ? (r.receiveDateTime | date:'dd/MM/yyyy HH:mm') : '-' }}</td><td>{{ r.returnDateTime ? (r.returnDateTime | date:'dd/MM/yyyy HH:mm') : '-' }}</td><td><button pButton type="button" class="p-button-text p-button-sm" icon="pi pi-eye" (click)="goToRepair(r)"></button></td></tr></ng-template>
+        <ng-template pTemplate="body" let-r><tr><td>#{{ r.orderNumber }}</td><td>{{ r.status }}</td><td>{{ r.receiveDateTime ? (r.receiveDateTime | date:'dd/MM/yyyy HH:mm') : '-' }}</td><td>{{ r.returnDateTime ? (r.returnDateTime | date:'dd/MM/yyyy HH:mm') : '-' }}</td><td><button pButton type="button" class="p-button-text p-button-sm" icon="pi pi-eye" ariaLabel="Ver reparación" (click)="goToRepair(r)"></button></td></tr></ng-template>
       </p-table>
       @if (selectedRepair) {
         <div class="field"><label>Descripción</label><div>{{ selectedRepair.description || 'Sin descripción' }}</div></div>
@@ -84,7 +84,7 @@ export class ClientsPageComponent implements OnInit {
   clientRepairs: Repair[] = [];
   selectedRepair: Repair | null = null;
 
-  constructor(private readonly api: ApiService, private readonly messageService: MessageService, private readonly confirmationService: ConfirmationService, private readonly router: Router) {}
+  constructor(private readonly api: ApiService, private readonly messageService: MessageService, private readonly confirmationService: ConfirmationService, private readonly router: Router, private readonly changeDetector: ChangeDetectorRef) {}
 
   ngOnInit(): void { this.reload(); }
 
@@ -138,7 +138,7 @@ export class ClientsPageComponent implements OnInit {
     });
   }
 
-  onSearch(): void { if (!this.searchTerm.trim()) { this.reload(); return; } this.api.searchClients(this.searchTerm).subscribe((clients) => (this.clients = clients)); }
+  onSearch(): void { if (!this.searchTerm.trim()) { this.reload(); return; } this.api.searchClients(this.searchTerm).subscribe((clients) => { this.clients = clients; this.changeDetector.detectChanges(); }); }
   whatsAppLink(phone: string): string { const digits = (phone || "").replace(/\D/g, ""); return `https://wa.me/${digits}`; }
-  private reload(): void { this.api.getClients().subscribe((clients) => (this.clients = clients.slice().reverse())); }
+  private reload(): void { this.api.getClients().subscribe((clients) => { this.clients = clients.slice().reverse(); this.changeDetector.detectChanges(); }); }
 }

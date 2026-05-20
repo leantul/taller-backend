@@ -35,10 +35,10 @@
     </div>
 
     <p-table [value]="filteredRepairs" size="small" [paginator]="true" [rows]="10" sortMode="multiple">
-      <ng-template pTemplate="header"><tr><th pSortableColumn="orderNumber">Orden <p-sortIcon field="orderNumber"></p-sortIcon></th><th pSortableColumn="idClient">Cliente <p-sortIcon field="idClient"></p-sortIcon></th><th pSortableColumn="status">Estado <p-sortIcon field="status"></p-sortIcon></th><th pSortableColumn="quotedAmount">Presupuesto <p-sortIcon field="quotedAmount"></p-sortIcon></th><th pSortableColumn="price">Monto <p-sortIcon field="price"></p-sortIcon></th><th>Acción</th></tr></ng-template>
+      <ng-template pTemplate="header"><tr><th pSortableColumn="orderNumber">Orden <p-sortIcon field="orderNumber"></p-sortIcon></th><th pSortableColumn="idClient">Cliente <p-sortIcon field="idClient"></p-sortIcon></th><th>Dispositivo</th><th pSortableColumn="status">Estado <p-sortIcon field="status"></p-sortIcon></th><th pSortableColumn="quotedAmount">Presupuesto <p-sortIcon field="quotedAmount"></p-sortIcon></th><th pSortableColumn="price">Monto <p-sortIcon field="price"></p-sortIcon></th><th>Acción</th></tr></ng-template>
       <ng-template pTemplate="body" let-r>
         <tr>
-          <td>{{ r.orderNumber }}</td><td>{{ clientLabel(r) }}</td><td><p-tag [value]="statusLabel(r.status)" [severity]="statusSeverity(r.status)"></p-tag></td>
+          <td>{{ r.orderNumber }}</td><td>{{ clientLabel(r) }}</td><td>{{ deviceLabel(r) }}</td><td><p-tag [value]="statusLabel(r.status)" [severity]="statusSeverity(r.status)"></p-tag></td>
           <td>{{ (r.quotedAmount || 0) | currency:'ARS':'symbol':'1.2-2':'es-AR' }}</td>
           <td>{{ (r.price || 0) | currency:'ARS':'symbol':'1.2-2':'es-AR' }}</td>
           <td>

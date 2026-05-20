@@ -50,6 +50,8 @@ export class RepairsPageComponent implements OnInit {
   draftClient: Client = { name: '', lastName: '', dni: '', email: '', phone: '' };
   statusEditingRepair: Repair | null = null;
   searchTerm = '';
+  currentPage = 1;
+  pageSize = 10;
   isSaving = false;
   isUpdating = false;
   isDeleting = false;
@@ -261,6 +263,7 @@ export class RepairsPageComponent implements OnInit {
       const matchesTo = !this.toDate || (receive && receive <= this.toDate);
       return Boolean(matchesTerm && matchesFrom && matchesTo);
     });
+    this.currentPage = 1;
   }
   private reload(): void { this.api.getRepairs().subscribe((repairs) => { this.repairs = repairs.slice().reverse(); this.applyFilters(); this.changeDetector.detectChanges(); }); }
 
@@ -273,6 +276,38 @@ export class RepairsPageComponent implements OnInit {
     const device = this.devicesById.get(repair.idDevice);
     if (!device) return repair.idDevice || '-';
     return `${device.brand || '-'} - ${device.model || '-'}`.replace(/\s+/g, ' ').trim();
+  }
+
+  statusClass(status: Repair['status']): string {
+    return `status-${String(status || '').toLowerCase().replace(/_/g, '-')}`;
+  }
+
+  repairRowKey(repair: Repair): string {
+    return repair.id || repair.orderNumber || `${repair.idClient}-${repair.idDevice}-${repair.receiveDateTime || ''}`;
+  }
+
+  get totalPages(): number {
+    return Math.max(1, Math.ceil(this.filteredRepairs.length / this.pageSize));
+  }
+
+  get visibleRepairs(): Repair[] {
+    const start = (this.currentPage - 1) * this.pageSize;
+    return this.filteredRepairs.slice(start, start + this.pageSize);
+  }
+
+  get paginationLabel(): string {
+    if (!this.filteredRepairs.length) return '0 reparaciones';
+    const start = (this.currentPage - 1) * this.pageSize + 1;
+    const end = Math.min(this.currentPage * this.pageSize, this.filteredRepairs.length);
+    return `${start}-${end} de ${this.filteredRepairs.length} reparaciones`;
+  }
+
+  previousPage(): void {
+    this.currentPage = Math.max(1, this.currentPage - 1);
+  }
+
+  nextPage(): void {
+    this.currentPage = Math.min(this.totalPages, this.currentPage + 1);
   }
 
   whatsAppLink(phone: string): string {

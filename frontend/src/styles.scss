@@ -436,6 +436,172 @@ body::before {
   box-shadow: 0 0 0 4px rgba(0, 163, 199, .16);
 }
 
+.repairs-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--surface), var(--surface-soft) 18%);
+}
+
+.repairs-table {
+  width: 100%;
+  min-width: 820px;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.repairs-table th,
+.repairs-table td {
+  padding: .78rem .85rem;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  vertical-align: middle;
+}
+
+.repairs-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--surface-soft);
+  color: var(--muted);
+  font-size: .72rem;
+  font-weight: 800;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.repairs-table tbody tr {
+  transition: background .15s ease;
+}
+
+.repairs-table tbody tr:hover {
+  background: color-mix(in srgb, var(--brand-500), transparent 92%);
+}
+
+.repairs-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.amount-col {
+  text-align: right !important;
+  white-space: nowrap;
+}
+
+.actions-col {
+  width: 8.5rem;
+}
+
+.order-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.8rem;
+  padding: 0 .55rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--brand-500), transparent 86%);
+  color: var(--text);
+  font-weight: 800;
+  font-size: .85rem;
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.75rem;
+  max-width: 100%;
+  padding: 0 .62rem;
+  border-radius: 999px;
+  font-size: .72rem;
+  font-weight: 800;
+  line-height: 1.1;
+  white-space: normal;
+  text-transform: uppercase;
+}
+
+.status-por-recibir,
+.status-recibida {
+  background: rgba(0, 163, 199, .16);
+  color: var(--brand-500);
+}
+
+.status-presupuestada-esperando-respuesta {
+  background: rgba(242, 169, 0, .18);
+  color: var(--accent-500);
+}
+
+.status-haciendo {
+  background: rgba(148, 163, 184, .2);
+  color: var(--text);
+}
+
+.status-esperando-retiro {
+  background: rgba(25, 169, 116, .18);
+  color: var(--success-500);
+}
+
+.status-retirada {
+  background: rgba(214, 69, 69, .16);
+  color: var(--danger-500);
+}
+
+.repair-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: .25rem;
+}
+
+.icon-action,
+.pager-button {
+  display: inline-grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--brand-500);
+  cursor: pointer;
+  transition: background .15s ease, border-color .15s ease, color .15s ease;
+}
+
+.icon-action:hover,
+.pager-button:hover:not(:disabled) {
+  border-color: var(--border);
+  background: var(--surface-soft);
+}
+
+.icon-action.danger {
+  color: var(--danger-500);
+}
+
+.icon-action:disabled,
+.pager-button:disabled {
+  cursor: not-allowed;
+  opacity: .45;
+}
+
+.empty-row {
+  padding: 2rem !important;
+  color: var(--muted);
+  text-align: center !important;
+}
+
+.repairs-pager {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: .85rem;
+  color: var(--muted);
+  font-size: .9rem;
+}
+
+.pager-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: .55rem;
+}
+
 .auth-shell {
   min-height: calc(100vh - 2rem);
 }

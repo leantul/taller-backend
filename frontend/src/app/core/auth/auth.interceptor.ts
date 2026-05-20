@@ -1,5 +1,5 @@
 import { HttpInterceptorFn } from '@angular/common/http';
-import { inject } from '@angular/core';
+import { ApplicationRef, inject, NgZone } from '@angular/core';
 import { catchError, finalize, throwError } from 'rxjs';
 import { LoadingService } from '../services/loading.service';
 import { AuthService } from './auth.service';
@@ -8,7 +8,10 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const token = localStorage.getItem('token');
   const loading = inject(LoadingService);
   const authService = inject(AuthService);
-  loading.show();
+  const appRef = inject(ApplicationRef);
+  const zone = inject(NgZone);
+
+  zone.run(() => loading.show());
   const isAuthRequest = req.url.includes('/auth/login');
 
   const request = token && !isAuthRequest
@@ -22,6 +25,17 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
       }
       return throwError(() => error);
     }),
-    finalize(() => loading.hide())
+    finalize(() => {
+      const finishRequest = () => zone.run(() => {
+        loading.hide();
+        appRef.tick();
+      });
+
+      if (typeof requestAnimationFrame === 'function') {
+        requestAnimationFrame(finishRequest);
+      } else {
+        setTimeout(finishRequest, 0);
+      }
+    })
   );
 };

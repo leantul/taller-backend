@@ -33,6 +33,7 @@ export class RepairsPageComponent implements OnInit {
   filteredRepairs: Repair[] = [];
   clients: Client[] = [];
   clientsById = new Map<string, Client>();
+  devicesById = new Map<string, Device>();
   clientDevices: Device[] = [];
   allDevices: Device[] = [];
   draftDevice: Device = { brand: '', model: '', serialNumber: '', clientId: '', deviceType: 'NOTEBOOK' };
@@ -67,6 +68,7 @@ export class RepairsPageComponent implements OnInit {
       this.repairs = repairs.slice().reverse();
       this.clients = clients;
       this.clientsById = new Map(clients.filter(item => !!item.id).map(item => [item.id!, item]));
+      this.devicesById = new Map(devices.filter(item => !!item.id).map(item => [item.id!, item]));
       this.allDevices = devices;
       this.applyFilters();
       this.changeDetector.detectChanges();
@@ -253,7 +255,7 @@ export class RepairsPageComponent implements OnInit {
   applyFilters(): void {
     const term = this.searchTerm.trim().toLowerCase();
     this.filteredRepairs = this.repairs.filter((r) => {
-      const matchesTerm = !term || [r.idClient, r.idDevice, r.orderNumber, r.description].filter(Boolean).join(' ').toLowerCase().includes(term);
+      const matchesTerm = !term || [r.idClient, r.idDevice, this.clientLabel(r), this.deviceLabel(r), r.orderNumber, r.description].filter(Boolean).join(' ').toLowerCase().includes(term);
       const receive = r.receiveDateTime ? new Date(r.receiveDateTime) : null;
       const matchesFrom = !this.fromDate || (receive && receive >= this.fromDate);
       const matchesTo = !this.toDate || (receive && receive <= this.toDate);
@@ -265,6 +267,12 @@ export class RepairsPageComponent implements OnInit {
   clientLabel(repair: Repair): string {
     const client = this.clientsById.get(repair.idClient);
     return client ? `${client.name} ${client.lastName}`.trim() : repair.idClient;
+  }
+
+  deviceLabel(repair: Repair): string {
+    const device = this.devicesById.get(repair.idDevice);
+    if (!device) return repair.idDevice || '-';
+    return `${device.brand || '-'} - ${device.model || '-'}`.replace(/\s+/g, ' ').trim();
   }
 
   whatsAppLink(phone: string): string {

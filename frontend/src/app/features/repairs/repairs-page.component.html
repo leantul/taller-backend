@@ -34,23 +34,53 @@
       <p-datepicker styleClass="compact-filter" [(ngModel)]="toDate" (ngModelChange)="applyFilters()" dateFormat="dd-mm-yy" placeholder="Hasta" [showIcon]="true" iconDisplay="input" appendTo="body"></p-datepicker>
     </div>
 
-    <p-table [value]="filteredRepairs" size="small" [paginator]="true" [rows]="10" sortMode="multiple">
-      <ng-template pTemplate="header"><tr><th pSortableColumn="orderNumber">Orden <p-sortIcon field="orderNumber"></p-sortIcon></th><th pSortableColumn="idClient">Cliente <p-sortIcon field="idClient"></p-sortIcon></th><th>Dispositivo</th><th pSortableColumn="status">Estado <p-sortIcon field="status"></p-sortIcon></th><th pSortableColumn="quotedAmount">Presupuesto <p-sortIcon field="quotedAmount"></p-sortIcon></th><th pSortableColumn="price">Monto <p-sortIcon field="price"></p-sortIcon></th><th>Acción</th></tr></ng-template>
-      <ng-template pTemplate="body" let-r>
-        <tr>
-          <td>{{ r.orderNumber }}</td><td>{{ clientLabel(r) }}</td><td>{{ deviceLabel(r) }}</td><td><p-tag [value]="statusLabel(r.status)" [severity]="statusSeverity(r.status)"></p-tag></td>
-          <td>{{ (r.quotedAmount || 0) | currency:'ARS':'symbol':'1.2-2':'es-AR' }}</td>
-          <td>{{ (r.price || 0) | currency:'ARS':'symbol':'1.2-2':'es-AR' }}</td>
-          <td>
-            <div class="action-buttons">
-              <button pButton type="button" class="p-button-text p-button-rounded" icon="pi pi-sync" ariaLabel="Cambiar estado" (click)="openStatusModal(r)"></button>
-              <button pButton type="button" class="p-button-text p-button-rounded" icon="pi pi-pencil" ariaLabel="Editar reparación" (click)="openEditModal(r)"></button>
-              <button pButton type="button" class="p-button-text p-button-rounded p-button-danger" icon="pi pi-trash" ariaLabel="Eliminar reparación" [disabled]="isDeleting" (click)="confirmDeleteRepair(r)"></button>
-            </div>
-          </td>
-        </tr>
-      </ng-template>
-    </p-table>
+    <div class="native-table-wrap">
+      <table class="native-table repairs-table">
+        <thead>
+          <tr>
+            <th>Orden</th>
+            <th>Cliente</th>
+            <th>Dispositivo</th>
+            <th>Estado</th>
+            <th>Presupuesto</th>
+            <th>Monto</th>
+            <th>Acción</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (r of visibleRepairs; track repairRowKey(r)) {
+            <tr>
+              <td><span class="order-chip">#{{ r.orderNumber || '-' }}</span></td>
+              <td>{{ clientLabel(r) }}</td>
+              <td>{{ deviceLabel(r) }}</td>
+              <td><span class="status-pill" [ngClass]="statusClass(r.status)">{{ statusLabel(r.status) }}</span></td>
+              <td>{{ (r.quotedAmount || 0) | currency:'ARS':'symbol':'1.2-2':'es-AR' }}</td>
+              <td>{{ (r.price || 0) | currency:'ARS':'symbol':'1.2-2':'es-AR' }}</td>
+              <td>
+                <div class="action-buttons">
+                  <button class="icon-action" type="button" aria-label="Cambiar estado" (click)="openStatusModal(r)"><i class="pi pi-sync"></i></button>
+                  <button class="icon-action" type="button" aria-label="Editar reparación" (click)="openEditModal(r)"><i class="pi pi-pencil"></i></button>
+                  <button class="icon-action danger" type="button" aria-label="Eliminar reparación" [disabled]="isDeleting" (click)="confirmDeleteRepair(r)"><i class="pi pi-trash"></i></button>
+                </div>
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td class="empty-cell" colspan="7">No hay reparaciones para los filtros aplicados.</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <div class="table-pager" aria-label="Paginación de reparaciones">
+      <span>{{ paginationLabel }}</span>
+      <div class="pager-actions">
+        <button class="pager-button" type="button" [disabled]="currentPage === 1" (click)="previousPage()"><i class="pi pi-chevron-left"></i></button>
+        <span>Página {{ currentPage }} de {{ totalPages }}</span>
+        <button class="pager-button" type="button" [disabled]="currentPage === totalPages" (click)="nextPage()"><i class="pi pi-chevron-right"></i></button>
+      </div>
+    </div>
   </p-card>
 </div>
 

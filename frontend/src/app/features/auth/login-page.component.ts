@@ -3,33 +3,43 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../core/auth/auth.service';
 import { Router } from '@angular/router';
-import { InputTextModule } from 'primeng/inputtext';
-import { PasswordModule } from 'primeng/password';
-import { ButtonModule } from 'primeng/button';
-import { CardModule } from 'primeng/card';
 import { MessageService } from 'primeng/api';
 import { ThemeMode, ThemeService } from '../../core/services/theme.service';
 
 @Component({
   selector: 'app-login-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, InputTextModule, PasswordModule, ButtonModule, CardModule],
+  imports: [CommonModule, FormsModule],
   template: `
     <section class="auth-shell">
-      <p-card class="auth-card modern-auth">
-        <div class="login-theme-toggle"><button pButton type="button" [icon]="themeMode === 'dark' ? 'pi pi-sun' : 'pi pi-moon'" class="p-button-text p-button-rounded" [ariaLabel]="themeMode === 'dark' ? 'Usar tema claro' : 'Usar tema oscuro'" (click)="toggleTheme()"></button></div>
+      <div class="auth-card">
+        <button class="icon-button login-theme-toggle" type="button" [attr.aria-label]="themeMode === 'dark' ? 'Usar tema claro' : 'Usar tema oscuro'" (click)="toggleTheme()">
+          <i [class]="themeMode === 'dark' ? 'pi pi-sun' : 'pi pi-moon'"></i>
+        </button>
+
         <img [src]="themeMode === 'dark' ? '/assets/logo-dark.png' : '/assets/logo-light.png'" alt="Logo" class="login-logo" />
         <div class="auth-copy">
+          <span class="eyebrow">Acceso interno</span>
           <h1>Panel operativo</h1>
           <p>Clientes, equipos y reparaciones en una sola mesa de trabajo.</p>
         </div>
-        <form (ngSubmit)="submit()" class="p-fluid auth-form">
-          <div class="field auth-field"><label for="login-username">Usuario</label><input id="login-username" pInputText [(ngModel)]="username" name="username" autocomplete="username" required /></div>
-          <div class="field auth-field"><label for="login-password">Contraseña</label><p-password inputId="login-password" [(ngModel)]="password" name="password" [feedback]="false" [toggleMask]="true" [style]="{ width: '100%' }" inputStyleClass="auth-password-input" required></p-password></div>
-          <button pButton type="submit" label="Entrar" icon="pi pi-sign-in"></button>
+
+        <form (ngSubmit)="submit()" class="auth-form">
+          <label class="field auth-field" for="login-username">
+            <span>Usuario</span>
+            <input id="login-username" class="control" [(ngModel)]="username" name="username" autocomplete="username" required />
+          </label>
+          <label class="field auth-field" for="login-password">
+            <span>Contraseña</span>
+            <input id="login-password" class="control" [(ngModel)]="password" name="password" type="password" autocomplete="current-password" required />
+          </label>
+          <button class="primary-button" type="submit">
+            <i class="pi pi-sign-in"></i>
+            <span>Entrar</span>
+          </button>
         </form>
         @if (error) { <small class="error"><i class="pi pi-exclamation-circle"></i> {{ error }}</small> }
-      </p-card>
+      </div>
     </section>
   `
 })

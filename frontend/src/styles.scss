@@ -187,6 +187,12 @@ a { color: inherit; }
   padding: 1.1rem 1.35rem 2rem;
 }
 
+.app-shell:not(.is-authenticated) .app-content {
+  width: 100%;
+  min-height: 100vh;
+  padding: 0;
+}
+
 .global-loading-overlay {
   position: fixed;
   inset: 0;
@@ -613,22 +619,7 @@ textarea.p-inputtext {
   display: block;
   width: min(170px, 50vw);
   height: auto;
-  margin: .1rem auto 1.1rem;
-}
-
-.auth-copy {
-  margin-bottom: 1rem;
-  text-align: center;
-}
-
-.auth-copy h1 {
-  margin: .2rem 0 .25rem;
-  font-size: 1.55rem;
-}
-
-.auth-copy p {
-  margin: 0;
-  color: var(--muted);
+  margin: .2rem auto 1.2rem;
 }
 
 .auth-form {
@@ -1075,6 +1066,31 @@ textarea.p-inputtext {
 
 .settings-form {
   padding: 1rem;
+}
+
+.metric-list {
+  display: grid;
+  gap: .55rem;
+}
+
+.metric-list-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: .65rem .75rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--surface-soft), var(--surface) 35%);
+}
+
+.metric-list-row span {
+  color: var(--muted);
+}
+
+.metric-list-row strong {
+  color: var(--text);
+  white-space: nowrap;
 }
 
 .p-chart canvas {

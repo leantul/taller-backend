@@ -3,16 +3,17 @@ import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
 import { CardModule } from 'primeng/card';
-import { ChartModule } from 'primeng/chart';
 import { ApiService } from '../../core/services/api.service';
 import { Client } from '../../shared/models/client.model';
 import { Device } from '../../shared/models/device.model';
 import { Repair } from '../../shared/models/repair.model';
 
+type BreakdownRow = { label: string; value: number; tone?: string };
+
 @Component({
   selector: 'app-dashboard-page',
   standalone: true,
-  imports: [CommonModule, RouterLink, CardModule, ChartModule],
+  imports: [CommonModule, RouterLink, CardModule],
   template: `
     <section class="page-heading">
       <div>
@@ -75,10 +76,43 @@ import { Repair } from '../../shared/models/repair.model';
       <p-card styleClass="metric-card revenue"><span class="metric-label">Ingresos estimados</span><div class="metric">{{ totalRevenue | currency:'ARS':'symbol':'1.2-2':'es-AR' }}</div><small>Suma de reparaciones</small></p-card>
     </section>
 
-    <section class="dashboard-grid charts">
-      <p-card header="Evolución mensual de ingresos" class="chart-card" (click)="toggleChart('income')"><p-chart type="line" [data]="monthlyIncomeChart" [options]="getChartOptions('income')"></p-chart></p-card>
-      <p-card header="Equipos por tipo" class="chart-card" (click)="toggleChart('devices')"><p-chart type="bar" [data]="devicesByTypeChart" [options]="getChartOptions('devices')"></p-chart></p-card>
-      <p-card header="Reparaciones por estado" class="chart-card" (click)="toggleChart('repairs')"><p-chart type="doughnut" [data]="repairsByStatusChart" [options]="getChartOptions('repairs')"></p-chart></p-card>
+    <section class="dashboard-grid charts lightweight-dashboard">
+      <p-card header="Ingresos por mes">
+        <div class="metric-list">
+          @for (item of monthlyRevenueRows; track item.label) {
+            <div class="metric-list-row">
+              <span>{{ item.label }}</span>
+              <strong>{{ item.value | currency:'ARS':'symbol':'1.0-0':'es-AR' }}</strong>
+            </div>
+          } @empty {
+            <p class="inline-message">Sin ingresos registrados.</p>
+          }
+        </div>
+      </p-card>
+      <p-card header="Equipos por tipo">
+        <div class="metric-list">
+          @for (item of deviceTypeRows; track item.label) {
+            <div class="metric-list-row">
+              <span>{{ item.label }}</span>
+              <strong>{{ item.value }}</strong>
+            </div>
+          } @empty {
+            <p class="inline-message">Sin equipos registrados.</p>
+          }
+        </div>
+      </p-card>
+      <p-card header="Reparaciones por estado">
+        <div class="metric-list">
+          @for (item of repairStatusRows; track item.label) {
+            <div class="metric-list-row">
+              <span>{{ item.label }}</span>
+              <strong>{{ item.value }}</strong>
+            </div>
+          } @empty {
+            <p class="inline-message">Sin reparaciones cargadas.</p>
+          }
+        </div>
+      </p-card>
     </section>
 
     <section class="dashboard-grid lists">
@@ -154,11 +188,9 @@ export class DashboardPageComponent implements OnInit {
   recentDevices: Device[] = [];
   recentRepairs: { date: string; client: string; price: number }[] = [];
   inactiveClients: { name: string; lastRepair: string | null }[] = [];
-  devicesByTypeChart: any;
-  repairsByStatusChart: any;
-  monthlyIncomeChart: any;
-  chartOptions: any = { plugins: { legend: { labels: { color: '#94a3b8' } } }, maintainAspectRatio: false };
-  expandedChart: 'income' | 'devices' | 'repairs' | null = null;
+  deviceTypeRows: BreakdownRow[] = [];
+  repairStatusRows: BreakdownRow[] = [];
+  monthlyRevenueRows: BreakdownRow[] = [];
   waitingPickupCount = 0;
   inProgressCount = 0;
   quotedPendingCount = 0;
@@ -190,7 +222,7 @@ export class DashboardPageComponent implements OnInit {
         price: r.price || 0
       }));
 
-      this.buildCharts();
+      this.buildBreakdowns();
       this.buildInactiveClients();
       this.changeDetector.detectChanges();
     });
@@ -226,10 +258,7 @@ export class DashboardPageComponent implements OnInit {
       .map(({ name, lastRepair }) => ({ name, lastRepair }));
   }
 
-  toggleChart(chart: 'income' | 'devices' | 'repairs'): void { this.expandedChart = this.expandedChart === chart ? null : chart; }
-  getChartOptions(chart: 'income' | 'devices' | 'repairs'): any { return { ...this.chartOptions, aspectRatio: this.expandedChart === chart ? 1.2 : 2.2 }; }
-
-  private buildCharts(): void {
+  private buildBreakdowns(): void {
     const deviceMap = new Map<string, number>();
     this.devices.forEach((item) => deviceMap.set(item.deviceType, (deviceMap.get(item.deviceType) || 0) + 1));
     const repairMap = new Map<string, number>();
@@ -244,16 +273,37 @@ export class DashboardPageComponent implements OnInit {
     });
     const sortedMonths = Array.from(monthlyIncomeMap.keys()).sort();
     this.monthRevenue = sortedMonths.length ? (monthlyIncomeMap.get(sortedMonths[sortedMonths.length - 1]) || 0) : 0;
-    this.monthlyIncomeChart = {
-      labels: sortedMonths,
-      datasets: [{ label: 'Ingresos (ARS)', data: sortedMonths.map((month) => monthlyIncomeMap.get(month) || 0), borderColor: '#34b6f8', backgroundColor: 'rgba(52,182,248,0.2)', tension: 0.3, fill: true }]
-    };
-    this.devicesByTypeChart = { labels: Array.from(deviceMap.keys()), datasets: [{ label: 'Equipos', backgroundColor: '#0ea5e9', data: Array.from(deviceMap.values()) }] };
-    this.repairsByStatusChart = { labels: Array.from(repairMap.keys()), datasets: [{ data: Array.from(repairMap.values()), backgroundColor: ['#0ea5e9', '#22c55e', '#f59e0b', '#ef4444', '#6366f1', '#14b8a6'] }] };
+    this.monthlyRevenueRows = sortedMonths
+      .slice(-6)
+      .map((month) => ({ label: this.formatMonth(month), value: monthlyIncomeMap.get(month) || 0 }));
+    this.deviceTypeRows = Array.from(deviceMap.entries())
+      .map(([label, value]) => ({ label, value }))
+      .sort((a, b) => b.value - a.value);
+    this.repairStatusRows = Array.from(repairMap.entries())
+      .map(([label, value]) => ({ label: this.statusLabel(label as Repair['status']), value }))
+      .sort((a, b) => b.value - a.value);
   }
 
   private asMoney(value: unknown): number {
     const parsed = Number(value ?? 0);
     return Number.isFinite(parsed) ? parsed : 0;
+  }
+
+  private formatMonth(value: string): string {
+    const [year, month] = value.split('-').map(Number);
+    if (!year || !month) return value;
+    return new Date(year, month - 1, 1).toLocaleDateString('es-AR', { month: 'short', year: 'numeric' });
+  }
+
+  private statusLabel(status: Repair['status']): string {
+    switch (status) {
+      case 'POR_RECIBIR': return 'Por recibir';
+      case 'RECIBIDA': return 'Recibida';
+      case 'PRESUPUESTADA_ESPERANDO_RESPUESTA': return 'Presupuestada';
+      case 'HACIENDO': return 'Haciendo';
+      case 'ESPERANDO_RETIRO': return 'Esperando retiro';
+      case 'RETIRADA': return 'Retirada';
+      default: return status;
+    }
   }
 }

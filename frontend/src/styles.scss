@@ -712,12 +712,29 @@ textarea.p-inputtext {
 }
 
 .table-toolbar {
+  display: flex;
+  align-items: center;
+  gap: .55rem;
+  flex-wrap: wrap;
   margin-bottom: .75rem;
 }
 
 .table-toolbar .filter-search {
   display: inline-flex;
+  align-items: center;
   width: min(28rem, 100%);
+}
+
+.table-toolbar .p-input-icon-left,
+.repairs-filters .p-input-icon-left {
+  display: inline-flex;
+  align-items: center;
+  width: 100%;
+}
+
+.table-toolbar .p-input-icon-left > .p-inputtext,
+.repairs-filters .p-input-icon-left > .p-inputtext {
+  width: 100%;
 }
 
 .repairs-filters {
@@ -741,6 +758,35 @@ textarea.p-inputtext {
   flex-wrap: wrap;
   gap: .45rem;
   margin: -.15rem 0 .55rem;
+}
+
+.finance-filters {
+  display: flex;
+  align-items: end;
+  gap: .75rem;
+  flex-wrap: wrap;
+  margin-bottom: .9rem;
+}
+
+.finance-filters .field {
+  margin-bottom: 0;
+  min-width: 12rem;
+}
+
+.finance-reset {
+  min-height: 2.25rem;
+}
+
+.finance-layout {
+  grid-template-columns: minmax(320px, .85fr) minmax(0, 1.15fr);
+}
+
+.finance-breakdown {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.finance-table {
+  min-width: 100%;
 }
 
 .summary-chip {
@@ -1067,6 +1113,7 @@ textarea.p-inputtext {
   .dashboard-grid,
   .dashboard-grid.charts,
   .dashboard-grid.lists,
+  .finance-layout,
   .status-board {
     grid-template-columns: 1fr;
   }
@@ -1085,7 +1132,8 @@ textarea.p-inputtext {
   }
 
   .inline-row,
-  .repairs-filters {
+  .repairs-filters,
+  .finance-filters {
     flex-direction: column;
     align-items: stretch;
   }

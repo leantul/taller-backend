@@ -62,6 +62,7 @@ export class AppComponent {
     { label: 'Clientes', icon: 'pi pi-users', path: '/clientes' },
     { label: 'Dispositivos', icon: 'pi pi-desktop', path: '/dispositivos' },
     { label: 'Reparaciones', icon: 'pi pi-wrench', path: '/reparaciones' },
+    { label: 'Finanzas', icon: 'pi pi-chart-line', path: '/finanzas' },
     { label: 'Estados', icon: 'pi pi-th-large', path: '/status' },
     { label: 'Avisos', icon: 'pi pi-bell', path: '/notificaciones' }
   ];

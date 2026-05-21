@@ -18,11 +18,6 @@ import { ThemeMode, ThemeService } from '../../core/services/theme.service';
         </button>
 
         <img [src]="themeMode === 'dark' ? '/assets/logo-dark.png' : '/assets/logo-light.png'" alt="Logo" class="login-logo" />
-        <div class="auth-copy">
-          <span class="eyebrow">Acceso interno</span>
-          <h1>Panel operativo</h1>
-          <p>Clientes, equipos y reparaciones en una sola mesa de trabajo.</p>
-        </div>
 
         <form (ngSubmit)="submit()" class="auth-form">
           <label class="field auth-field" for="login-username">

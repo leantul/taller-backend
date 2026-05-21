@@ -55,6 +55,12 @@ export class RepairsPageComponent implements OnInit {
   devicesById = new Map<string, Device>();
   clientDevices: Device[] = [];
   allDevices: Device[] = [];
+  clientOptions: { label: string; value: string }[] = [];
+  deviceOptions: { label: string; value: string }[] = [];
+  clientDeviceOptions: { label: string; value: string }[] = [];
+  filteredClientsList: Client[] = [];
+  selectedClientSummary = '';
+  selectedDeviceSummary = '';
   draftDevice: Device = { brand: '', model: '', serialNumber: '', clientId: '', deviceType: 'NOTEBOOK' };
   showClientModal = false;
   showDeviceModal = false;
@@ -93,6 +99,9 @@ export class RepairsPageComponent implements OnInit {
       this.clientsById = new Map(clients.filter(item => !!item.id).map(item => [item.id!, item]));
       this.devicesById = new Map(devices.filter(item => !!item.id).map(item => [item.id!, item]));
       this.allDevices = devices;
+      this.rebuildStaticOptions();
+      this.updateFilteredClients();
+      this.refreshSelectionSummaries();
       this.applyFilters();
       this.changeDetector.detectChanges();
     });
@@ -110,7 +119,12 @@ export class RepairsPageComponent implements OnInit {
     this.draft.idClient = client.id || '';
     this.selectedClientName = `${client.name} ${client.lastName}`.trim();
     this.showClientModal = false;
-    this.api.getDevices().subscribe((devices) => { this.clientDevices = devices.filter(d => d.clientId === this.draft.idClient); this.changeDetector.detectChanges(); });
+    this.api.getDevices().subscribe((devices) => {
+      this.clientDevices = devices.filter(d => d.clientId === this.draft.idClient);
+      this.rebuildClientDeviceOptions();
+      this.refreshSelectionSummaries();
+      this.changeDetector.detectChanges();
+    });
   }
 
   createDeviceInline(): void {
@@ -118,9 +132,13 @@ export class RepairsPageComponent implements OnInit {
     this.api.createDevice(this.draftDevice).subscribe((device) => {
       this.clientDevices = [device, ...this.clientDevices];
       this.allDevices = [device, ...this.allDevices];
+      if (device.id) this.devicesById.set(device.id, device);
+      this.rebuildStaticOptions();
+      this.rebuildClientDeviceOptions();
       this.draft.idDevice = device.id || '';
       this.draftDevice = { brand: '', model: '', serialNumber: '', clientId: this.draft.idClient, deviceType: 'NOTEBOOK' };
       this.showDeviceModal = false;
+      this.refreshSelectionSummaries();
       this.changeDetector.detectChanges();
     });
   }
@@ -136,9 +154,11 @@ export class RepairsPageComponent implements OnInit {
       next: () => {
         this.isSaving = false;
         this.messageService.add({ severity: 'success', summary: 'Reparación guardada', detail: 'Alta creada correctamente.' });
-        this.draft = { idDevice: '', idClient: '', orderNumber: '', description: '', status: 'POR_RECIBIR', price: 0, quotedAmount: 0, quoteNotes: '', parts: [] };
+      this.draft = { idDevice: '', idClient: '', orderNumber: '', description: '', status: 'POR_RECIBIR', price: 0, quotedAmount: 0, quoteNotes: '', parts: [] };
         this.selectedClientName='';
         this.clientDevices=[];
+        this.rebuildClientDeviceOptions();
+        this.refreshSelectionSummaries();
         this.reload();
       },
       error: (error) => { this.isSaving = false; this.messageService.add({ severity: 'error', summary: 'Error', detail: this.errorDetail(error, 'No se pudo guardar la reparación.') }); }
@@ -152,13 +172,20 @@ export class RepairsPageComponent implements OnInit {
     const exactClient = this.clients.find((c) => `${c.name} ${c.lastName}`.trim().toLowerCase() === value.trim().toLowerCase());
     if (exactClient?.id) {
       this.draft.idClient = exactClient.id;
-      this.api.getDevices().subscribe((devices) => { this.clientDevices = devices.filter(d => d.clientId === this.draft.idClient); this.changeDetector.detectChanges(); });
+      this.api.getDevices().subscribe((devices) => {
+        this.clientDevices = devices.filter(d => d.clientId === this.draft.idClient);
+        this.rebuildClientDeviceOptions();
+        this.refreshSelectionSummaries();
+        this.changeDetector.detectChanges();
+      });
       return;
     }
 
     this.draft.idClient = '';
     this.draft.idDevice = '';
     this.clientDevices = [];
+    this.rebuildClientDeviceOptions();
+    this.refreshSelectionSummaries();
   }
 
   createClientInline(): void {
@@ -171,6 +198,8 @@ export class RepairsPageComponent implements OnInit {
       next: (client) => {
         this.clients = [client, ...this.clients];
         if (client.id) this.clientsById.set(client.id, client);
+        this.rebuildStaticOptions();
+        this.updateFilteredClients();
         this.selectClient(client);
         this.draftClient = { name: '', lastName: '', dni: '', email: '', phone: '' };
         this.showNewClientModal = false;
@@ -212,7 +241,9 @@ export class RepairsPageComponent implements OnInit {
       ...repair,
       parts: (repair.parts || []).map((part) => ({ ...part }))
     };
+    this.refreshSelectionSummaries();
     this.showEditModal = true;
+    this.changeDetector.detectChanges();
   }
 
   onEditStatusChange(): void {
@@ -291,16 +322,6 @@ export class RepairsPageComponent implements OnInit {
     return `${device.brand || '-'} - ${device.model || '-'}`.replace(/\s+/g, ' ').trim();
   }
 
-  get selectedClientSummary(): string {
-    const client = this.clientsById.get(this.draft.idClient);
-    return client ? `${client.name} ${client.lastName}`.trim() : '';
-  }
-
-  get selectedDeviceSummary(): string {
-    const device = this.clientDevices.find((item) => item.id === this.draft.idDevice) || this.devicesById.get(this.draft.idDevice);
-    return device ? `${device.deviceType} · ${device.brand} ${device.model}`.replace(/\s+/g, ' ').trim() : '';
-  }
-
   statusClass(status: Repair['status']): string {
     switch (status) {
       case 'POR_RECIBIR': return 'is-muted';
@@ -330,24 +351,6 @@ export class RepairsPageComponent implements OnInit {
     const digits = (phone || "").replace(/\D/g, "");
     return `https://wa.me/${digits}`;
   }
-
-
-
-  get clientOptions(): { label: string; value: string }[] {
-    return this.clients.map((c) => ({ label: `${c.name} ${c.lastName}`.trim(), value: c.id || '' })).filter((c) => !!c.value);
-  }
-
-  get deviceOptions(): { label: string; value: string }[] {
-    return this.allDevices.map((d) => ({ label: `${d.brand || '-'} - ${d.model || '-'}` , value: d.id || '' })).filter((d) => !!d.value);
-  }
-
-  get clientDeviceOptions(): { label: string; value: string }[] {
-    return this.clientDevices.map((d) => ({
-      label: `${d.brand || '-'} - ${d.model || '-'}` ,
-      value: d.id || ''
-    })).filter((d) => !!d.value);
-  }
-
   filterClientSuggestions(query: string): void {
     const term = (query || '').trim().toLowerCase();
     if (term.length < 3) {
@@ -376,9 +379,7 @@ export class RepairsPageComponent implements OnInit {
   }
 
   get filteredClients(): Client[] {
-    const term = this.clientSearch.trim().toLowerCase();
-    if (!term) return this.clients;
-    return this.clients.filter((c) => `${c.name} ${c.lastName} ${c.phone} ${c.email}`.toLowerCase().includes(term));
+    return this.filteredClientsList;
   }
 
   private updateVisibleRepairs(): void {
@@ -429,6 +430,51 @@ export class RepairsPageComponent implements OnInit {
       quotedAmountLabel: this.formatMoney(repair.quotedAmount),
       priceLabel: this.formatMoney(repair.price)
     };
+  }
+
+  onDraftDeviceChange(): void {
+    this.refreshSelectionSummaries();
+  }
+
+  onEditRepairClientChange(): void {
+    if (!this.clientOptions.some((option) => option.value === this.editingRepair.idClient)) {
+      this.editingRepair.idClient = '';
+    }
+  }
+
+  onEditRepairDeviceChange(): void {
+    if (!this.deviceOptions.some((option) => option.value === this.editingRepair.idDevice)) {
+      this.editingRepair.idDevice = '';
+    }
+  }
+
+  updateFilteredClients(): void {
+    const term = this.clientSearch.trim().toLowerCase();
+    this.filteredClientsList = !term
+      ? this.clients
+      : this.clients.filter((c) => `${c.name} ${c.lastName} ${c.phone} ${c.email}`.toLowerCase().includes(term));
+  }
+
+  private rebuildStaticOptions(): void {
+    this.clientOptions = this.clients
+      .map((c) => ({ label: `${c.name} ${c.lastName}`.trim(), value: c.id || '' }))
+      .filter((c) => !!c.value);
+    this.deviceOptions = this.allDevices
+      .map((d) => ({ label: `${d.brand || '-'} - ${d.model || '-'}`, value: d.id || '' }))
+      .filter((d) => !!d.value);
+  }
+
+  private rebuildClientDeviceOptions(): void {
+    this.clientDeviceOptions = this.clientDevices
+      .map((d) => ({ label: `${d.brand || '-'} - ${d.model || '-'}`, value: d.id || '' }))
+      .filter((d) => !!d.value);
+  }
+
+  private refreshSelectionSummaries(): void {
+    const client = this.clientsById.get(this.draft.idClient);
+    this.selectedClientSummary = client ? `${client.name} ${client.lastName}`.trim() : '';
+    const device = this.clientDevices.find((item) => item.id === this.draft.idDevice) || this.devicesById.get(this.draft.idDevice);
+    this.selectedDeviceSummary = device ? `${device.deviceType} · ${device.brand} ${device.model}`.replace(/\s+/g, ' ').trim() : '';
   }
 
   private formatMoney(value: unknown): string {

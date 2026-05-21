@@ -4,7 +4,6 @@ import { FormsModule } from '@angular/forms';
 import { CardModule } from 'primeng/card';
 import { InputTextModule } from 'primeng/inputtext';
 import { ButtonModule } from 'primeng/button';
-import { TableModule } from 'primeng/table';
 import { SelectModule } from 'primeng/select';
 import { DialogModule } from 'primeng/dialog';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
@@ -16,7 +15,7 @@ import { Client } from '../../shared/models/client.model';
 @Component({
   selector: 'app-devices-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, CardModule, InputTextModule, ButtonModule, TableModule, SelectModule, DialogModule, ConfirmDialogModule],
+  imports: [CommonModule, FormsModule, CardModule, InputTextModule, ButtonModule, SelectModule, DialogModule, ConfirmDialogModule],
   providers: [ConfirmationService],
   template: `
     <p-confirmdialog></p-confirmdialog>
@@ -45,10 +44,38 @@ import { Client } from '../../shared/models/client.model';
           <span class="p-input-icon-left filter-search"><i class="pi pi-search"></i><input pInputText [(ngModel)]="searchTerm" (ngModelChange)="applyFilters()" placeholder="Buscar por cualquier campo" /></span>
           <p-select styleClass="compact-filter" [options]="clientOptions" optionLabel="label" optionValue="value" [(ngModel)]="selectedClientId" (ngModelChange)="applyFilters()" placeholder="Filtrar por cliente" [showClear]="true" appendTo="body"></p-select>
         </div>
-        <p-table [value]="filteredDevices" size="small" [paginator]="true" [rows]="10" sortMode="multiple">
-          <ng-template pTemplate="header"><tr><th pSortableColumn="deviceType">Tipo <p-sortIcon field="deviceType"></p-sortIcon></th><th pSortableColumn="brand">Marca <p-sortIcon field="brand"></p-sortIcon></th><th pSortableColumn="model">Modelo <p-sortIcon field="model"></p-sortIcon></th><th pSortableColumn="serialNumber">Serie <p-sortIcon field="serialNumber"></p-sortIcon></th><th pSortableColumn="clientName">Cliente <p-sortIcon field="clientName"></p-sortIcon></th><th>Acciones</th></tr></ng-template>
-          <ng-template pTemplate="body" let-d><tr><td>{{ d.deviceType }}</td><td>{{ d.brand }}</td><td>{{ d.model }}</td><td>{{ d.serialNumber }}</td><td>{{ getClientName(d.clientId) }}</td><td><button pButton type="button" class="p-button-text p-button-sm" icon="pi pi-pencil" ariaLabel="Editar dispositivo" (click)="openEdit(d)"></button><button pButton type="button" class="p-button-text p-button-sm p-button-danger" icon="pi pi-trash" ariaLabel="Eliminar dispositivo" (click)="confirmRemove(d)"></button></td></tr></ng-template>
-        </p-table>
+        <div class="native-table-wrap">
+          <table class="native-table">
+            <thead><tr><th>Tipo</th><th>Marca</th><th>Modelo</th><th>Serie</th><th>Cliente</th><th>Acciones</th></tr></thead>
+            <tbody>
+              @for (d of visibleDevices; track d.id || d.serialNumber) {
+                <tr>
+                  <td>{{ d.deviceType }}</td>
+                  <td>{{ d.brand }}</td>
+                  <td>{{ d.model }}</td>
+                  <td>{{ d.serialNumber }}</td>
+                  <td>{{ getClientName(d.clientId) }}</td>
+                  <td>
+                    <div class="action-buttons">
+                      <button class="icon-action" type="button" aria-label="Editar dispositivo" (click)="openEdit(d)"><i class="pi pi-pencil"></i></button>
+                      <button class="icon-action danger" type="button" aria-label="Eliminar dispositivo" (click)="confirmRemove(d)"><i class="pi pi-trash"></i></button>
+                    </div>
+                  </td>
+                </tr>
+              } @empty {
+                <tr><td class="empty-cell" colspan="6">No hay dispositivos para mostrar.</td></tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        <div class="table-pager" aria-label="Paginación de dispositivos">
+          <span>{{ paginationLabel }}</span>
+          <div class="pager-actions">
+            <button class="pager-button" type="button" [disabled]="currentPage === 1" (click)="previousPage()"><i class="pi pi-chevron-left"></i></button>
+            <span>Página {{ currentPage }} de {{ totalPages }}</span>
+            <button class="pager-button" type="button" [disabled]="currentPage === totalPages" (click)="nextPage()"><i class="pi pi-chevron-right"></i></button>
+          </div>
+        </div>
       </p-card>
     </div>
 
@@ -71,6 +98,8 @@ export class DevicesPageComponent implements OnInit {
   editVisible = false;
   selectedClientId: string | null = null;
   searchTerm = '';
+  currentPage = 1;
+  pageSize = 10;
   typeOptions = [
     { label: 'Desktop', value: 'DESKTOP' }, { label: 'Notebook', value: 'NOTEBOOK' }, { label: 'Tablet', value: 'TABLET' }, { label: 'Celular', value: 'CELULAR' }, { label: 'Otros', value: 'OTROS' }
   ];
@@ -120,11 +149,37 @@ export class DevicesPageComponent implements OnInit {
         const byTerm = !term || `${device.deviceType} ${device.brand} ${device.model} ${device.serialNumber} ${device.clientId} ${device.clientName}`.toLowerCase().includes(term);
         return byClient && byTerm;
       });
+    this.currentPage = 1;
   }
 
   getClientName(clientId: string): string {
     const client = this.clients.find((c) => c.id === clientId);
     return client ? `${client.name} ${client.lastName}` : clientId;
+  }
+
+  get totalPages(): number {
+    return Math.max(1, Math.ceil(this.filteredDevices.length / this.pageSize));
+  }
+
+  get visibleDevices(): (Device & { clientName?: string })[] {
+    const page = Math.min(this.currentPage, this.totalPages);
+    const start = (page - 1) * this.pageSize;
+    return this.filteredDevices.slice(start, start + this.pageSize);
+  }
+
+  get paginationLabel(): string {
+    if (!this.filteredDevices.length) return '0 dispositivos';
+    const start = (Math.min(this.currentPage, this.totalPages) - 1) * this.pageSize + 1;
+    const end = Math.min(start + this.pageSize - 1, this.filteredDevices.length);
+    return `${start}-${end} de ${this.filteredDevices.length} dispositivos`;
+  }
+
+  previousPage(): void {
+    this.currentPage = Math.max(1, this.currentPage - 1);
+  }
+
+  nextPage(): void {
+    this.currentPage = Math.min(this.totalPages, this.currentPage + 1);
   }
 
   private reload(): void { this.api.getDevices().subscribe((devices) => { this.devices = devices.slice().reverse(); this.applyFilters(); this.changeDetector.detectChanges(); }); }

@@ -1,9 +1,8 @@
 import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
 import { CardModule } from 'primeng/card';
-import { TableModule } from 'primeng/table';
-import { TagModule } from 'primeng/tag';
 import { ChartModule } from 'primeng/chart';
 import { ApiService } from '../../core/services/api.service';
 import { Client } from '../../shared/models/client.model';
@@ -13,7 +12,7 @@ import { Repair } from '../../shared/models/repair.model';
 @Component({
   selector: 'app-dashboard-page',
   standalone: true,
-  imports: [CommonModule, CardModule, TableModule, TagModule, ChartModule],
+  imports: [CommonModule, RouterLink, CardModule, ChartModule],
   template: `
     <section class="page-heading">
       <div>
@@ -21,6 +20,52 @@ import { Repair } from '../../shared/models/repair.model';
         <h1>Resumen operativo</h1>
       </div>
       <p>Lectura rápida de carga de trabajo, ingresos y últimos movimientos.</p>
+    </section>
+
+    <section class="dashboard-topline">
+      <div class="action-hub">
+        <a routerLink="/reparaciones" class="action-tile">
+          <i class="pi pi-wrench"></i>
+          <div>
+            <strong>Nueva reparación</strong>
+            <small>Alta, presupuesto y seguimiento</small>
+          </div>
+        </a>
+        <a routerLink="/clientes" class="action-tile">
+          <i class="pi pi-users"></i>
+          <div>
+            <strong>Nuevo cliente</strong>
+            <small>Base de clientes y datos de contacto</small>
+          </div>
+        </a>
+        <a routerLink="/dispositivos" class="action-tile">
+          <i class="pi pi-desktop"></i>
+          <div>
+            <strong>Nuevo dispositivo</strong>
+            <small>Vincular equipo con su dueño</small>
+          </div>
+        </a>
+        <a routerLink="/status" class="action-tile">
+          <i class="pi pi-th-large"></i>
+          <div>
+            <strong>Ver tablero</strong>
+            <small>Mover ordenes entre etapas</small>
+          </div>
+        </a>
+      </div>
+
+      <div class="ops-summary">
+        <div class="ops-summary-head">
+          <strong>Foco operativo</strong>
+          <small>Lo que conviene mirar primero</small>
+        </div>
+        <div class="ops-summary-grid">
+          <div class="ops-item"><span>Pendientes de retiro</span><strong>{{ waitingPickupCount }}</strong></div>
+          <div class="ops-item"><span>En proceso</span><strong>{{ inProgressCount }}</strong></div>
+          <div class="ops-item"><span>Presupuestadas</span><strong>{{ quotedPendingCount }}</strong></div>
+          <div class="ops-item"><span>Ingreso este mes</span><strong>{{ monthRevenue | currency:'ARS':'symbol':'1.0-0':'es-AR' }}</strong></div>
+        </div>
+      </div>
     </section>
 
     <section class="dashboard-grid metrics-grid">
@@ -38,31 +83,63 @@ import { Repair } from '../../shared/models/repair.model';
 
     <section class="dashboard-grid lists">
       <p-card header="Últimos 5 clientes">
-        <p-table [value]="recentClients" size="small">
-          <ng-template pTemplate="header"><tr><th>Nombre</th><th>Tipo de dispositivo</th></tr></ng-template>
-          <ng-template pTemplate="body" let-item><tr><td>{{ item.name }}</td><td>{{ item.deviceType }}</td></tr></ng-template>
-        </p-table>
+        <div class="native-table-wrap">
+          <table class="native-table dashboard-table">
+            <thead><tr><th>Nombre</th><th>Tipo de dispositivo</th></tr></thead>
+            <tbody>
+              @for (item of recentClients; track item.name) {
+                <tr><td>{{ item.name }}</td><td>{{ item.deviceType }}</td></tr>
+              } @empty {
+                <tr><td class="empty-cell" colspan="2">Sin datos recientes.</td></tr>
+              }
+            </tbody>
+          </table>
+        </div>
       </p-card>
 
       <p-card header="Últimos 5 dispositivos">
-        <p-table [value]="recentDevices" size="small">
-          <ng-template pTemplate="header"><tr><th>Tipo</th><th>Marca</th><th>Modelo</th></tr></ng-template>
-          <ng-template pTemplate="body" let-item><tr><td>{{ item.deviceType }}</td><td>{{ item.brand }}</td><td>{{ item.model }}</td></tr></ng-template>
-        </p-table>
+        <div class="native-table-wrap">
+          <table class="native-table dashboard-table">
+            <thead><tr><th>Tipo</th><th>Marca</th><th>Modelo</th></tr></thead>
+            <tbody>
+              @for (item of recentDevices; track item.id || item.serialNumber) {
+                <tr><td>{{ item.deviceType }}</td><td>{{ item.brand }}</td><td>{{ item.model }}</td></tr>
+              } @empty {
+                <tr><td class="empty-cell" colspan="3">Sin dispositivos recientes.</td></tr>
+              }
+            </tbody>
+          </table>
+        </div>
       </p-card>
 
       <p-card header="Últimas 5 reparaciones">
-        <p-table [value]="recentRepairs" size="small">
-          <ng-template pTemplate="header"><tr><th>Fecha</th><th>Cliente</th><th>Monto</th></tr></ng-template>
-          <ng-template pTemplate="body" let-item><tr><td>{{ item.date }}</td><td>{{ item.client }}</td><td>{{ item.price | currency:'ARS':'symbol':'1.2-2':'es-AR' }}</td></tr></ng-template>
-        </p-table>
+        <div class="native-table-wrap">
+          <table class="native-table dashboard-table">
+            <thead><tr><th>Fecha</th><th>Cliente</th><th>Monto</th></tr></thead>
+            <tbody>
+              @for (item of recentRepairs; track item.date + item.client) {
+                <tr><td>{{ item.date }}</td><td>{{ item.client }}</td><td>{{ item.price | currency:'ARS':'symbol':'1.2-2':'es-AR' }}</td></tr>
+              } @empty {
+                <tr><td class="empty-cell" colspan="3">Sin reparaciones entregadas.</td></tr>
+              }
+            </tbody>
+          </table>
+        </div>
       </p-card>
 
       <p-card header="Top 5 equipos inactivos">
-        <p-table [value]="inactiveClients" size="small">
-          <ng-template pTemplate="header"><tr><th>Cliente</th><th>Fecha</th></tr></ng-template>
-          <ng-template pTemplate="body" let-item><tr><td>{{ item.name }}</td><td>{{ item.lastRepair || 'Sin historial' }}</td></tr></ng-template>
-        </p-table>
+        <div class="native-table-wrap">
+          <table class="native-table dashboard-table">
+            <thead><tr><th>Cliente</th><th>Fecha</th></tr></thead>
+            <tbody>
+              @for (item of inactiveClients; track item.name) {
+                <tr><td>{{ item.name }}</td><td>{{ item.lastRepair || 'Sin historial' }}</td></tr>
+              } @empty {
+                <tr><td class="empty-cell" colspan="2">Sin registros para mostrar.</td></tr>
+              }
+            </tbody>
+          </table>
+        </div>
       </p-card>
     </section>
   `
@@ -72,6 +149,7 @@ export class DashboardPageComponent implements OnInit {
   devices: Device[] = [];
   repairs: Repair[] = [];
   totalRevenue = 0;
+  monthRevenue = 0;
   recentClients: { name: string; deviceType: string }[] = [];
   recentDevices: Device[] = [];
   recentRepairs: { date: string; client: string; price: number }[] = [];
@@ -81,6 +159,9 @@ export class DashboardPageComponent implements OnInit {
   monthlyIncomeChart: any;
   chartOptions: any = { plugins: { legend: { labels: { color: '#94a3b8' } } }, maintainAspectRatio: false };
   expandedChart: 'income' | 'devices' | 'repairs' | null = null;
+  waitingPickupCount = 0;
+  inProgressCount = 0;
+  quotedPendingCount = 0;
 
   constructor(private readonly api: ApiService, private readonly changeDetector: ChangeDetectorRef) {}
 
@@ -90,6 +171,9 @@ export class DashboardPageComponent implements OnInit {
       this.devices = devices;
       this.repairs = repairs;
       this.totalRevenue = repairs.reduce((acc, item) => acc + (item.price || 0), 0);
+      this.waitingPickupCount = repairs.filter((item) => item.status === 'ESPERANDO_RETIRO').length;
+      this.inProgressCount = repairs.filter((item) => item.status === 'HACIENDO' || item.status === 'RECIBIDA').length;
+      this.quotedPendingCount = repairs.filter((item) => item.status === 'PRESUPUESTADA_ESPERANDO_RESPUESTA').length;
 
       this.recentClients = latestClients.map((c) => ({
           name: `${c.name} ${c.lastName}`.trim(),
@@ -159,6 +243,7 @@ export class DashboardPageComponent implements OnInit {
       monthlyIncomeMap.set(monthKey, (monthlyIncomeMap.get(monthKey) || 0) + (item.price || 0));
     });
     const sortedMonths = Array.from(monthlyIncomeMap.keys()).sort();
+    this.monthRevenue = sortedMonths.length ? (monthlyIncomeMap.get(sortedMonths[sortedMonths.length - 1]) || 0) : 0;
     this.monthlyIncomeChart = {
       labels: sortedMonths,
       datasets: [{ label: 'Ingresos (ARS)', data: sortedMonths.map((month) => monthlyIncomeMap.get(month) || 0), borderColor: '#34b6f8', backgroundColor: 'rgba(52,182,248,0.2)', tension: 0.3, fill: true }]

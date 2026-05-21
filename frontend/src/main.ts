@@ -14,7 +14,10 @@ bootstrapApplication(AppComponent, {
     provideAnimations(),
     providePrimeNG({
       theme: {
-        preset: Aura
+        preset: Aura,
+        options: {
+          darkModeSelector: '.p-dark'
+        }
       }
     }),
     provideHttpClient(withInterceptors([authInterceptor])),

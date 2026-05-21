@@ -170,7 +170,7 @@ export class DashboardPageComponent implements OnInit {
       this.clients = clients;
       this.devices = devices;
       this.repairs = repairs;
-      this.totalRevenue = repairs.reduce((acc, item) => acc + (item.price || 0), 0);
+      this.totalRevenue = repairs.reduce((acc, item) => acc + this.asMoney(item.price), 0);
       this.waitingPickupCount = repairs.filter((item) => item.status === 'ESPERANDO_RETIRO').length;
       this.inProgressCount = repairs.filter((item) => item.status === 'HACIENDO' || item.status === 'RECIBIDA').length;
       this.quotedPendingCount = repairs.filter((item) => item.status === 'PRESUPUESTADA_ESPERANDO_RESPUESTA').length;
@@ -240,7 +240,7 @@ export class DashboardPageComponent implements OnInit {
       if (!item.receiveDateTime) return;
       const date = new Date(item.receiveDateTime);
       const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-      monthlyIncomeMap.set(monthKey, (monthlyIncomeMap.get(monthKey) || 0) + (item.price || 0));
+      monthlyIncomeMap.set(monthKey, (monthlyIncomeMap.get(monthKey) || 0) + this.asMoney(item.price));
     });
     const sortedMonths = Array.from(monthlyIncomeMap.keys()).sort();
     this.monthRevenue = sortedMonths.length ? (monthlyIncomeMap.get(sortedMonths[sortedMonths.length - 1]) || 0) : 0;
@@ -250,5 +250,10 @@ export class DashboardPageComponent implements OnInit {
     };
     this.devicesByTypeChart = { labels: Array.from(deviceMap.keys()), datasets: [{ label: 'Equipos', backgroundColor: '#0ea5e9', data: Array.from(deviceMap.values()) }] };
     this.repairsByStatusChart = { labels: Array.from(repairMap.keys()), datasets: [{ data: Array.from(repairMap.values()), backgroundColor: ['#0ea5e9', '#22c55e', '#f59e0b', '#ef4444', '#6366f1', '#14b8a6'] }] };
+  }
+
+  private asMoney(value: unknown): number {
+    const parsed = Number(value ?? 0);
+    return Number.isFinite(parsed) ? parsed : 0;
   }
 }

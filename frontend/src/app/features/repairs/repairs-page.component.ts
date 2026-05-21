@@ -29,6 +29,7 @@ import { MessageService } from 'primeng/api';
 export class RepairsPageComponent implements OnInit {
   repairs: Repair[] = [];
   filteredRepairs: Repair[] = [];
+  visibleRepairs: Repair[] = [];
   clients: Client[] = [];
   clientsById = new Map<string, Client>();
   devicesById = new Map<string, Device>();
@@ -50,6 +51,8 @@ export class RepairsPageComponent implements OnInit {
   searchTerm = '';
   currentPage = 1;
   pageSize = 10;
+  totalPages = 1;
+  paginationLabel = '0 reparaciones';
   isSaving = false;
   isUpdating = false;
   isDeleting = false;
@@ -250,6 +253,7 @@ export class RepairsPageComponent implements OnInit {
       return Boolean(matchesTerm && matchesFrom && matchesTo);
     });
     this.currentPage = 1;
+    this.updateVisibleRepairs();
   }
   private reload(): void { this.api.getRepairs().subscribe((repairs) => { this.repairs = repairs.slice().reverse(); this.applyFilters(); this.changeDetector.detectChanges(); }); }
 
@@ -290,29 +294,14 @@ export class RepairsPageComponent implements OnInit {
     return repair.id || repair.orderNumber || `${repair.idClient}-${repair.idDevice}-${repair.receiveDateTime || ''}`;
   }
 
-  get totalPages(): number {
-    return Math.max(1, Math.ceil(this.filteredRepairs.length / this.pageSize));
-  }
-
-  get visibleRepairs(): Repair[] {
-    const page = Math.min(this.currentPage, this.totalPages);
-    const start = (page - 1) * this.pageSize;
-    return this.filteredRepairs.slice(start, start + this.pageSize);
-  }
-
-  get paginationLabel(): string {
-    if (!this.filteredRepairs.length) return '0 reparaciones';
-    const start = (Math.min(this.currentPage, this.totalPages) - 1) * this.pageSize + 1;
-    const end = Math.min(start + this.pageSize - 1, this.filteredRepairs.length);
-    return `${start}-${end} de ${this.filteredRepairs.length} reparaciones`;
-  }
-
   previousPage(): void {
     this.currentPage = Math.max(1, this.currentPage - 1);
+    this.updateVisibleRepairs();
   }
 
   nextPage(): void {
     this.currentPage = Math.min(this.totalPages, this.currentPage + 1);
+    this.updateVisibleRepairs();
   }
 
   whatsAppLink(phone: string): string {
@@ -368,5 +357,18 @@ export class RepairsPageComponent implements OnInit {
     const term = this.clientSearch.trim().toLowerCase();
     if (!term) return this.clients;
     return this.clients.filter((c) => `${c.name} ${c.lastName} ${c.phone} ${c.email}`.toLowerCase().includes(term));
+  }
+
+  private updateVisibleRepairs(): void {
+    this.totalPages = Math.max(1, Math.ceil(this.filteredRepairs.length / this.pageSize));
+    const page = Math.min(this.currentPage, this.totalPages);
+    const start = (page - 1) * this.pageSize;
+    this.visibleRepairs = this.filteredRepairs.slice(start, start + this.pageSize);
+    if (!this.filteredRepairs.length) {
+      this.paginationLabel = '0 reparaciones';
+      return;
+    }
+    const end = Math.min(start + this.pageSize, this.filteredRepairs.length);
+    this.paginationLabel = `${start + 1}-${end} de ${this.filteredRepairs.length} reparaciones`;
   }
 }

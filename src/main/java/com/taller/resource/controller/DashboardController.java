@@ -2,6 +2,7 @@ package com.taller.resource.controller;
 
 import com.taller.resource.dto.ClientDTO;
 import com.taller.resource.dto.DashboardDTO;
+import com.taller.resource.dto.DashboardOverviewDTO;
 import com.taller.resource.dto.DeviceDTO;
 import com.taller.resource.dto.RepairDTO;
 import com.taller.service.DashboardService;
@@ -25,6 +26,11 @@ public class DashboardController {
         int targetYear = year != null ? year : now.getYear();
         int targetMonth = month != null ? month : now.getMonthValue();
         return dashboardService.monthSummary(targetYear, targetMonth);
+    }
+
+    @GetMapping("/overview")
+    public DashboardOverviewDTO overview() {
+        return dashboardService.overview();
     }
 
     @GetMapping("/latest-clients")

@@ -7,6 +7,7 @@ import com.taller.model.enums.RepairStatusEnum;
 import com.taller.model.repository.RepairPaymentRepository;
 import com.taller.model.repository.RepairPartRepository;
 import com.taller.model.repository.RepairRepository;
+import com.taller.model.repository.projection.RepairListView;
 import com.taller.resource.dto.RepairDTO;
 import com.taller.resource.dto.RepairPartDTO;
 import com.taller.resource.dto.RepairPaymentDTO;
@@ -15,7 +16,10 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -26,7 +30,7 @@ public class RepairService {
     private final RepairPaymentRepository repairPaymentRepository;
 
     public List<RepairDTO> getAllRepairs() {
-      return repairRepository.findAll().stream().map(this::toDto).toList();
+      return repairRepository.findListRows().stream().map(this::toListDto).toList();
     }
 
     public RepairDTO getRepairById(String id) {
@@ -114,17 +118,20 @@ public class RepairService {
     }
 
     public List<RepairDTO> search(String term) {
-        return repairRepository.search(term).stream().map(this::toDto).toList();
+        return repairRepository.searchListRows(term).stream().map(this::toListDto).toList();
     }
 
     public BigDecimal totalIncome(LocalDateTime from, LocalDateTime to) {
-        return repairRepository.findByReturnDateTimeBetween(from, to).stream()
+        List<RepairListView> repairs = repairRepository.findFinanceRows(from, to);
+        Map<String, List<RepairPart>> partsByRepairId = partsByRepairId(repairs.stream().map(RepairListView::getId).toList());
+
+        return repairs.stream()
                 .map(repair -> {
                     BigDecimal laborIncome = repair.getLaborAmount() != null
                             ? repair.getLaborAmount()
                             : (repair.getPrice() != null ? repair.getPrice() : BigDecimal.ZERO);
 
-                    BigDecimal partsIncome = repairPartRepository.findByRepairId(repair.getId()).stream()
+                    BigDecimal partsIncome = partsByRepairId.getOrDefault(repair.getId(), List.of()).stream()
                             .map(part -> {
                                 BigDecimal cost = part.getCost() != null ? part.getCost() : BigDecimal.ZERO;
                                 BigDecimal sale = part.getSalePrice() != null ? part.getSalePrice() : BigDecimal.ZERO;
@@ -167,6 +174,27 @@ public class RepairService {
         return dto;
     }
 
+    private RepairDTO toListDto(RepairListView repair) {
+        RepairDTO dto = new RepairDTO();
+        dto.setId(repair.getId());
+        dto.setIdDevice(repair.getIdDevice());
+        dto.setIdClient(repair.getIdClient());
+        dto.setDescription(repair.getDescription());
+        dto.setOrderNumber(repair.getOrderNumber());
+        dto.setStatus(repair.getStatus());
+        dto.setReceiveDateTime(repair.getReceiveDateTime());
+        dto.setReturnDateTime(repair.getReturnDateTime());
+        dto.setPrice(repair.getPrice());
+        dto.setLaborAmount(repair.getLaborAmount());
+        dto.setExtraAmount(repair.getExtraAmount());
+        dto.setQuotedAmount(repair.getQuotedAmount());
+        dto.setQuoteNotes(repair.getQuoteNotes());
+        dto.setApproved(repair.getApproved());
+        dto.setRejected(repair.getRejected());
+        dto.setReadyNotifiedAt(repair.getReadyNotifiedAt());
+        return dto;
+    }
+
     private RepairPartDTO toPartDto(RepairPart part) {
         RepairPartDTO dto = new RepairPartDTO();
         dto.setId(part.getId());
@@ -202,5 +230,13 @@ public class RepairService {
             return repairDTO.getIdClient();
         }
         return repairDTO.getClient() != null ? repairDTO.getClient().getId() : null;
+    }
+
+    private Map<String, List<RepairPart>> partsByRepairId(Collection<String> repairIds) {
+        if (repairIds == null || repairIds.isEmpty()) {
+            return Map.of();
+        }
+        return repairPartRepository.findByRepairIdIn(repairIds).stream()
+                .collect(Collectors.groupingBy(RepairPart::getRepairId));
     }
 }

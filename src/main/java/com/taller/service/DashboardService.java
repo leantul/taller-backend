@@ -1,12 +1,26 @@
 package com.taller.service;
 
-import com.taller.model.Device;
+import com.taller.model.enums.DeviceTypeEnum;
+import com.taller.model.enums.RepairStatusEnum;
 import com.taller.model.repository.ClientRepository;
 import com.taller.model.repository.DeviceRepository;
 import com.taller.model.repository.RepairPartRepository;
 import com.taller.model.repository.RepairRepository;
+import com.taller.model.repository.projection.ClientBasicView;
+import com.taller.model.repository.projection.DeviceBasicView;
+import com.taller.model.repository.projection.DeviceLastRepairView;
+import com.taller.model.repository.projection.DeviceTypeCountView;
+import com.taller.model.repository.projection.MonthlyRevenueView;
+import com.taller.model.repository.projection.RepairListView;
+import com.taller.model.repository.projection.RepairStatusCountView;
 import com.taller.resource.dto.ClientDTO;
 import com.taller.resource.dto.DashboardDTO;
+import com.taller.resource.dto.DashboardInactiveDeviceDTO;
+import com.taller.resource.dto.DashboardOverviewDTO;
+import com.taller.resource.dto.DashboardRecentClientDTO;
+import com.taller.resource.dto.DashboardRecentDeviceDTO;
+import com.taller.resource.dto.DashboardRecentRepairDTO;
+import com.taller.resource.dto.DashboardSeriesItemDTO;
 import com.taller.resource.dto.DeviceDTO;
 import com.taller.resource.dto.RepairDTO;
 import lombok.RequiredArgsConstructor;
@@ -14,8 +28,14 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.YearMonth;
+import java.util.EnumMap;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -32,9 +52,9 @@ public class DashboardService {
         LocalDateTime to = from.plusMonths(1).minusSeconds(1);
 
         BigDecimal income = repairService.totalIncome(from, to);
-        BigDecimal costs = repairPartRepository.findAll().stream()
-                .map(com.taller.model.RepairPart::getCost)
-                .filter(v -> v != null)
+        List<RepairListView> repairs = repairRepository.findFinanceRows(from, to);
+        BigDecimal costs = repairPartRepository.findByRepairIdIn(repairs.stream().map(RepairListView::getId).toList()).stream()
+                .map(part -> safeMoney(part.getCost()).multiply(BigDecimal.valueOf(part.getQuantity() != null ? part.getQuantity() : 1)))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         return DashboardDTO.builder()
@@ -66,5 +86,162 @@ public class DashboardService {
             dto.setId(r.getId()); dto.setIdClient(r.getIdClient()); dto.setOrderNumber(r.getOrderNumber()); dto.setStatus(r.getStatus()); dto.setPrice(r.getPrice()); dto.setReceiveDateTime(r.getReceiveDateTime());
             return dto;
         }).toList();
+    }
+
+    public DashboardOverviewDTO overview() {
+        DashboardOverviewDTO dto = new DashboardOverviewDTO();
+        dto.setClientCount(clientRepository.count());
+        dto.setDeviceCount(deviceRepository.count());
+        dto.setRepairCount(repairRepository.count());
+
+        LocalDate now = LocalDate.now();
+        YearMonth currentMonth = YearMonth.of(now.getYear(), now.getMonth());
+        LocalDateTime monthStart = currentMonth.atDay(1).atStartOfDay();
+        LocalDateTime nextMonthStart = currentMonth.plusMonths(1).atDay(1).atStartOfDay();
+        LocalDateTime sixMonthsAgo = currentMonth.minusMonths(5).atDay(1).atStartOfDay();
+
+        List<MonthlyRevenueView> monthlyRevenueViews = repairRepository.findMonthlyRevenueSince(sixMonthsAgo);
+        Map<YearMonth, BigDecimal> monthlyTotals = new LinkedHashMap<>();
+        YearMonth cursor = currentMonth.minusMonths(5);
+        while (!cursor.isAfter(currentMonth)) {
+            monthlyTotals.put(cursor, BigDecimal.ZERO);
+            cursor = cursor.plusMonths(1);
+        }
+        BigDecimal totalRevenue = BigDecimal.ZERO;
+        for (MonthlyRevenueView item : monthlyRevenueViews) {
+            BigDecimal price = safeMoney(item.getPrice());
+            totalRevenue = totalRevenue.add(price);
+            if (item.getReceiveDateTime() != null) {
+                YearMonth key = YearMonth.from(item.getReceiveDateTime());
+                if (monthlyTotals.containsKey(key)) {
+                    monthlyTotals.put(key, monthlyTotals.get(key).add(price));
+                }
+            }
+        }
+        dto.setTotalRevenue(totalRevenue);
+        dto.setMonthRevenue(monthlyTotals.getOrDefault(currentMonth, BigDecimal.ZERO));
+        dto.setMonthlyRevenue(monthlyTotals.entrySet().stream()
+                .map(entry -> new DashboardSeriesItemDTO(formatMonth(entry.getKey()), entry.getValue()))
+                .toList());
+
+        Map<RepairStatusEnum, Long> statusCounts = new EnumMap<>(RepairStatusEnum.class);
+        for (RepairStatusCountView countView : repairRepository.countByStatus()) {
+            statusCounts.put(countView.getStatus(), countView.getTotal());
+        }
+        dto.setWaitingPickupCount(statusCounts.getOrDefault(RepairStatusEnum.ESPERANDO_RETIRO, 0L));
+        dto.setInProgressCount(
+                statusCounts.getOrDefault(RepairStatusEnum.HACIENDO, 0L)
+                        + statusCounts.getOrDefault(RepairStatusEnum.RECIBIDA, 0L)
+        );
+        dto.setQuotedPendingCount(statusCounts.getOrDefault(RepairStatusEnum.PRESUPUESTADA_ESPERANDO_RESPUESTA, 0L));
+        dto.setRepairStatuses(statusCounts.entrySet().stream()
+                .map(entry -> new DashboardSeriesItemDTO(statusLabel(entry.getKey()), entry.getValue()))
+                .sorted((left, right) -> Long.compare(((Number) right.getValue()).longValue(), ((Number) left.getValue()).longValue()))
+                .toList());
+
+        List<DeviceTypeCountView> deviceTypeCounts = deviceRepository.countByDeviceType();
+        dto.setDeviceTypes(deviceTypeCounts.stream()
+                .map(entry -> new DashboardSeriesItemDTO(deviceTypeLabel(entry.getDeviceType()), entry.getTotal()))
+                .toList());
+
+        List<DashboardRecentClientDTO> latestClients = clientRepository.findTop5WithDevicesBasic(PageRequest.of(0, 5)).stream()
+                .map(client -> {
+                    DashboardRecentClientDTO clientDto = new DashboardRecentClientDTO();
+                    clientDto.setId(client.getId());
+                    clientDto.setName((client.getName() + " " + client.getLastName()).trim());
+                    clientDto.setDeviceType("-");
+                    return clientDto;
+                })
+                .toList();
+
+        List<DeviceBasicView> latestDevices = deviceRepository.findBasicLatest(PageRequest.of(0, 5));
+        Map<String, String> firstDeviceTypeByClient = new LinkedHashMap<>();
+        for (DeviceBasicView device : latestDevices) {
+            firstDeviceTypeByClient.putIfAbsent(device.getClientId(), deviceTypeLabel(device.getDeviceType()));
+        }
+        dto.setRecentClients(latestClients.stream()
+                .peek(client -> client.setDeviceType(firstDeviceTypeByClient.getOrDefault(client.getId(), "-")))
+                .toList());
+
+        dto.setRecentDevices(latestDevices.stream().map(device -> {
+            DashboardRecentDeviceDTO deviceDto = new DashboardRecentDeviceDTO();
+            deviceDto.setId(device.getId());
+            deviceDto.setDeviceType(device.getDeviceType());
+            deviceDto.setBrand(device.getBrand());
+            deviceDto.setModel(device.getModel());
+            return deviceDto;
+        }).toList());
+
+        List<RepairListView> latestDeliveredRepairs = repairRepository.findLatestDeliveredRows(PageRequest.of(0, 5));
+        Map<String, ClientBasicView> clientsById = clientRepository.findBasicByIdIn(
+                latestDeliveredRepairs.stream()
+                        .map(RepairListView::getIdClient)
+                        .filter(id -> id != null && !id.isBlank())
+                        .collect(Collectors.toSet())
+        ).stream().collect(Collectors.toMap(ClientBasicView::getId, client -> client));
+
+        dto.setRecentRepairs(latestDeliveredRepairs.stream()
+                .map(repair -> {
+                    DashboardRecentRepairDTO repairDto = new DashboardRecentRepairDTO();
+                    repairDto.setRepairId(repair.getId());
+                    LocalDateTime repairDate = repair.getReturnDateTime() != null ? repair.getReturnDateTime() : repair.getReceiveDateTime();
+                    repairDto.setDate(repairDate != null ? repairDate.toLocalDate().toString() : "-");
+                    ClientBasicView client = clientsById.get(repair.getIdClient());
+                    repairDto.setClient(client != null ? (client.getName() + " " + client.getLastName()).trim() : repair.getIdClient());
+                    repairDto.setPrice(repair.getPrice());
+                    return repairDto;
+                })
+                .toList());
+
+        List<DeviceLastRepairView> inactiveViews = repairRepository.findOldestLastRepairByDevice(PageRequest.of(0, 5));
+        Map<String, DeviceBasicView> inactiveDevicesById = deviceRepository.findBasicByIdIn(
+                inactiveViews.stream().map(DeviceLastRepairView::getDeviceId).toList()
+        ).stream().collect(Collectors.toMap(DeviceBasicView::getId, device -> device));
+        Map<String, ClientBasicView> inactiveClientsById = clientRepository.findBasicByIdIn(
+                inactiveDevicesById.values().stream().map(DeviceBasicView::getClientId).collect(Collectors.toSet())
+        ).stream().collect(Collectors.toMap(ClientBasicView::getId, client -> client));
+        dto.setInactiveDevices(inactiveViews.stream().map(view -> {
+            DeviceBasicView device = inactiveDevicesById.get(view.getDeviceId());
+            ClientBasicView client = device != null ? inactiveClientsById.get(device.getClientId()) : null;
+            DashboardInactiveDeviceDTO item = new DashboardInactiveDeviceDTO();
+            String deviceLabel = device != null
+                    ? (deviceTypeLabel(device.getDeviceType()) + " " + nullSafe(device.getBrand()) + " " + nullSafe(device.getModel())).replaceAll("\\s+", " ").trim()
+                    : view.getDeviceId();
+            String ownerLabel = client != null ? (client.getName() + " " + client.getLastName()).trim() : "Cliente sin datos";
+            item.setName(deviceLabel + " · " + ownerLabel);
+            item.setLastRepair(view.getLastRepairDate() != null ? view.getLastRepairDate().toLocalDate().toString() : null);
+            return item;
+        }).toList());
+
+        return dto;
+    }
+
+    private String formatMonth(YearMonth month) {
+        return month.getMonth().name().substring(0, 1) + month.getMonth().name().substring(1).toLowerCase() + " " + month.getYear();
+    }
+
+    private String statusLabel(RepairStatusEnum status) {
+        return status != null ? status.getStatus() : "-";
+    }
+
+    private String deviceTypeLabel(DeviceTypeEnum deviceType) {
+        if (deviceType == null) {
+            return "-";
+        }
+        return switch (deviceType) {
+            case DESKTOP -> "Desktop";
+            case NOTEBOOK -> "Notebook";
+            case TABLET -> "Tablet";
+            case CELULAR -> "Celular";
+            case OTROS -> "Otros";
+        };
+    }
+
+    private BigDecimal safeMoney(BigDecimal value) {
+        return value != null ? value : BigDecimal.ZERO;
+    }
+
+    private String nullSafe(String value) {
+        return value != null ? value : "";
     }
 }

@@ -6,11 +6,9 @@ import { FormsModule } from '@angular/forms';
 import { CardModule } from 'primeng/card';
 import { InputTextModule } from 'primeng/inputtext';
 import { ButtonModule } from 'primeng/button';
-import { TableModule } from 'primeng/table';
 import { SelectModule } from 'primeng/select';
 import { AutoCompleteModule } from 'primeng/autocomplete';
 import { InputNumberModule } from 'primeng/inputnumber';
-import { TagModule } from 'primeng/tag';
 import { DatePickerModule } from 'primeng/datepicker';
 import { DialogModule } from 'primeng/dialog';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
@@ -24,7 +22,7 @@ import { MessageService } from 'primeng/api';
 @Component({
   selector: 'app-repairs-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, CardModule, InputTextModule, ButtonModule, TableModule, SelectModule, AutoCompleteModule, InputNumberModule, TagModule, DatePickerModule, DialogModule, ConfirmDialogModule],
+  imports: [CommonModule, FormsModule, CardModule, InputTextModule, ButtonModule, SelectModule, AutoCompleteModule, InputNumberModule, DatePickerModule, DialogModule, ConfirmDialogModule],
   providers: [ConfirmationService],
   templateUrl: './repairs-page.component.html'
 })
@@ -168,18 +166,6 @@ export class RepairsPageComponent implements OnInit {
     this.editingRepair.parts = (this.editingRepair.parts || []).filter((_, i) => i !== index);
   }
 
-  statusSeverity(status: Repair['status']): "success" | "info" | "warn" | "danger" | "secondary" | "contrast" {
-    switch (status) {
-      case 'POR_RECIBIR': return 'secondary';
-      case 'RECIBIDA': return 'info';
-      case 'PRESUPUESTADA_ESPERANDO_RESPUESTA': return 'warn';
-      case 'HACIENDO': return 'contrast';
-      case 'ESPERANDO_RETIRO': return 'success';
-      case 'RETIRADA': return 'danger';
-      default: return 'secondary';
-    }
-  }
-
   statusLabel(status: Repair['status']): string {
     return this.statusOptions.find((s) => s.value === status)?.label || status;
   }
@@ -278,8 +264,26 @@ export class RepairsPageComponent implements OnInit {
     return `${device.brand || '-'} - ${device.model || '-'}`.replace(/\s+/g, ' ').trim();
   }
 
+  get selectedClientSummary(): string {
+    const client = this.clientsById.get(this.draft.idClient);
+    return client ? `${client.name} ${client.lastName}`.trim() : '';
+  }
+
+  get selectedDeviceSummary(): string {
+    const device = this.clientDevices.find((item) => item.id === this.draft.idDevice) || this.devicesById.get(this.draft.idDevice);
+    return device ? `${device.deviceType} · ${device.brand} ${device.model}`.replace(/\s+/g, ' ').trim() : '';
+  }
+
   statusClass(status: Repair['status']): string {
-    return `status-${String(status || '').toLowerCase().replace(/_/g, '-')}`;
+    switch (status) {
+      case 'POR_RECIBIR': return 'is-muted';
+      case 'RECIBIDA': return 'is-info';
+      case 'PRESUPUESTADA_ESPERANDO_RESPUESTA': return 'is-warning';
+      case 'HACIENDO': return 'is-active';
+      case 'ESPERANDO_RETIRO': return 'is-success';
+      case 'RETIRADA': return 'is-closed';
+      default: return 'is-muted';
+    }
   }
 
   repairRowKey(repair: Repair): string {
@@ -291,14 +295,15 @@ export class RepairsPageComponent implements OnInit {
   }
 
   get visibleRepairs(): Repair[] {
-    const start = (this.currentPage - 1) * this.pageSize;
+    const page = Math.min(this.currentPage, this.totalPages);
+    const start = (page - 1) * this.pageSize;
     return this.filteredRepairs.slice(start, start + this.pageSize);
   }
 
   get paginationLabel(): string {
     if (!this.filteredRepairs.length) return '0 reparaciones';
-    const start = (this.currentPage - 1) * this.pageSize + 1;
-    const end = Math.min(this.currentPage * this.pageSize, this.filteredRepairs.length);
+    const start = (Math.min(this.currentPage, this.totalPages) - 1) * this.pageSize + 1;
+    const end = Math.min(start + this.pageSize - 1, this.filteredRepairs.length);
     return `${start}-${end} de ${this.filteredRepairs.length} reparaciones`;
   }
 

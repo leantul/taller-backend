@@ -17,7 +17,18 @@
           <button pButton type="button" size="small" class="p-button-sm" icon="pi pi-user-plus" [rounded]="true" [text]="true" (click)="showNewClientModal=true"></button>
         </div>
       </div>
+      @if (selectedClientSummary) {
+        <div class="selection-summary">
+          <span class="summary-chip"><i class="pi pi-user"></i> {{ selectedClientSummary }}</span>
+          <span class="summary-chip"><i class="pi pi-desktop"></i> {{ clientDevices.length }} dispositivo(s)</span>
+        </div>
+      }
       <div class="field"><label>Dispositivo</label><div class="inline-row device-inline-row"><p-select styleClass="device-select" [options]="clientDeviceOptions" optionLabel="label" optionValue="value" [(ngModel)]="draft.idDevice" name="idDevice"></p-select><button pButton type="button" icon="pi pi-plus" class="p-button-sm device-add-btn" [disabled]="!draft.idClient" (click)="showDeviceModal=true"></button></div></div>
+      @if (selectedDeviceSummary) {
+        <div class="selection-summary">
+          <span class="summary-chip"><i class="pi pi-tag"></i> {{ selectedDeviceSummary }}</span>
+        </div>
+      }
       <div class="field"><label>Falla reportada</label><textarea class="p-inputtext" rows="5" [(ngModel)]="draft.description" name="description" required></textarea></div>
       <div class="field"><label>Estado</label><p-select [options]="statusOptions" optionLabel="label" optionValue="value" [(ngModel)]="draft.status" name="status"></p-select></div>
       <div class="field"><label>Presupuesto enviado</label><p-inputNumber [(ngModel)]="draft.quotedAmount" name="quotedAmount" mode="currency" currency="ARS" locale="es-AR" [min]="0"></p-inputNumber></div>
@@ -34,17 +45,17 @@
       <p-datepicker styleClass="compact-filter" [(ngModel)]="toDate" (ngModelChange)="applyFilters()" dateFormat="dd-mm-yy" placeholder="Hasta" [showIcon]="true" iconDisplay="input" appendTo="body"></p-datepicker>
     </div>
 
-    <div class="repairs-table-wrap">
-      <table class="repairs-table">
+    <div class="native-table-wrap">
+      <table class="native-table repairs-table">
         <thead>
           <tr>
             <th>Orden</th>
             <th>Cliente</th>
             <th>Dispositivo</th>
             <th>Estado</th>
-            <th class="amount-col">Presupuesto</th>
-            <th class="amount-col">Monto</th>
-            <th class="actions-col">Acción</th>
+            <th>Presupuesto</th>
+            <th>Monto</th>
+            <th>Acción</th>
           </tr>
         </thead>
         <tbody>
@@ -54,31 +65,31 @@
               <td>{{ clientLabel(r) }}</td>
               <td>{{ deviceLabel(r) }}</td>
               <td><span class="status-pill" [ngClass]="statusClass(r.status)">{{ statusLabel(r.status) }}</span></td>
-              <td class="amount-col">{{ (r.quotedAmount || 0) | currency:'ARS':'symbol':'1.2-2':'es-AR' }}</td>
-              <td class="amount-col">{{ (r.price || 0) | currency:'ARS':'symbol':'1.2-2':'es-AR' }}</td>
+              <td>{{ (r.quotedAmount || 0) | currency:'ARS':'symbol':'1.2-2':'es-AR' }}</td>
+              <td>{{ (r.price || 0) | currency:'ARS':'symbol':'1.2-2':'es-AR' }}</td>
               <td>
-                <div class="repair-actions">
-                  <button type="button" class="icon-action" aria-label="Cambiar estado" (click)="openStatusModal(r)"><i class="pi pi-sync"></i></button>
-                  <button type="button" class="icon-action" aria-label="Editar reparación" (click)="openEditModal(r)"><i class="pi pi-pencil"></i></button>
-                  <button type="button" class="icon-action danger" aria-label="Eliminar reparación" [disabled]="isDeleting" (click)="confirmDeleteRepair(r)"><i class="pi pi-trash"></i></button>
+                <div class="action-buttons">
+                  <button class="icon-action" type="button" aria-label="Cambiar estado" (click)="openStatusModal(r)"><i class="pi pi-sync"></i></button>
+                  <button class="icon-action" type="button" aria-label="Editar reparación" (click)="openEditModal(r)"><i class="pi pi-pencil"></i></button>
+                  <button class="icon-action danger" type="button" aria-label="Eliminar reparación" [disabled]="isDeleting" (click)="confirmDeleteRepair(r)"><i class="pi pi-trash"></i></button>
                 </div>
               </td>
             </tr>
           } @empty {
             <tr>
-              <td colspan="7" class="empty-row">No hay reparaciones para los filtros seleccionados.</td>
+              <td class="empty-cell" colspan="7">No hay reparaciones para los filtros aplicados.</td>
             </tr>
           }
         </tbody>
       </table>
     </div>
 
-    <div class="repairs-pager" aria-label="Paginación de reparaciones">
+    <div class="table-pager" aria-label="Paginación de reparaciones">
       <span>{{ paginationLabel }}</span>
       <div class="pager-actions">
-        <button type="button" class="pager-button" [disabled]="currentPage === 1" (click)="previousPage()"><i class="pi pi-angle-left"></i></button>
-        <strong>{{ currentPage }} / {{ totalPages }}</strong>
-        <button type="button" class="pager-button" [disabled]="currentPage === totalPages" (click)="nextPage()"><i class="pi pi-angle-right"></i></button>
+        <button class="pager-button" type="button" [disabled]="currentPage === 1" (click)="previousPage()"><i class="pi pi-chevron-left"></i></button>
+        <span>Página {{ currentPage }} de {{ totalPages }}</span>
+        <button class="pager-button" type="button" [disabled]="currentPage === totalPages" (click)="nextPage()"><i class="pi pi-chevron-right"></i></button>
       </div>
     </div>
   </p-card>
@@ -123,10 +134,24 @@
 
 <p-dialog header="Seleccionar cliente" [(visible)]="showClientModal" [modal]="true" [style]="{width:'60rem'}">
   <div class="field"><label>Buscar cliente</label><input pInputText [(ngModel)]="clientSearch" placeholder="Nombre, apellido, teléfono o email" /></div>
-  <p-table [value]="filteredClients" [paginator]="true" [rows]="8">
-    <ng-template pTemplate="header"><tr><th>Nombre</th><th>Apellido</th><th>Teléfono</th><th>Email</th><th></th></tr></ng-template>
-    <ng-template pTemplate="body" let-c><tr><td>{{c.name}}</td><td>{{c.lastName}}</td><td><span>{{c.phone}}</span> <a [href]="whatsAppLink(c.phone)" target="_blank" rel="noopener" class="wa-link"><i class="pi pi-whatsapp"></i></a></td><td>{{c.email}}</td><td><button pButton type="button" class="p-button-text" label="Seleccionar" (click)="selectClient(c)"></button></td></tr></ng-template>
-  </p-table>
+  <div class="native-table-wrap">
+    <table class="native-table">
+      <thead><tr><th>Nombre</th><th>Apellido</th><th>Teléfono</th><th>Email</th><th></th></tr></thead>
+      <tbody>
+        @for (c of filteredClients; track c.id || (c.dni + c.email)) {
+          <tr>
+            <td>{{ c.name }}</td>
+            <td>{{ c.lastName }}</td>
+            <td><span>{{ c.phone }}</span> <a [href]="whatsAppLink(c.phone)" target="_blank" rel="noopener" class="wa-link"><i class="pi pi-whatsapp"></i></a></td>
+            <td>{{ c.email }}</td>
+            <td><button class="secondary-button" type="button" (click)="selectClient(c)">Seleccionar</button></td>
+          </tr>
+        } @empty {
+          <tr><td class="empty-cell" colspan="5">No hay clientes que coincidan con la búsqueda.</td></tr>
+        }
+      </tbody>
+    </table>
+  </div>
 </p-dialog>
 
 <p-dialog header="Nuevo dispositivo" [(visible)]="showDeviceModal" [modal]="true" [style]="{width:'36rem'}">

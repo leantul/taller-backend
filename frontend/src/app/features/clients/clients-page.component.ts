@@ -5,7 +5,6 @@ import { FormsModule } from '@angular/forms';
 import { CardModule } from 'primeng/card';
 import { InputTextModule } from 'primeng/inputtext';
 import { ButtonModule } from 'primeng/button';
-import { TableModule } from 'primeng/table';
 import { DialogModule } from 'primeng/dialog';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { ConfirmationService, MessageService } from 'primeng/api';
@@ -16,10 +15,18 @@ import { Repair } from '../../shared/models/repair.model';
 @Component({
   selector: 'app-clients-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, CardModule, InputTextModule, ButtonModule, TableModule, DialogModule, ConfirmDialogModule],
+  imports: [CommonModule, FormsModule, CardModule, InputTextModule, ButtonModule, DialogModule, ConfirmDialogModule],
   providers: [ConfirmationService],
   template: `
     <p-confirmdialog></p-confirmdialog>
+    <section class="page-heading">
+      <div>
+        <span class="eyebrow">Personas</span>
+        <h1>Clientes</h1>
+      </div>
+      <p>Alta, edicion y consulta del historial de reparaciones de cada cliente.</p>
+    </section>
+
     <div class="page-grid">
       <p-card header="Nuevo cliente">
         <form class="p-fluid" (ngSubmit)="save()">
@@ -34,21 +41,40 @@ import { Repair } from '../../shared/models/repair.model';
 
       <p-card header="Clientes">
         <div class="table-toolbar">
-          <span class="p-input-icon-left"><i class="pi pi-search"></i><input pInputText [(ngModel)]="searchTerm" (ngModelChange)="onSearch()" placeholder="Buscar por nombre, DNI o email" /></span>
+          <span class="p-input-icon-left filter-search"><i class="pi pi-search"></i><input pInputText [(ngModel)]="searchTerm" (ngModelChange)="onSearch()" placeholder="Buscar por nombre, DNI o email" /></span>
         </div>
-        <p-table [value]="clients" size="small" [paginator]="true" [rows]="10" sortMode="multiple">
-          <ng-template pTemplate="header"><tr><th pSortableColumn="name">Nombre <p-sortIcon field="name"></p-sortIcon></th><th pSortableColumn="dni">DNI <p-sortIcon field="dni"></p-sortIcon></th><th pSortableColumn="email">Email <p-sortIcon field="email"></p-sortIcon></th><th pSortableColumn="phone">Teléfono <p-sortIcon field="phone"></p-sortIcon></th><th>Acciones</th></tr></ng-template>
-          <ng-template pTemplate="body" let-c>
-            <tr>
-              <td>{{ c.name }} {{ c.lastName }}</td><td>{{ c.dni }}</td><td>{{ c.email }}</td><td>{{ c.phone }} <a [href]="whatsAppLink(c.phone)" target="_blank" rel="noopener" class="wa-link"><i class="pi pi-whatsapp"></i></a></td>
-              <td>
-                <button pButton type="button" class="p-button-text p-button-sm" icon="pi pi-pencil" ariaLabel="Editar cliente" (click)="openEdit(c)"></button>
-                <button pButton type="button" class="p-button-text p-button-sm" icon="pi pi-history" ariaLabel="Ver reparaciones del cliente" (click)="openRepairs(c)"></button>
-                <button pButton type="button" class="p-button-text p-button-sm" icon="pi pi-trash" ariaLabel="Eliminar cliente" (click)="confirmDelete(c)"></button>
-              </td>
-            </tr>
-          </ng-template>
-        </p-table>
+        <div class="native-table-wrap">
+          <table class="native-table">
+            <thead><tr><th>Nombre</th><th>DNI</th><th>Email</th><th>Teléfono</th><th>Acciones</th></tr></thead>
+            <tbody>
+              @for (c of visibleClients; track c.id || (c.dni + c.email)) {
+                <tr>
+                  <td>{{ c.name }} {{ c.lastName }}</td>
+                  <td>{{ c.dni }}</td>
+                  <td>{{ c.email }}</td>
+                  <td>{{ c.phone }} <a [href]="whatsAppLink(c.phone)" target="_blank" rel="noopener" class="wa-link"><i class="pi pi-whatsapp"></i></a></td>
+                  <td>
+                    <div class="action-buttons">
+                      <button class="icon-action" type="button" aria-label="Editar cliente" (click)="openEdit(c)"><i class="pi pi-pencil"></i></button>
+                      <button class="icon-action" type="button" aria-label="Ver reparaciones del cliente" (click)="openRepairs(c)"><i class="pi pi-history"></i></button>
+                      <button class="icon-action danger" type="button" aria-label="Eliminar cliente" (click)="confirmDelete(c)"><i class="pi pi-trash"></i></button>
+                    </div>
+                  </td>
+                </tr>
+              } @empty {
+                <tr><td class="empty-cell" colspan="5">No hay clientes para mostrar.</td></tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        <div class="table-pager" aria-label="Paginación de clientes">
+          <span>{{ paginationLabel }}</span>
+          <div class="pager-actions">
+            <button class="pager-button" type="button" [disabled]="currentPage === 1" (click)="previousPage()"><i class="pi pi-chevron-left"></i></button>
+            <span>Página {{ currentPage }} de {{ totalPages }}</span>
+            <button class="pager-button" type="button" [disabled]="currentPage === totalPages" (click)="nextPage()"><i class="pi pi-chevron-right"></i></button>
+          </div>
+        </div>
       </p-card>
     </div>
 
@@ -63,10 +89,24 @@ import { Repair } from '../../shared/models/repair.model';
 
 
     <p-dialog header="Reparaciones del cliente" [(visible)]="repairsVisible" [modal]="true" [style]="{width:'56rem'}">
-      <p-table [value]="clientRepairs" size="small" sortMode="multiple">
-        <ng-template pTemplate="header"><tr><th pSortableColumn="orderNumber">Orden <p-sortIcon field="orderNumber"></p-sortIcon></th><th pSortableColumn="status">Estado <p-sortIcon field="status"></p-sortIcon></th><th pSortableColumn="receiveDateTime">Ingreso <p-sortIcon field="receiveDateTime"></p-sortIcon></th><th pSortableColumn="returnDateTime">Entrega <p-sortIcon field="returnDateTime"></p-sortIcon></th><th>Detalle</th></tr></ng-template>
-        <ng-template pTemplate="body" let-r><tr><td>#{{ r.orderNumber }}</td><td>{{ r.status }}</td><td>{{ r.receiveDateTime ? (r.receiveDateTime | date:'dd/MM/yyyy HH:mm') : '-' }}</td><td>{{ r.returnDateTime ? (r.returnDateTime | date:'dd/MM/yyyy HH:mm') : '-' }}</td><td><button pButton type="button" class="p-button-text p-button-sm" icon="pi pi-eye" ariaLabel="Ver reparación" (click)="goToRepair(r)"></button></td></tr></ng-template>
-      </p-table>
+      <div class="native-table-wrap">
+        <table class="native-table">
+          <thead><tr><th>Orden</th><th>Estado</th><th>Ingreso</th><th>Entrega</th><th>Detalle</th></tr></thead>
+          <tbody>
+            @for (r of clientRepairs; track r.id || r.orderNumber) {
+              <tr>
+                <td>#{{ r.orderNumber }}</td>
+                <td>{{ r.status }}</td>
+                <td>{{ r.receiveDateTime ? (r.receiveDateTime | date:'dd/MM/yyyy HH:mm') : '-' }}</td>
+                <td>{{ r.returnDateTime ? (r.returnDateTime | date:'dd/MM/yyyy HH:mm') : '-' }}</td>
+                <td><button class="icon-action" type="button" aria-label="Ver reparación" (click)="goToRepair(r)"><i class="pi pi-eye"></i></button></td>
+              </tr>
+            } @empty {
+              <tr><td class="empty-cell" colspan="5">Este cliente no tiene reparaciones registradas.</td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
       @if (selectedRepair) {
         <div class="field"><label>Descripción</label><div>{{ selectedRepair.description || 'Sin descripción' }}</div></div>
         <div class="field"><label>Presupuesto</label><div>{{ (selectedRepair.quotedAmount || 0) | currency:'ARS':'symbol':'1.2-2':'es-AR' }}</div></div>
@@ -80,6 +120,8 @@ export class ClientsPageComponent implements OnInit {
   editing: Client = { name: '', lastName: '', dni: '', email: '', phone: '' };
   editVisible = false;
   searchTerm = '';
+  currentPage = 1;
+  pageSize = 10;
   repairsVisible = false;
   clientRepairs: Repair[] = [];
   selectedRepair: Repair | null = null;
@@ -138,7 +180,21 @@ export class ClientsPageComponent implements OnInit {
     });
   }
 
-  onSearch(): void { if (!this.searchTerm.trim()) { this.reload(); return; } this.api.searchClients(this.searchTerm).subscribe((clients) => { this.clients = clients; this.changeDetector.detectChanges(); }); }
+  onSearch(): void { if (!this.searchTerm.trim()) { this.reload(); return; } this.api.searchClients(this.searchTerm).subscribe((clients) => { this.clients = clients; this.currentPage = 1; this.changeDetector.detectChanges(); }); }
   whatsAppLink(phone: string): string { const digits = (phone || "").replace(/\D/g, ""); return `https://wa.me/${digits}`; }
-  private reload(): void { this.api.getClients().subscribe((clients) => { this.clients = clients.slice().reverse(); this.changeDetector.detectChanges(); }); }
+  get totalPages(): number { return Math.max(1, Math.ceil(this.clients.length / this.pageSize)); }
+  get visibleClients(): Client[] {
+    const page = Math.min(this.currentPage, this.totalPages);
+    const start = (page - 1) * this.pageSize;
+    return this.clients.slice(start, start + this.pageSize);
+  }
+  get paginationLabel(): string {
+    if (!this.clients.length) return '0 clientes';
+    const start = (Math.min(this.currentPage, this.totalPages) - 1) * this.pageSize + 1;
+    const end = Math.min(start + this.pageSize - 1, this.clients.length);
+    return `${start}-${end} de ${this.clients.length} clientes`;
+  }
+  previousPage(): void { this.currentPage = Math.max(1, this.currentPage - 1); }
+  nextPage(): void { this.currentPage = Math.min(this.totalPages, this.currentPage + 1); }
+  private reload(): void { this.api.getClients().subscribe((clients) => { this.clients = clients.slice().reverse(); this.currentPage = 1; this.changeDetector.detectChanges(); }); }
 }

@@ -1,10 +1,14 @@
 import { Injectable } from '@angular/core';
+import { BehaviorSubject } from 'rxjs';
 
 export type ThemeMode = 'dark' | 'light';
 
 @Injectable({ providedIn: 'root' })
 export class ThemeService {
   private readonly key = 'theme-mode';
+  private readonly modeSubject = new BehaviorSubject<ThemeMode>('dark');
+
+  readonly mode$ = this.modeSubject.asObservable();
 
   initTheme(): ThemeMode {
     const stored = localStorage.getItem(this.key) as ThemeMode | null;
@@ -19,8 +23,13 @@ export class ThemeService {
     return next;
   }
 
+  currentTheme(): ThemeMode {
+    return this.modeSubject.value;
+  }
+
   private setTheme(mode: ThemeMode): void {
     document.documentElement.setAttribute('data-theme', mode);
     localStorage.setItem(this.key, mode);
+    this.modeSubject.next(mode);
   }
 }

@@ -1,14 +1,15 @@
-import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
-import { forkJoin } from 'rxjs';
+import { forkJoin, Subscription } from 'rxjs';
 import { CardModule } from 'primeng/card';
 import { ApiService } from '../../core/services/api.service';
+import { ThemeMode, ThemeService } from '../../core/services/theme.service';
 import { Client } from '../../shared/models/client.model';
 import { Device } from '../../shared/models/device.model';
 import { Repair } from '../../shared/models/repair.model';
 
-type BreakdownRow = { label: string; value: number; tone?: string };
+type BreakdownRow = { label: string; value: number };
 
 @Component({
   selector: 'app-dashboard-page',
@@ -76,40 +77,31 @@ type BreakdownRow = { label: string; value: number; tone?: string };
       <p-card styleClass="metric-card revenue"><span class="metric-label">Ingresos estimados</span><div class="metric">{{ totalRevenue | currency:'ARS':'symbol':'1.2-2':'es-AR' }}</div><small>Suma de reparaciones</small></p-card>
     </section>
 
-    <section class="dashboard-grid charts lightweight-dashboard">
+    <section class="dashboard-grid charts">
       <p-card header="Ingresos por mes">
-        <div class="metric-list">
-          @for (item of monthlyRevenueRows; track item.label) {
-            <div class="metric-list-row">
-              <span>{{ item.label }}</span>
-              <strong>{{ item.value | currency:'ARS':'symbol':'1.0-0':'es-AR' }}</strong>
-            </div>
-          } @empty {
-            <p class="inline-message">Sin ingresos registrados.</p>
+        <div class="chart-surface">
+          @if (chartsReady) {
+            <p-chart type="bar" [data]="monthlyRevenueChartData" [options]="barChartOptions"></p-chart>
+          } @else {
+            <div class="chart-placeholder">Preparando gráfico…</div>
           }
         </div>
       </p-card>
       <p-card header="Equipos por tipo">
-        <div class="metric-list">
-          @for (item of deviceTypeRows; track item.label) {
-            <div class="metric-list-row">
-              <span>{{ item.label }}</span>
-              <strong>{{ item.value }}</strong>
-            </div>
-          } @empty {
-            <p class="inline-message">Sin equipos registrados.</p>
+        <div class="chart-surface">
+          @if (chartsReady) {
+            <p-chart type="doughnut" [data]="deviceTypeChartData" [options]="doughnutChartOptions"></p-chart>
+          } @else {
+            <div class="chart-placeholder">Preparando gráfico…</div>
           }
         </div>
       </p-card>
       <p-card header="Reparaciones por estado">
-        <div class="metric-list">
-          @for (item of repairStatusRows; track item.label) {
-            <div class="metric-list-row">
-              <span>{{ item.label }}</span>
-              <strong>{{ item.value }}</strong>
-            </div>
-          } @empty {
-            <p class="inline-message">Sin reparaciones cargadas.</p>
+        <div class="chart-surface">
+          @if (chartsReady) {
+            <p-chart type="doughnut" [data]="repairStatusChartData" [options]="doughnutChartOptions"></p-chart>
+          } @else {
+            <div class="chart-placeholder">Preparando gráfico…</div>
           }
         </div>
       </p-card>
@@ -178,7 +170,7 @@ type BreakdownRow = { label: string; value: number; tone?: string };
     </section>
   `
 })
-export class DashboardPageComponent implements OnInit {
+export class DashboardPageComponent implements OnInit, OnDestroy {
   clients: Client[] = [];
   devices: Device[] = [];
   repairs: Repair[] = [];
@@ -194,55 +186,199 @@ export class DashboardPageComponent implements OnInit {
   waitingPickupCount = 0;
   inProgressCount = 0;
   quotedPendingCount = 0;
+  chartsReady = false;
+  themeMode: ThemeMode;
+  monthlyRevenueChartData: any = { labels: [], datasets: [] };
+  deviceTypeChartData: any = { labels: [], datasets: [] };
+  repairStatusChartData: any = { labels: [], datasets: [] };
+  barChartOptions: any = {};
+  doughnutChartOptions: any = {};
 
-  constructor(private readonly api: ApiService, private readonly changeDetector: ChangeDetectorRef) {}
+  private readonly subscriptions = new Subscription();
+
+  constructor(
+    private readonly api: ApiService,
+    private readonly changeDetector: ChangeDetectorRef,
+    private readonly themeService: ThemeService
+  ) {
+    this.themeMode = this.themeService.currentTheme();
+  }
 
   ngOnInit(): void {
-    forkJoin({ clients: this.api.getClients(), devices: this.api.getDevices(), repairs: this.api.getRepairs(), latestClients: this.api.getLatestClients(), latestDevices: this.api.getLatestDevices(), latestRepairs: this.api.getLatestRepairs() }).subscribe(({ clients, devices, repairs, latestClients, latestDevices, latestRepairs }) => {
-      this.clients = clients;
-      this.devices = devices;
-      this.repairs = repairs;
-      this.totalRevenue = repairs.reduce((acc, item) => acc + this.asMoney(item.price), 0);
-      this.waitingPickupCount = repairs.filter((item) => item.status === 'ESPERANDO_RETIRO').length;
-      this.inProgressCount = repairs.filter((item) => item.status === 'HACIENDO' || item.status === 'RECIBIDA').length;
-      this.quotedPendingCount = repairs.filter((item) => item.status === 'PRESUPUESTADA_ESPERANDO_RESPUESTA').length;
+    this.subscriptions.add(
+      this.themeService.mode$.subscribe((mode) => {
+        this.themeMode = mode;
+        if (this.repairs.length || this.devices.length) {
+          this.refreshCharts();
+        }
+      })
+    );
 
-      this.recentClients = latestClients.map((c) => ({
-          name: `${c.name} ${c.lastName}`.trim(),
-          deviceType: devices.find((d) => d.clientId === c.id)?.deviceType || '-'
+    this.subscriptions.add(
+      forkJoin({
+        clients: this.api.getClients(),
+        devices: this.api.getDevices(),
+        repairs: this.api.getRepairs(),
+        latestClients: this.api.getLatestClients(),
+        latestDevices: this.api.getLatestDevices(),
+        latestRepairs: this.api.getLatestRepairs()
+      }).subscribe(({ clients, devices, repairs, latestClients, latestDevices }) => {
+        this.clients = clients;
+        this.devices = devices;
+        this.repairs = repairs;
+        this.totalRevenue = repairs.reduce((acc, item) => acc + this.asMoney(item.price), 0);
+        this.waitingPickupCount = repairs.filter((item) => item.status === 'ESPERANDO_RETIRO').length;
+        this.inProgressCount = repairs.filter((item) => item.status === 'HACIENDO' || item.status === 'RECIBIDA').length;
+        this.quotedPendingCount = repairs.filter((item) => item.status === 'PRESUPUESTADA_ESPERANDO_RESPUESTA').length;
+
+        this.recentClients = latestClients.map((client) => ({
+          name: `${client.name} ${client.lastName}`.trim(),
+          deviceType: devices.find((device) => device.clientId === client.id)?.deviceType || '-'
         }));
-      this.recentDevices = latestDevices;
-      const latestDeliveredRepairs = repairs
-        .filter((r) => r.status === 'RETIRADA')
-        .sort((a, b) => new Date(b.returnDateTime || b.receiveDateTime || 0).getTime() - new Date(a.returnDateTime || a.receiveDateTime || 0).getTime())
-        .slice(0, 5);
-      this.recentRepairs = latestDeliveredRepairs.map((r) => ({
-        date: (r.returnDateTime || r.receiveDateTime) ? new Date(r.returnDateTime || r.receiveDateTime!).toLocaleDateString('es-AR') : '-',
-        client: this.clients.find((c) => c.id === r.idClient) ? `${this.clients.find((c) => c.id === r.idClient)!.name} ${this.clients.find((c) => c.id === r.idClient)!.lastName}` : r.idClient,
-        price: r.price || 0
-      }));
+        this.recentDevices = latestDevices;
 
-      this.buildBreakdowns();
-      this.buildInactiveClients();
-      this.changeDetector.detectChanges();
-    });
+        const latestDeliveredRepairs = repairs
+          .filter((repair) => repair.status === 'RETIRADA')
+          .sort((left, right) => new Date(right.returnDateTime || right.receiveDateTime || 0).getTime() - new Date(left.returnDateTime || left.receiveDateTime || 0).getTime())
+          .slice(0, 5);
+
+        this.recentRepairs = latestDeliveredRepairs.map((repair) => ({
+          date: (repair.returnDateTime || repair.receiveDateTime) ? new Date(repair.returnDateTime || repair.receiveDateTime!).toLocaleDateString('es-AR') : '-',
+          client: this.clientName(repair.idClient),
+          price: this.asMoney(repair.price)
+        }));
+
+        this.buildBreakdowns();
+        this.buildInactiveClients();
+        this.refreshCharts();
+      })
+    );
+  }
+
+  ngOnDestroy(): void {
+    this.subscriptions.unsubscribe();
+  }
+
+  private refreshCharts(): void {
+    const styles = getComputedStyle(document.documentElement);
+    const textColor = styles.getPropertyValue('--text').trim() || '#1d2529';
+    const mutedColor = styles.getPropertyValue('--muted').trim() || '#667176';
+    const borderColor = styles.getPropertyValue('--border').trim() || '#d7d2c8';
+    const brandColor = styles.getPropertyValue('--brand-500').trim() || '#0c8a9f';
+    const accentColor = styles.getPropertyValue('--accent-500').trim() || '#d79324';
+    const successColor = styles.getPropertyValue('--success-500').trim() || '#177245';
+    const dangerColor = styles.getPropertyValue('--danger-500').trim() || '#b73636';
+    const infoColor = styles.getPropertyValue('--info-500').trim() || '#2364aa';
+
+    const palette = [brandColor, accentColor, successColor, infoColor, '#8b5cf6', '#ef4444', '#14b8a6', '#f97316'];
+
+    this.monthlyRevenueChartData = {
+      labels: this.monthlyRevenueRows.map((row) => row.label),
+      datasets: [
+        {
+          label: 'Ingresos',
+          data: this.monthlyRevenueRows.map((row) => row.value),
+          backgroundColor: colorWithAlpha(brandColor, 0.75),
+          borderColor: brandColor,
+          borderWidth: 1.5,
+          borderRadius: 8,
+          maxBarThickness: 36
+        }
+      ]
+    };
+
+    this.deviceTypeChartData = {
+      labels: this.deviceTypeRows.map((row) => row.label),
+      datasets: [
+        {
+          data: this.deviceTypeRows.map((row) => row.value),
+          backgroundColor: palette.slice(0, Math.max(this.deviceTypeRows.length, 1)),
+          borderColor: this.themeMode === 'dark' ? '#171b1f' : '#ffffff',
+          borderWidth: 2
+        }
+      ]
+    };
+
+    this.repairStatusChartData = {
+      labels: this.repairStatusRows.map((row) => row.label),
+      datasets: [
+        {
+          data: this.repairStatusRows.map((row) => row.value),
+          backgroundColor: [infoColor, brandColor, accentColor, successColor, dangerColor, '#6b7280'],
+          borderColor: this.themeMode === 'dark' ? '#171b1f' : '#ffffff',
+          borderWidth: 2
+        }
+      ]
+    };
+
+    this.barChartOptions = {
+      maintainAspectRatio: false,
+      animation: false,
+      plugins: {
+        legend: {
+          display: false,
+          labels: { color: textColor }
+        },
+        tooltip: {
+          titleColor: textColor,
+          bodyColor: textColor
+        }
+      },
+      scales: {
+        x: {
+          ticks: { color: mutedColor },
+          grid: { display: false, color: borderColor }
+        },
+        y: {
+          beginAtZero: true,
+          ticks: { color: mutedColor },
+          grid: { color: colorWithAlpha(borderColor, 0.75) }
+        }
+      }
+    };
+
+    this.doughnutChartOptions = {
+      maintainAspectRatio: false,
+      animation: false,
+      cutout: '62%',
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: {
+            color: textColor,
+            usePointStyle: true,
+            boxWidth: 10,
+            padding: 16
+          }
+        },
+        tooltip: {
+          titleColor: textColor,
+          bodyColor: textColor
+        }
+      }
+    };
+
+    this.chartsReady = true;
+    this.changeDetector.detectChanges();
   }
 
   private buildInactiveClients(): void {
     const byDevice = new Map<string, Date>();
-    this.repairs.forEach((r) => {
-      if (!r.idDevice || !r.receiveDateTime) return;
-      const date = new Date(r.receiveDateTime);
-      const current = byDevice.get(r.idDevice);
-      if (!current || date > current) byDevice.set(r.idDevice, date);
+    this.repairs.forEach((repair) => {
+      if (!repair.idDevice || !repair.receiveDateTime) return;
+      const date = new Date(repair.receiveDateTime);
+      const current = byDevice.get(repair.idDevice);
+      if (!current || date > current) {
+        byDevice.set(repair.idDevice, date);
+      }
     });
 
-    const devicesById = new Map(this.devices.filter((d) => !!d.id).map((d) => [d.id!, d]));
+    const devicesById = new Map(this.devices.filter((device) => !!device.id).map((device) => [device.id!, device]));
 
     this.inactiveClients = Array.from(byDevice.entries())
       .map(([deviceId, lastDate]) => {
         const device = devicesById.get(deviceId);
-        const client = device ? this.clients.find((c) => c.id === device.clientId) : undefined;
+        const client = device ? this.clients.find((item) => item.id === device.clientId) : undefined;
         const deviceLabel = device
           ? `${device.deviceType || 'Equipo'} ${device.brand || ''} ${device.model || ''}`.replace(/\s+/g, ' ').trim()
           : deviceId;
@@ -253,35 +389,44 @@ export class DashboardPageComponent implements OnInit {
           order: lastDate.getTime()
         };
       })
-      .sort((a, b) => a.order - b.order)
+      .sort((left, right) => left.order - right.order)
       .slice(0, 5)
       .map(({ name, lastRepair }) => ({ name, lastRepair }));
   }
 
   private buildBreakdowns(): void {
     const deviceMap = new Map<string, number>();
-    this.devices.forEach((item) => deviceMap.set(item.deviceType, (deviceMap.get(item.deviceType) || 0) + 1));
+    this.devices.forEach((device) => deviceMap.set(device.deviceType, (deviceMap.get(device.deviceType) || 0) + 1));
+
     const repairMap = new Map<string, number>();
-    this.repairs.forEach((item) => repairMap.set(item.status, (repairMap.get(item.status) || 0) + 1));
+    this.repairs.forEach((repair) => repairMap.set(repair.status, (repairMap.get(repair.status) || 0) + 1));
 
     const monthlyIncomeMap = new Map<string, number>();
-    this.repairs.forEach((item) => {
-      if (!item.receiveDateTime) return;
-      const date = new Date(item.receiveDateTime);
+    this.repairs.forEach((repair) => {
+      if (!repair.receiveDateTime) return;
+      const date = new Date(repair.receiveDateTime);
       const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-      monthlyIncomeMap.set(monthKey, (monthlyIncomeMap.get(monthKey) || 0) + this.asMoney(item.price));
+      monthlyIncomeMap.set(monthKey, (monthlyIncomeMap.get(monthKey) || 0) + this.asMoney(repair.price));
     });
+
     const sortedMonths = Array.from(monthlyIncomeMap.keys()).sort();
     this.monthRevenue = sortedMonths.length ? (monthlyIncomeMap.get(sortedMonths[sortedMonths.length - 1]) || 0) : 0;
     this.monthlyRevenueRows = sortedMonths
       .slice(-6)
       .map((month) => ({ label: this.formatMonth(month), value: monthlyIncomeMap.get(month) || 0 }));
+
     this.deviceTypeRows = Array.from(deviceMap.entries())
       .map(([label, value]) => ({ label, value }))
-      .sort((a, b) => b.value - a.value);
+      .sort((left, right) => right.value - left.value);
+
     this.repairStatusRows = Array.from(repairMap.entries())
       .map(([label, value]) => ({ label: this.statusLabel(label as Repair['status']), value }))
-      .sort((a, b) => b.value - a.value);
+      .sort((left, right) => right.value - left.value);
+  }
+
+  private clientName(clientId: string): string {
+    const client = this.clients.find((item) => item.id === clientId);
+    return client ? `${client.name} ${client.lastName}`.trim() : clientId;
   }
 
   private asMoney(value: unknown): number {
@@ -306,4 +451,15 @@ export class DashboardPageComponent implements OnInit {
       default: return status;
     }
   }
+}
+
+function colorWithAlpha(hex: string, alpha: number): string {
+  const clean = hex.replace('#', '');
+  if (clean.length !== 6) {
+    return hex;
+  }
+  const red = parseInt(clean.slice(0, 2), 16);
+  const green = parseInt(clean.slice(2, 4), 16);
+  const blue = parseInt(clean.slice(4, 6), 16);
+  return `rgba(${red}, ${green}, ${blue}, ${alpha})`;
 }

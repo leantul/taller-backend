@@ -5,6 +5,7 @@ import { Client } from '../../shared/models/client.model';
 import { APP_CONFIG } from '../config/app-config';
 import { Device } from '../../shared/models/device.model';
 import { Repair, RepairCreateDTO, RepairUpdateDTO } from '../../shared/models/repair.model';
+import { FinanceSummary } from '../../shared/models/finance.model';
 
 @Injectable({ providedIn: 'root' })
 export class ApiService {
@@ -32,4 +33,11 @@ export class ApiService {
   getLatestClients(): Observable<Client[]> { return this.http.get<Client[]>(`${this.baseUrl}/dashboard/latest-clients`); }
   getLatestDevices(): Observable<Device[]> { return this.http.get<Device[]>(`${this.baseUrl}/dashboard/latest-devices`); }
   getLatestRepairs(): Observable<Repair[]> { return this.http.get<Repair[]>(`${this.baseUrl}/dashboard/latest-repairs`); }
+  getFinanceSummary(from?: string, to?: string): Observable<FinanceSummary> {
+    const params = new URLSearchParams();
+    if (from) params.set('from', from);
+    if (to) params.set('to', to);
+    const query = params.toString();
+    return this.http.get<FinanceSummary>(`${this.baseUrl}/finance/summary${query ? `?${query}` : ''}`);
+  }
 }

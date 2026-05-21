@@ -725,6 +725,10 @@ textarea.p-inputtext {
   width: min(28rem, 100%);
 }
 
+.finance-toolbar {
+  justify-content: flex-start;
+}
+
 .table-toolbar .p-input-icon-left,
 .repairs-filters .p-input-icon-left {
   display: inline-flex;
@@ -775,6 +779,11 @@ textarea.p-inputtext {
 
 .finance-reset {
   min-height: 2.25rem;
+}
+
+.finance-toolbar .primary-button,
+.finance-toolbar .secondary-button {
+  margin-bottom: .02rem;
 }
 
 .finance-layout {

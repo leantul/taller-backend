@@ -27,6 +27,15 @@ import { MessageService } from 'primeng/api';
   templateUrl: './repairs-page.component.html'
 })
 export class RepairsPageComponent implements OnInit {
+  private readonly statusOrder: Record<Repair['status'], number> = {
+    POR_RECIBIR: 0,
+    RECIBIDA: 1,
+    PRESUPUESTADA_ESPERANDO_RESPUESTA: 2,
+    HACIENDO: 3,
+    ESPERANDO_RETIRO: 4,
+    RETIRADA: 5
+  };
+
   repairs: Repair[] = [];
   filteredRepairs: Repair[] = [];
   visibleRepairs: Repair[] = [];
@@ -245,13 +254,16 @@ export class RepairsPageComponent implements OnInit {
 
   applyFilters(): void {
     const term = this.searchTerm.trim().toLowerCase();
-    this.filteredRepairs = this.repairs.filter((r) => {
-      const matchesTerm = !term || [r.idClient, r.idDevice, this.clientLabel(r), this.deviceLabel(r), r.orderNumber, r.description].filter(Boolean).join(' ').toLowerCase().includes(term);
-      const receive = r.receiveDateTime ? new Date(r.receiveDateTime) : null;
-      const matchesFrom = !this.fromDate || (receive && receive >= this.fromDate);
-      const matchesTo = !this.toDate || (receive && receive <= this.toDate);
-      return Boolean(matchesTerm && matchesFrom && matchesTo);
-    });
+    this.filteredRepairs = this.repairs
+      .filter((r) => {
+        const matchesTerm = !term || [r.idClient, r.idDevice, this.clientLabel(r), this.deviceLabel(r), r.orderNumber, r.description].filter(Boolean).join(' ').toLowerCase().includes(term);
+        const receive = r.receiveDateTime ? new Date(r.receiveDateTime) : null;
+        const matchesFrom = !this.fromDate || (receive && receive >= this.fromDate);
+        const matchesTo = !this.toDate || (receive && receive <= this.toDate);
+        return Boolean(matchesTerm && matchesFrom && matchesTo);
+      })
+      .sort((left, right) => this.compareRepairs(left, right));
+
     this.currentPage = 1;
     this.updateVisibleRepairs();
   }
@@ -363,12 +375,33 @@ export class RepairsPageComponent implements OnInit {
     this.totalPages = Math.max(1, Math.ceil(this.filteredRepairs.length / this.pageSize));
     const page = Math.min(this.currentPage, this.totalPages);
     const start = (page - 1) * this.pageSize;
-    this.visibleRepairs = this.filteredRepairs.slice(start, start + this.pageSize);
+    this.visibleRepairs = [...this.filteredRepairs.slice(start, start + this.pageSize)];
     if (!this.filteredRepairs.length) {
       this.paginationLabel = '0 reparaciones';
-      return;
+    } else {
+      const end = Math.min(start + this.pageSize, this.filteredRepairs.length);
+      this.paginationLabel = `${start + 1}-${end} de ${this.filteredRepairs.length} reparaciones`;
     }
-    const end = Math.min(start + this.pageSize, this.filteredRepairs.length);
-    this.paginationLabel = `${start + 1}-${end} de ${this.filteredRepairs.length} reparaciones`;
+    queueMicrotask(() => this.changeDetector.detectChanges());
+  }
+
+  private compareRepairs(left: Repair, right: Repair): number {
+    const statusDiff = this.statusOrder[left.status] - this.statusOrder[right.status];
+    if (statusDiff !== 0) {
+      return statusDiff;
+    }
+
+    const rightDate = this.sortTimestamp(right);
+    const leftDate = this.sortTimestamp(left);
+    if (rightDate !== leftDate) {
+      return rightDate - leftDate;
+    }
+
+    return (right.orderNumber || '').localeCompare(left.orderNumber || '', undefined, { numeric: true, sensitivity: 'base' });
+  }
+
+  private sortTimestamp(repair: Repair): number {
+    const raw = repair.receiveDateTime || repair.returnDateTime;
+    return raw ? new Date(raw).getTime() : 0;
   }
 }

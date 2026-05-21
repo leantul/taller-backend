@@ -37,18 +37,18 @@ import { Repair } from '../../shared/models/repair.model';
 
     <section class="dashboard-grid metrics-grid finance-metrics">
       <p-card styleClass="metric-card"><span class="metric-label">Reparaciones</span><div class="metric">{{ repairCount }}</div><small>Incluidas en el rango</small></p-card>
-      <p-card styleClass="metric-card"><span class="metric-label">Ingresos</span><div class="metric">{{ totalIncome | currency:'ARS':'symbol':'1.0-0':'es-AR' }}</div><small>Total cobrado real</small></p-card>
-      <p-card styleClass="metric-card"><span class="metric-label">Gasto en repuestos</span><div class="metric">{{ totalPartsCost | currency:'ARS':'symbol':'1.0-0':'es-AR' }}</div><small>Suma de costos</small></p-card>
-      <p-card styleClass="metric-card revenue"><span class="metric-label">Ganancia neta</span><div class="metric">{{ netIncome | currency:'ARS':'symbol':'1.0-0':'es-AR' }}</div><small>Cobrado menos repuestos</small></p-card>
+      <p-card styleClass="metric-card"><span class="metric-label">Ingresos</span><div class="metric">{{ formatMoney(totalIncome) }}</div><small>Total cobrado real</small></p-card>
+      <p-card styleClass="metric-card"><span class="metric-label">Gasto en repuestos</span><div class="metric">{{ formatMoney(totalPartsCost) }}</div><small>Suma de costos</small></p-card>
+      <p-card styleClass="metric-card revenue"><span class="metric-label">Ganancia neta</span><div class="metric">{{ formatMoney(netIncome) }}</div><small>Cobrado menos repuestos</small></p-card>
     </section>
 
     <section class="dashboard-grid lists finance-layout">
       <p-card header="Composición del periodo">
         <div class="ops-summary-grid finance-breakdown">
-          <div class="ops-item"><span>Mano de obra cargada</span><strong>{{ totalLabor | currency:'ARS':'symbol':'1.0-0':'es-AR' }}</strong></div>
-          <div class="ops-item"><span>Presupuestos emitidos</span><strong>{{ totalQuoted | currency:'ARS':'symbol':'1.0-0':'es-AR' }}</strong></div>
+          <div class="ops-item"><span>Mano de obra cargada</span><strong>{{ formatMoney(totalLabor) }}</strong></div>
+          <div class="ops-item"><span>Presupuestos emitidos</span><strong>{{ formatMoney(totalQuoted) }}</strong></div>
           <div class="ops-item"><span>Ordenes entregadas</span><strong>{{ deliveredCount }}</strong></div>
-          <div class="ops-item"><span>Margen promedio</span><strong>{{ averageNet | currency:'ARS':'symbol':'1.0-0':'es-AR' }}</strong></div>
+          <div class="ops-item"><span>Margen promedio</span><strong>{{ formatMoney(averageNet) }}</strong></div>
         </div>
       </p-card>
 
@@ -62,9 +62,9 @@ import { Repair } from '../../shared/models/repair.model';
                   <td>#{{ row.orderNumber || '-' }}</td>
                   <td>{{ row.date ? (row.date | date:'dd/MM/yyyy') : '-' }}</td>
                   <td>{{ statusLabel(row.status) }}</td>
-                  <td>{{ asMoney(row.income) | currency:'ARS':'symbol':'1.0-0':'es-AR' }}</td>
-                  <td>{{ asMoney(row.partsCost) | currency:'ARS':'symbol':'1.0-0':'es-AR' }}</td>
-                  <td>{{ asMoney(row.net) | currency:'ARS':'symbol':'1.0-0':'es-AR' }}</td>
+                  <td>{{ formatMoney(row.income) }}</td>
+                  <td>{{ formatMoney(row.partsCost) }}</td>
+                  <td>{{ formatMoney(row.net) }}</td>
                 </tr>
               } @empty {
                 <tr><td class="empty-cell" colspan="6">No hay reparaciones dentro del rango elegido.</td></tr>
@@ -92,6 +92,7 @@ export class FinancePageComponent implements OnInit {
   constructor(private readonly api: ApiService, private readonly changeDetector: ChangeDetectorRef) {}
 
   ngOnInit(): void {
+    this.setCurrentMonthRange();
     this.applyFilters();
   }
 
@@ -103,14 +104,48 @@ export class FinancePageComponent implements OnInit {
   }
 
   resetDates(): void {
-    this.draftFromDate = '';
-    this.draftToDate = '';
+    this.setCurrentMonthRange();
     this.applyFilters();
   }
 
+  formatMoney(value: unknown): string {
+    return new Intl.NumberFormat('es-AR', {
+      style: 'currency',
+      currency: 'ARS',
+      maximumFractionDigits: 0
+    }).format(this.asMoney(value));
+  }
+
   asMoney(value: unknown): number {
-    const parsed = Number(value ?? 0);
-    return Number.isFinite(parsed) ? parsed : 0;
+    if (typeof value === 'number') {
+      return Number.isFinite(value) ? value : 0;
+    }
+
+    if (typeof value === 'string') {
+      const sanitized = value.trim().replace(/\s+/g, '').replace(/[^0-9,.-]/g, '');
+      if (!sanitized) {
+        return 0;
+      }
+
+      let normalized = sanitized;
+      if (sanitized.includes(',') && sanitized.includes('.')) {
+        normalized = sanitized.lastIndexOf(',') > sanitized.lastIndexOf('.')
+          ? sanitized.replace(/\./g, '').replace(',', '.')
+          : sanitized.replace(/,/g, '');
+      } else if (sanitized.includes(',')) {
+        normalized = sanitized.replace(/\./g, '').replace(',', '.');
+      }
+
+      const parsed = Number(normalized);
+      return Number.isFinite(parsed) ? parsed : 0;
+    }
+
+    if (value && typeof value === 'object') {
+      const nestedValue = (value as { amount?: unknown; value?: unknown }).amount ?? (value as { value?: unknown }).value;
+      return this.asMoney(nestedValue);
+    }
+
+    return 0;
   }
 
   statusLabel(status: Repair['status']): string {
@@ -135,5 +170,18 @@ export class FinancePageComponent implements OnInit {
     this.netIncome = this.asMoney(summary.netIncome);
     this.averageNet = this.asMoney(summary.averageNet);
     this.deliveredCount = summary.deliveredCount || 0;
+  }
+
+  private setCurrentMonthRange(): void {
+    const today = new Date();
+    this.draftFromDate = this.toInputDate(new Date(today.getFullYear(), today.getMonth(), 1));
+    this.draftToDate = this.toInputDate(new Date(today.getFullYear(), today.getMonth() + 1, 0));
+  }
+
+  private toInputDate(value: Date): string {
+    const year = value.getFullYear();
+    const month = `${value.getMonth() + 1}`.padStart(2, '0');
+    const day = `${value.getDate()}`.padStart(2, '0');
+    return `${year}-${month}-${day}`;
   }
 }

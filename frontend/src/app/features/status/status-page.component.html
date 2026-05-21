@@ -6,7 +6,7 @@
   <p>Arrastrá las reparaciones entre columnas para actualizar el flujo de trabajo del taller.</p>
 </section>
 
-<section class="status-board">
+<section class="status-board" cdkDropListGroup>
   @for (col of columns; track col.status) {
     <p-card class="status-column">
       <div class="status-column-head">
@@ -38,13 +38,27 @@
   @if (selectedRepair) {
     <div class="detail-grid">
       <div class="detail-item"><label>Orden</label><div>#{{ selectedRepair.orderNumber }}</div></div>
-      <div class="detail-item"><label>Estado</label><div><span class="status-pill" [ngClass]="statusClass(selectedRepair.status)">{{ statusLabel(selectedRepair.status) }}</span></div></div>
+      <div class="detail-item">
+        <label>Estado</label>
+        <div class="detail-status-editor">
+          <span class="status-pill" [ngClass]="statusClass(selectedRepair.status)">{{ statusLabel(selectedRepair.status) }}</span>
+          <select class="control" [(ngModel)]="selectedRepair.status">
+            @for (option of statusOptions; track option.value) {
+              <option [value]="option.value">{{ option.label }}</option>
+            }
+          </select>
+        </div>
+      </div>
       <div class="detail-item"><label>Cliente</label><div>{{ clientName(selectedRepair) }}</div></div>
       <div class="detail-item"><label>Equipo</label><div>{{ deviceLabel(selectedRepair) }}</div></div>
       <div class="detail-item detail-wide"><label>Descripción</label><div>{{ selectedRepair.description || 'Sin descripción' }}</div></div>
       <div class="detail-item"><label>Monto</label><div>{{ selectedRepair.price | currency:'ARS':'symbol':'1.2-2':'es-AR' }}</div></div>
       <div class="detail-item"><label>Presupuesto</label><div>{{ (selectedRepair.quotedAmount || 0) | currency:'ARS':'symbol':'1.2-2':'es-AR' }}</div></div>
       <div class="detail-item"><label>Fecha ingreso</label><div>{{ selectedRepair.receiveDateTime ? (selectedRepair.receiveDateTime | date:'dd/MM/yyyy HH:mm') : '-' }}</div></div>
+    </div>
+    <div class="dialog-actions">
+      <button class="secondary-button" type="button" (click)="showDetailModal = false">Cerrar</button>
+      <button class="primary-button" type="button" [disabled]="isSavingStatus" (click)="saveDetailStatus()">Guardar estado</button>
     </div>
   }
 </p-dialog>

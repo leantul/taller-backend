@@ -23,7 +23,7 @@
           <span class="summary-chip"><i class="pi pi-desktop"></i> {{ clientDevices.length }} dispositivo(s)</span>
         </div>
       }
-      <div class="field"><label>Dispositivo</label><div class="inline-row device-inline-row"><p-select styleClass="device-select" [options]="clientDeviceOptions" optionLabel="label" optionValue="value" [(ngModel)]="draft.idDevice" name="idDevice"></p-select><button pButton type="button" icon="pi pi-plus" class="p-button-sm device-add-btn" [disabled]="!draft.idClient" (click)="showDeviceModal=true"></button></div></div>
+      <div class="field"><label>Dispositivo</label><div class="inline-row device-inline-row"><p-select styleClass="device-select" [options]="clientDeviceOptions" optionLabel="label" optionValue="value" [(ngModel)]="draft.idDevice" name="idDevice" (ngModelChange)="onDraftDeviceChange()"></p-select><button pButton type="button" icon="pi pi-plus" class="p-button-sm device-add-btn" [disabled]="!draft.idClient" (click)="showDeviceModal=true"></button></div></div>
       @if (selectedDeviceSummary) {
         <div class="selection-summary">
           <span class="summary-chip"><i class="pi pi-tag"></i> {{ selectedDeviceSummary }}</span>
@@ -98,23 +98,53 @@
 
 <p-dialog header="Cambiar estado" [(visible)]="showStatusModal" [modal]="true" [style]="{width:'28rem'}">
   @if (statusEditingRepair) {
-    <div class="field"><label>Estado</label><p-select [options]="statusOptions" optionLabel="label" optionValue="value" [(ngModel)]="statusEditingRepair.status" appendTo="body"></p-select></div>
+    <div class="field">
+      <label>Estado</label>
+      <select class="control" [(ngModel)]="statusEditingRepair.status">
+        @for (option of statusOptions; track option.value) {
+          <option [value]="option.value">{{ option.label }}</option>
+        }
+      </select>
+    </div>
     <button pButton type="button" label="Guardar" icon="pi pi-check" [disabled]="isUpdating" [loading]="isUpdating" (click)="saveStatus()"></button>
   }
 </p-dialog>
 
 <p-dialog header="Editar reparación" [(visible)]="showEditModal" [modal]="true" [style]="{width:'36rem'}">
-  <div class="field"><label>Dispositivo</label><p-select [options]="deviceOptions" optionLabel="label" optionValue="value" [(ngModel)]="editingRepair.idDevice" appendTo="body"></p-select></div>
-  <div class="field"><label>Cliente</label><p-select [options]="clientOptions" optionLabel="label" optionValue="value" [(ngModel)]="editingRepair.idClient" appendTo="body"></p-select></div>
+  <div class="field">
+    <label>Dispositivo</label>
+    <select class="control" [(ngModel)]="editingRepair.idDevice" (ngModelChange)="onEditRepairDeviceChange()">
+      <option value="">Seleccionar dispositivo</option>
+      @for (option of deviceOptions; track option.value) {
+        <option [value]="option.value">{{ option.label }}</option>
+      }
+    </select>
+  </div>
+  <div class="field">
+    <label>Cliente</label>
+    <select class="control" [(ngModel)]="editingRepair.idClient" (ngModelChange)="onEditRepairClientChange()">
+      <option value="">Seleccionar cliente</option>
+      @for (option of clientOptions; track option.value) {
+        <option [value]="option.value">{{ option.label }}</option>
+      }
+    </select>
+  </div>
   <div class="field"><label>Falla reportada</label><textarea class="p-inputtext" rows="4" [(ngModel)]="editingRepair.description"></textarea></div>
-  <div class="field"><label>Estado</label><p-select [options]="statusOptions" optionLabel="label" optionValue="value" [(ngModel)]="editingRepair.status" (ngModelChange)="onEditStatusChange()" appendTo="body"></p-select></div>
+  <div class="field">
+    <label>Estado</label>
+    <select class="control" [(ngModel)]="editingRepair.status" (ngModelChange)="onEditStatusChange()">
+      @for (option of statusOptions; track option.value) {
+        <option [value]="option.value">{{ option.label }}</option>
+      }
+    </select>
+  </div>
   @if (editingRepair.status === 'RETIRADA') {
     <div class="field"><label>Fecha y hora de retiro</label><p-datepicker [(ngModel)]="editReturnDate" [showTime]="true" hourFormat="24" dateFormat="dd-mm-yy" appendTo="body"></p-datepicker></div>
   }
-  <div class="field"><label>Presupuesto enviado</label><p-inputNumber [(ngModel)]="editingRepair.quotedAmount" mode="currency" currency="ARS" locale="es-AR" [min]="0"></p-inputNumber></div>
+  <div class="field"><label>Presupuesto enviado</label><input class="control" type="number" min="0" step="0.01" [(ngModel)]="editingRepair.quotedAmount" /></div>
   <div class="field"><label>Detalle del presupuesto</label><textarea class="p-inputtext" rows="4" [(ngModel)]="editingRepair.quoteNotes"></textarea></div>
-  <div class="field"><label>Mano de obra</label><p-inputNumber [(ngModel)]="editingRepair.laborAmount" mode="currency" currency="ARS" locale="es-AR" [min]="0"></p-inputNumber></div>
-  <div class="field"><label>Monto final</label><p-inputNumber [(ngModel)]="editingRepair.price" mode="currency" currency="ARS" locale="es-AR" [min]="0"></p-inputNumber></div>
+  <div class="field"><label>Mano de obra</label><input class="control" type="number" min="0" step="0.01" [(ngModel)]="editingRepair.laborAmount" /></div>
+  <div class="field"><label>Monto final</label><input class="control" type="number" min="0" step="0.01" [(ngModel)]="editingRepair.price" /></div>
   <div class="field">
     <div class="inline-row" style="justify-content:space-between;align-items:center;">
       <label>Repuestos cambiados</label>
@@ -123,9 +153,9 @@
     @for (part of editingRepair.parts || []; track $index) {
       <div class="inline-row" style="gap:.5rem; margin-bottom:.5rem;">
         <input pInputText [(ngModel)]="part.name" [ngModelOptions]="{standalone:true}" placeholder="Repuesto" />
-        <p-inputNumber [(ngModel)]="part.quantity" [ngModelOptions]="{standalone:true}" [min]="1" placeholder="Cant."></p-inputNumber>
-        <p-inputNumber [(ngModel)]="part.cost" [ngModelOptions]="{standalone:true}" mode="currency" currency="ARS" locale="es-AR" [min]="0" placeholder="Costo"></p-inputNumber>
-        <p-inputNumber [(ngModel)]="part.salePrice" [ngModelOptions]="{standalone:true}" mode="currency" currency="ARS" locale="es-AR" [min]="0" placeholder="Venta"></p-inputNumber>
+        <input class="control" type="number" min="1" step="1" [(ngModel)]="part.quantity" [ngModelOptions]="{standalone:true}" placeholder="Cant." />
+        <input class="control" type="number" min="0" step="0.01" [(ngModel)]="part.cost" [ngModelOptions]="{standalone:true}" placeholder="Costo" />
+        <input class="control" type="number" min="0" step="0.01" [(ngModel)]="part.salePrice" [ngModelOptions]="{standalone:true}" placeholder="Venta" />
         <button pButton type="button" icon="pi pi-trash" class="p-button-danger p-button-text" (click)="removePartRow($index)"></button>
       </div>
     }
@@ -134,7 +164,7 @@
 </p-dialog>
 
 <p-dialog header="Seleccionar cliente" [(visible)]="showClientModal" [modal]="true" [style]="{width:'60rem'}">
-  <div class="field"><label>Buscar cliente</label><input pInputText [(ngModel)]="clientSearch" placeholder="Nombre, apellido, teléfono o email" /></div>
+  <div class="field"><label>Buscar cliente</label><input pInputText [(ngModel)]="clientSearch" (ngModelChange)="updateFilteredClients()" placeholder="Nombre, apellido, teléfono o email" /></div>
   <div class="native-table-wrap">
     <table class="native-table">
       <thead><tr><th>Nombre</th><th>Apellido</th><th>Teléfono</th><th>Email</th><th></th></tr></thead>

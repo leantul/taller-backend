@@ -1,6 +1,7 @@
 import { CdkDragDrop, DragDropModule, moveItemInArray, transferArrayItem } from '@angular/cdk/drag-drop';
 import { CommonModule } from '@angular/common';
 import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { CardModule } from 'primeng/card';
 import { DialogModule } from 'primeng/dialog';
 import { MessageService } from 'primeng/api';
@@ -13,7 +14,7 @@ import { forkJoin } from 'rxjs';
 @Component({
   selector: 'app-status-page',
   standalone: true,
-  imports: [CommonModule, DragDropModule, CardModule, DialogModule],
+  imports: [CommonModule, FormsModule, DragDropModule, CardModule, DialogModule],
   templateUrl: './status-page.component.html'
 })
 export class StatusPageComponent implements OnInit {
@@ -21,14 +22,20 @@ export class StatusPageComponent implements OnInit {
     { title: 'Por recibir', status: 'POR_RECIBIR', items: [] },
     { title: 'A reparar', status: 'RECIBIDA', items: [] },
     { title: 'En proceso', status: 'HACIENDO', items: [] },
-    { title: 'Lista para entregar', status: 'ESPERANDO_RETIRO', items: [] },
-    { title: 'Entregada', status: 'RETIRADA', items: [] }
+    { title: 'Lista para entregar', status: 'ESPERANDO_RETIRO', items: [] }
   ];
 
   selectedRepair: Repair | null = null;
   showDetailModal = false;
   clientsById = new Map<string, Client>();
   devicesById = new Map<string, Device>();
+  isSavingStatus = false;
+  statusOptions = [
+    { label: 'Por recibir', value: 'POR_RECIBIR' },
+    { label: 'A reparar', value: 'RECIBIDA' },
+    { label: 'En proceso', value: 'HACIENDO' },
+    { label: 'Lista para entregar', value: 'ESPERANDO_RETIRO' }
+  ];
 
   constructor(private readonly api: ApiService, private readonly messageService: MessageService, private readonly changeDetector: ChangeDetectorRef) {}
 
@@ -51,8 +58,25 @@ export class StatusPageComponent implements OnInit {
   }
 
   openDetail(item: Repair): void {
-    this.selectedRepair = item;
+    this.selectedRepair = { ...item };
     this.showDetailModal = true;
+  }
+
+  saveDetailStatus(): void {
+    if (!this.selectedRepair) return;
+    this.isSavingStatus = true;
+    this.api.updateRepair(this.selectedRepair).subscribe({
+      next: () => {
+        this.isSavingStatus = false;
+        this.showDetailModal = false;
+        this.messageService.add({ severity: 'success', summary: 'Estado actualizado', detail: `Orden ${this.selectedRepair?.orderNumber}` });
+        this.reload();
+      },
+      error: () => {
+        this.isSavingStatus = false;
+        this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudo actualizar el estado.' });
+      }
+    });
   }
 
   clientName(item: Repair): string {

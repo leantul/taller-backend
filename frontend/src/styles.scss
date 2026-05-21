@@ -1093,6 +1093,18 @@ textarea.p-inputtext {
   white-space: nowrap;
 }
 
+.detail-status-editor {
+  display: grid;
+  gap: .6rem;
+}
+
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: .75rem;
+  margin-top: 1rem;
+}
+
 .p-chart canvas {
   max-height: 210px;
 }

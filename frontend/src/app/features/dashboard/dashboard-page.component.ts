@@ -1,4 +1,4 @@
-import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, NgZone, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { Subscription } from 'rxjs';
@@ -177,7 +177,8 @@ export class DashboardPageComponent implements OnInit, OnDestroy {
   constructor(
     private readonly api: ApiService,
     private readonly changeDetector: ChangeDetectorRef,
-    private readonly themeService: ThemeService
+    private readonly themeService: ThemeService,
+    private readonly zone: NgZone
   ) {
     this.themeMode = this.themeService.currentTheme();
   }
@@ -185,26 +186,31 @@ export class DashboardPageComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.subscriptions.add(
       this.themeService.mode$.subscribe((mode) => {
-        this.themeMode = mode;
-        if (this.dataReady) {
-          this.refreshCharts(true);
-        }
+        this.zone.run(() => {
+          this.themeMode = mode;
+          if (this.dataReady) {
+            this.refreshCharts(true);
+          }
+        });
       })
     );
 
     this.subscriptions.add(
       this.api.getDashboardOverview().subscribe((overview) => {
-        this.overview = {
-          ...overview,
-          recentClients: overview.recentClients || [],
-          recentDevices: overview.recentDevices || [],
-          recentRepairs: overview.recentRepairs || [],
-          inactiveDevices: overview.inactiveDevices || [],
-          deviceTypes: overview.deviceTypes || [],
-          repairStatuses: overview.repairStatuses || []
-        };
-        this.dataReady = true;
-        this.refreshCharts(true);
+        this.zone.run(() => {
+          this.overview = {
+            ...overview,
+            recentClients: overview.recentClients || [],
+            recentDevices: overview.recentDevices || [],
+            recentRepairs: overview.recentRepairs || [],
+            inactiveDevices: overview.inactiveDevices || [],
+            deviceTypes: overview.deviceTypes || [],
+            repairStatuses: overview.repairStatuses || []
+          };
+          this.dataReady = true;
+          this.changeDetector.detectChanges();
+          this.refreshCharts(true);
+        });
       })
     );
   }
@@ -297,8 +303,10 @@ export class DashboardPageComponent implements OnInit, OnDestroy {
     this.changeDetector.detectChanges();
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
-        this.chartsVisible = true;
-        this.changeDetector.detectChanges();
+        this.zone.run(() => {
+          this.chartsVisible = true;
+          this.changeDetector.detectChanges();
+        });
       });
     });
   }

@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, NgZone, OnDestroy, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Subscription } from 'rxjs';
 import { CardModule } from 'primeng/card';
@@ -108,7 +108,8 @@ export class FinancePageComponent implements OnInit, OnDestroy {
   constructor(
     private readonly api: ApiService,
     private readonly changeDetector: ChangeDetectorRef,
-    private readonly themeService: ThemeService
+    private readonly themeService: ThemeService,
+    private readonly zone: NgZone
   ) {
     this.themeMode = this.themeService.currentTheme();
   }
@@ -116,10 +117,12 @@ export class FinancePageComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.subscriptions.add(
       this.themeService.mode$.subscribe((mode) => {
-        this.themeMode = mode;
-        if (this.lastSummary) {
-          this.buildMonthlyNetChart(this.lastSummary);
-        }
+        this.zone.run(() => {
+          this.themeMode = mode;
+          if (this.lastSummary) {
+            this.buildMonthlyNetChart(this.lastSummary);
+          }
+        });
       })
     );
     this.setCurrentMonthRange();
@@ -134,10 +137,12 @@ export class FinancePageComponent implements OnInit, OnDestroy {
 
   applyFilters(): void {
     this.api.getFinanceSummary(this.draftFromDate || undefined, this.draftToDate || undefined).subscribe((summary) => {
-      this.lastSummary = summary;
-      this.hydrateSummary(summary);
-      this.buildMonthlyNetChart(summary);
-      this.changeDetector.detectChanges();
+      this.zone.run(() => {
+        this.lastSummary = summary;
+        this.hydrateSummary(summary);
+        this.buildMonthlyNetChart(summary);
+        this.changeDetector.detectChanges();
+      });
     });
   }
 
@@ -260,8 +265,10 @@ export class FinancePageComponent implements OnInit, OnDestroy {
     this.changeDetector.detectChanges();
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
-        this.chartVisible = true;
-        this.changeDetector.detectChanges();
+        this.zone.run(() => {
+          this.chartVisible = true;
+          this.changeDetector.detectChanges();
+        });
       });
     });
   }

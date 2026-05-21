@@ -7,6 +7,7 @@ import { NotificationsPageComponent } from './features/notifications/notificatio
 import { LoginPageComponent } from './features/auth/login-page.component';
 import { StatusPageComponent } from './features/status/status-page.component';
 import { ChangePasswordPageComponent } from './features/auth/change-password-page.component';
+import { FinancePageComponent } from './features/finance/finance-page.component';
 import { authGuard } from './core/auth/auth.guard';
 
 export const routes: Routes = [
@@ -15,6 +16,7 @@ export const routes: Routes = [
   { path: 'clientes', component: ClientsPageComponent, canActivate: [authGuard] },
   { path: 'dispositivos', component: DevicesPageComponent, canActivate: [authGuard] },
   { path: 'reparaciones', component: RepairsPageComponent, canActivate: [authGuard] },
+  { path: 'finanzas', component: FinancePageComponent, canActivate: [authGuard] },
   { path: 'notificaciones', component: NotificationsPageComponent, canActivate: [authGuard] },
   { path: 'status', component: StatusPageComponent, canActivate: [authGuard] },
   { path: 'cambiar-password', component: ChangePasswordPageComponent, canActivate: [authGuard] },

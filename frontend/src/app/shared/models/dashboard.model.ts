@@ -34,12 +34,9 @@ export interface DashboardOverview {
   clientCount: number;
   deviceCount: number;
   repairCount: number;
-  totalRevenue: number | string;
-  monthRevenue: number | string;
   waitingPickupCount: number;
   inProgressCount: number;
   quotedPendingCount: number;
-  monthlyRevenue: DashboardSeriesItem[];
   deviceTypes: DashboardSeriesItem[];
   repairStatuses: DashboardSeriesItem[];
   recentClients: DashboardRecentClient[];

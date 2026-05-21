@@ -5,6 +5,7 @@ import com.taller.model.enums.RepairStatusEnum;
 import com.taller.model.repository.RepairPartRepository;
 import com.taller.model.repository.RepairRepository;
 import com.taller.model.repository.projection.RepairListView;
+import com.taller.resource.dto.DashboardSeriesItemDTO;
 import com.taller.resource.dto.FinanceRowDTO;
 import com.taller.resource.dto.FinanceSummaryDTO;
 import lombok.RequiredArgsConstructor;
@@ -13,7 +14,9 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.YearMonth;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -65,8 +68,48 @@ public class FinanceService {
         summary.setNetIncome(netIncome);
         summary.setAverageNet(rows.isEmpty() ? BigDecimal.ZERO : netIncome.divide(BigDecimal.valueOf(rows.size()), 2, java.math.RoundingMode.HALF_UP));
         summary.setDeliveredCount(rows.stream().filter(row -> row.getStatus() == RepairStatusEnum.RETIRADA).count());
+        summary.setMonthlyNet(buildMonthlyNetSeries());
         summary.setRows(rows);
         return summary;
+    }
+
+    private List<DashboardSeriesItemDTO> buildMonthlyNetSeries() {
+        YearMonth currentMonth = YearMonth.now();
+        YearMonth firstMonth = currentMonth.minusMonths(11);
+        LocalDateTime from = firstMonth.atDay(1).atStartOfDay();
+
+        List<RepairListView> repairs = repairRepository.findFinanceRows(from, null);
+        Map<String, List<RepairPart>> partsByRepairId = repairs.isEmpty()
+                ? Map.of()
+                : repairPartRepository.findByRepairIdIn(repairs.stream().map(RepairListView::getId).toList()).stream()
+                .collect(Collectors.groupingBy(RepairPart::getRepairId));
+
+        Map<YearMonth, BigDecimal> monthlyNet = new LinkedHashMap<>();
+        YearMonth cursor = firstMonth;
+        while (!cursor.isAfter(currentMonth)) {
+            monthlyNet.put(cursor, BigDecimal.ZERO);
+            cursor = cursor.plusMonths(1);
+        }
+
+        for (RepairListView repair : repairs) {
+            LocalDateTime date = resolveFinanceDate(repair);
+            if (date == null) {
+                continue;
+            }
+
+            YearMonth month = YearMonth.from(date);
+            if (!monthlyNet.containsKey(month)) {
+                continue;
+            }
+
+            BigDecimal income = safeMoney(repair.getPrice());
+            BigDecimal partsCost = sumPartsCost(partsByRepairId.getOrDefault(repair.getId(), List.of()));
+            monthlyNet.put(month, monthlyNet.get(month).add(income.subtract(partsCost)));
+        }
+
+        return monthlyNet.entrySet().stream()
+                .map(entry -> new DashboardSeriesItemDTO(formatMonth(entry.getKey()), entry.getValue()))
+                .toList();
     }
 
     private FinanceRowDTO toRowDto(RepairListView repair, List<RepairPart> parts) {
@@ -96,5 +139,10 @@ public class FinanceService {
 
     private BigDecimal safeMoney(BigDecimal value) {
         return value != null ? value : BigDecimal.ZERO;
+    }
+
+    private String formatMonth(YearMonth month) {
+        String name = month.getMonth().name().substring(0, 1) + month.getMonth().name().substring(1).toLowerCase();
+        return name + " " + month.getYear();
     }
 }

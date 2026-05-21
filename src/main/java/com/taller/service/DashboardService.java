@@ -10,7 +10,6 @@ import com.taller.model.repository.projection.ClientBasicView;
 import com.taller.model.repository.projection.DeviceBasicView;
 import com.taller.model.repository.projection.DeviceLastRepairView;
 import com.taller.model.repository.projection.DeviceTypeCountView;
-import com.taller.model.repository.projection.MonthlyRevenueView;
 import com.taller.model.repository.projection.RepairListView;
 import com.taller.model.repository.projection.RepairStatusCountView;
 import com.taller.resource.dto.ClientDTO;
@@ -28,9 +27,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.YearMonth;
 import java.util.EnumMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -93,36 +90,6 @@ public class DashboardService {
         dto.setClientCount(clientRepository.count());
         dto.setDeviceCount(deviceRepository.count());
         dto.setRepairCount(repairRepository.count());
-
-        LocalDate now = LocalDate.now();
-        YearMonth currentMonth = YearMonth.of(now.getYear(), now.getMonth());
-        LocalDateTime monthStart = currentMonth.atDay(1).atStartOfDay();
-        LocalDateTime nextMonthStart = currentMonth.plusMonths(1).atDay(1).atStartOfDay();
-        LocalDateTime sixMonthsAgo = currentMonth.minusMonths(5).atDay(1).atStartOfDay();
-
-        List<MonthlyRevenueView> monthlyRevenueViews = repairRepository.findMonthlyRevenueSince(sixMonthsAgo);
-        Map<YearMonth, BigDecimal> monthlyTotals = new LinkedHashMap<>();
-        YearMonth cursor = currentMonth.minusMonths(5);
-        while (!cursor.isAfter(currentMonth)) {
-            monthlyTotals.put(cursor, BigDecimal.ZERO);
-            cursor = cursor.plusMonths(1);
-        }
-        BigDecimal totalRevenue = BigDecimal.ZERO;
-        for (MonthlyRevenueView item : monthlyRevenueViews) {
-            BigDecimal price = safeMoney(item.getPrice());
-            totalRevenue = totalRevenue.add(price);
-            if (item.getReceiveDateTime() != null) {
-                YearMonth key = YearMonth.from(item.getReceiveDateTime());
-                if (monthlyTotals.containsKey(key)) {
-                    monthlyTotals.put(key, monthlyTotals.get(key).add(price));
-                }
-            }
-        }
-        dto.setTotalRevenue(totalRevenue);
-        dto.setMonthRevenue(monthlyTotals.getOrDefault(currentMonth, BigDecimal.ZERO));
-        dto.setMonthlyRevenue(monthlyTotals.entrySet().stream()
-                .map(entry -> new DashboardSeriesItemDTO(formatMonth(entry.getKey()), entry.getValue()))
-                .toList());
 
         Map<RepairStatusEnum, Long> statusCounts = new EnumMap<>(RepairStatusEnum.class);
         for (RepairStatusCountView countView : repairRepository.countByStatus()) {
@@ -214,10 +181,6 @@ public class DashboardService {
         }).toList());
 
         return dto;
-    }
-
-    private String formatMonth(YearMonth month) {
-        return month.getMonth().name().substring(0, 1) + month.getMonth().name().substring(1).toLowerCase() + " " + month.getYear();
     }
 
     private String statusLabel(RepairStatusEnum status) {

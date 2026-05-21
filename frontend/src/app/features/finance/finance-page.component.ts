@@ -1,15 +1,18 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { Subscription } from 'rxjs';
 import { CardModule } from 'primeng/card';
+import { UIChart } from 'primeng/chart';
 import { ApiService } from '../../core/services/api.service';
 import { FinanceRow, FinanceSummary } from '../../shared/models/finance.model';
 import { Repair } from '../../shared/models/repair.model';
+import { ThemeMode, ThemeService } from '../../core/services/theme.service';
 
 @Component({
   selector: 'app-finance-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, CardModule],
+  imports: [CommonModule, FormsModule, CardModule, UIChart],
   template: `
     <section class="page-heading">
       <div>
@@ -40,6 +43,14 @@ import { Repair } from '../../shared/models/repair.model';
       <p-card styleClass="metric-card"><span class="metric-label">Ingresos</span><div class="metric">{{ formatMoney(totalIncome) }}</div><small>Total cobrado real</small></p-card>
       <p-card styleClass="metric-card"><span class="metric-label">Gasto en repuestos</span><div class="metric">{{ formatMoney(totalPartsCost) }}</div><small>Suma de costos</small></p-card>
       <p-card styleClass="metric-card revenue"><span class="metric-label">Ganancia neta</span><div class="metric">{{ formatMoney(netIncome) }}</div><small>Cobrado menos repuestos</small></p-card>
+    </section>
+
+    <section class="dashboard-grid charts finance-charts">
+      <p-card header="Ganancia neta por mes">
+        <div class="chart-surface">
+          <p-chart *ngIf="chartVisible" type="bar" [data]="monthlyNetChartData" [options]="barChartOptions"></p-chart>
+        </div>
+      </p-card>
     </section>
 
     <section class="dashboard-grid lists finance-layout">
@@ -76,7 +87,7 @@ import { Repair } from '../../shared/models/repair.model';
     </section>
   `
 })
-export class FinancePageComponent implements OnInit {
+export class FinancePageComponent implements OnInit, OnDestroy {
   draftFromDate = '';
   draftToDate = '';
   financeRows: FinanceRow[] = [];
@@ -88,17 +99,44 @@ export class FinancePageComponent implements OnInit {
   netIncome = 0;
   averageNet = 0;
   deliveredCount = 0;
+  themeMode: ThemeMode;
+  chartVisible = false;
+  monthlyNetChartData: any = { labels: [], datasets: [] };
+  barChartOptions: any = {};
+  private readonly subscriptions = new Subscription();
 
-  constructor(private readonly api: ApiService, private readonly changeDetector: ChangeDetectorRef) {}
+  constructor(
+    private readonly api: ApiService,
+    private readonly changeDetector: ChangeDetectorRef,
+    private readonly themeService: ThemeService
+  ) {
+    this.themeMode = this.themeService.currentTheme();
+  }
 
   ngOnInit(): void {
+    this.subscriptions.add(
+      this.themeService.mode$.subscribe((mode) => {
+        this.themeMode = mode;
+        if (this.lastSummary) {
+          this.buildMonthlyNetChart(this.lastSummary);
+        }
+      })
+    );
     this.setCurrentMonthRange();
     this.applyFilters();
   }
 
+  ngOnDestroy(): void {
+    this.subscriptions.unsubscribe();
+  }
+
+  private lastSummary: FinanceSummary | null = null;
+
   applyFilters(): void {
     this.api.getFinanceSummary(this.draftFromDate || undefined, this.draftToDate || undefined).subscribe((summary) => {
+      this.lastSummary = summary;
       this.hydrateSummary(summary);
+      this.buildMonthlyNetChart(summary);
       this.changeDetector.detectChanges();
     });
   }
@@ -172,6 +210,62 @@ export class FinancePageComponent implements OnInit {
     this.deliveredCount = summary.deliveredCount || 0;
   }
 
+  private buildMonthlyNetChart(summary: FinanceSummary): void {
+    const styles = getComputedStyle(document.documentElement);
+    const textColor = styles.getPropertyValue('--text').trim() || '#1d2529';
+    const borderColor = styles.getPropertyValue('--border').trim() || '#d7d2c8';
+    const brandColor = styles.getPropertyValue('--brand-500').trim() || '#0c8a9f';
+
+    this.monthlyNetChartData = {
+      labels: (summary.monthlyNet || []).map((row) => row.label),
+      datasets: [{
+        label: 'Ganancia neta',
+        data: (summary.monthlyNet || []).map((row) => this.asMoney(row.value)),
+        backgroundColor: colorWithAlpha(brandColor, 0.72),
+        borderColor: brandColor,
+        borderWidth: 1.5,
+        borderRadius: 8,
+        maxBarThickness: 34
+      }]
+    };
+
+    this.barChartOptions = {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          display: false
+        },
+        tooltip: {
+          backgroundColor: this.themeMode === 'dark' ? '#111417' : '#ffffff',
+          titleColor: textColor,
+          bodyColor: textColor,
+          borderColor,
+          borderWidth: 1
+        }
+      },
+      scales: {
+        x: {
+          ticks: { color: textColor },
+          grid: { color: colorWithAlpha(borderColor, 0.35) }
+        },
+        y: {
+          ticks: { color: textColor },
+          grid: { color: colorWithAlpha(borderColor, 0.35) }
+        }
+      }
+    };
+
+    this.chartVisible = false;
+    this.changeDetector.detectChanges();
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        this.chartVisible = true;
+        this.changeDetector.detectChanges();
+      });
+    });
+  }
+
   private setCurrentMonthRange(): void {
     const today = new Date();
     this.draftFromDate = this.toInputDate(new Date(today.getFullYear(), today.getMonth(), 1));
@@ -184,4 +278,17 @@ export class FinancePageComponent implements OnInit {
     const day = `${value.getDate()}`.padStart(2, '0');
     return `${year}-${month}-${day}`;
   }
+}
+
+function colorWithAlpha(hex: string, alpha: number): string {
+  if (!hex.startsWith('#')) {
+    return hex;
+  }
+  const normalized = hex.length === 4
+    ? `#${hex[1]}${hex[1]}${hex[2]}${hex[2]}${hex[3]}${hex[3]}`
+    : hex;
+  const r = Number.parseInt(normalized.slice(1, 3), 16);
+  const g = Number.parseInt(normalized.slice(3, 5), 16);
+  const b = Number.parseInt(normalized.slice(5, 7), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }

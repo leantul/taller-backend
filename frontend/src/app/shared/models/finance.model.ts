@@ -21,5 +21,6 @@ export interface FinanceSummary {
   netIncome: number | string;
   averageNet: number | string;
   deliveredCount: number;
+  monthlyNet: { label: string; value: number | string }[];
   rows: FinanceRow[];
 }

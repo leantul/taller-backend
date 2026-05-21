@@ -20,5 +20,6 @@ public class FinanceSummaryDTO {
     private BigDecimal netIncome;
     private BigDecimal averageNet;
     private long deliveredCount;
+    private List<DashboardSeriesItemDTO> monthlyNet;
     private List<FinanceRowDTO> rows;
 }

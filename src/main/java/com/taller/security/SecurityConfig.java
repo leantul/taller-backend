@@ -26,8 +26,11 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
-    @Value("${app.cors.allowed-origins:http://localhost:4200,https://taller-backend-nine.vercel.app}")
+    @Value("${app.cors.allowed-origins:http://localhost:4200}")
     private String allowedOrigins;
+
+    @Value("${app.cors.frontend-url:${FRONTEND_URL:https://taller-backend-nine.vercel.app}}")
+    private String frontendUrl;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -48,10 +51,19 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        List<String> origins = Arrays.stream(allowedOrigins.split(","))
+        List<String> origins = new java.util.ArrayList<>(Arrays.stream(allowedOrigins.split(","))
                 .map(String::trim)
                 .filter(value -> !value.isBlank())
-                .toList();
+                .toList());
+
+        // Always include the frontend deployment URL so CORS works even if
+        // APP_CORS_ALLOWED_ORIGINS on the hosting platform omits it.
+        if (frontendUrl != null && !frontendUrl.isBlank()) {
+            String trimmed = frontendUrl.trim();
+            if (!origins.contains(trimmed)) {
+                origins.add(trimmed);
+            }
+        }
 
         configuration.setAllowedOriginPatterns(origins);
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));

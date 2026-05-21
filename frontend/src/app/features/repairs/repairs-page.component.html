@@ -59,8 +59,8 @@
           </tr>
         </thead>
         <tbody>
-          @for (r of visibleRepairs; track repairRowKey(r)) {
-            <tr>
+          @if (visibleRepairs.length) {
+            <tr *ngFor="let r of visibleRepairs; trackBy: repairTrackBy">
               <td><span class="order-chip">#{{ r.orderNumber || '-' }}</span></td>
               <td>{{ clientLabel(r) }}</td>
               <td>{{ deviceLabel(r) }}</td>
@@ -75,7 +75,7 @@
                 </div>
               </td>
             </tr>
-          } @empty {
+          } @else {
             <tr>
               <td class="empty-cell" colspan="7">No hay reparaciones para los filtros aplicados.</td>
             </tr>

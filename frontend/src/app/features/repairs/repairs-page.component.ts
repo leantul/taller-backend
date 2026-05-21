@@ -1,4 +1,4 @@
-import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit, TrackByFunction } from '@angular/core';
 import { forkJoin } from 'rxjs';
 import { ActivatedRoute } from '@angular/router';
 import { CommonModule } from '@angular/common';
@@ -302,9 +302,8 @@ export class RepairsPageComponent implements OnInit {
     }
   }
 
-  repairRowKey(repair: Repair): string {
-    return repair.id || repair.orderNumber || `${repair.idClient}-${repair.idDevice}-${repair.receiveDateTime || ''}`;
-  }
+  repairTrackBy: TrackByFunction<Repair> = (index, repair) =>
+    repair.id || repair.orderNumber || `${repair.idClient}-${repair.idDevice}-${repair.receiveDateTime || index}`;
 
   previousPage(): void {
     this.currentPage = Math.max(1, this.currentPage - 1);

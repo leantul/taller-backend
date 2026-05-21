@@ -2,10 +2,12 @@ package com.taller.model.repository;
 
 import com.taller.model.Client;
 import com.taller.model.Device;
+import com.taller.model.repository.projection.ClientBasicView;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
 import java.util.List;
 import org.springframework.data.domain.Pageable;
 
@@ -27,4 +29,29 @@ public interface ClientRepository extends JpaRepository<Client, String> {
 
     @Query("SELECT c FROM Client c WHERE EXISTS (SELECT d FROM Device d WHERE d.clientId = c.id) ORDER BY c.creationDateTime DESC")
     List<Client> findTop5WithDevices(Pageable pageable);
+
+    @Query("""
+            SELECT c.id AS id,
+                   c.name AS name,
+                   c.lastName AS lastName,
+                   c.dni AS dni,
+                   c.email AS email,
+                   c.phone AS phone
+            FROM Client c
+            WHERE EXISTS (SELECT d FROM Device d WHERE d.clientId = c.id)
+            ORDER BY c.creationDateTime DESC
+            """)
+    List<ClientBasicView> findTop5WithDevicesBasic(Pageable pageable);
+
+    @Query("""
+            SELECT c.id AS id,
+                   c.name AS name,
+                   c.lastName AS lastName,
+                   c.dni AS dni,
+                   c.email AS email,
+                   c.phone AS phone
+            FROM Client c
+            WHERE c.id IN ?1
+            """)
+    List<ClientBasicView> findBasicByIdIn(Collection<String> ids);
 }

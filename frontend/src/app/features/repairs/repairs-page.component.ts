@@ -126,12 +126,10 @@ export class RepairsPageComponent implements OnInit {
     this.draft.idClient = client.id || '';
     this.selectedClientName = `${client.name} ${client.lastName}`.trim();
     this.showClientModal = false;
-    this.api.getDevices().subscribe((devices) => {
-      this.clientDevices = devices.filter(d => d.clientId === this.draft.idClient);
-      this.rebuildClientDeviceOptions();
-      this.refreshSelectionSummaries();
-      this.changeDetector.detectChanges();
-    });
+    this.clientDevices = this.allDevices.filter((device) => device.clientId === this.draft.idClient);
+    this.rebuildClientDeviceOptions();
+    this.refreshSelectionSummaries();
+    this.changeDetector.detectChanges();
   }
 
   createDeviceInline(): void {
@@ -180,12 +178,10 @@ export class RepairsPageComponent implements OnInit {
     const exactClient = this.clients.find((c) => `${c.name} ${c.lastName}`.trim().toLowerCase() === value.trim().toLowerCase());
     if (exactClient?.id) {
       this.draft.idClient = exactClient.id;
-      this.api.getDevices().subscribe((devices) => {
-        this.clientDevices = devices.filter(d => d.clientId === this.draft.idClient);
-        this.rebuildClientDeviceOptions();
-        this.refreshSelectionSummaries();
-        this.changeDetector.detectChanges();
-      });
+      this.clientDevices = this.allDevices.filter((device) => device.clientId === this.draft.idClient);
+      this.rebuildClientDeviceOptions();
+      this.refreshSelectionSummaries();
+      this.changeDetector.detectChanges();
       return;
     }
 
@@ -245,20 +241,31 @@ export class RepairsPageComponent implements OnInit {
   }
 
   openEditModal(repair: Repair): void {
+    if (!repair.id) return;
     this.showEditModal = false;
     this.showEditingDevicePassword = false;
-    this.editingRepair = {
-      ...repair,
-      parts: (repair.parts || []).map((part) => ({ ...part }))
-    };
-    this.editClientOptions = [...this.clientOptions];
-    this.editDeviceOptions = [...this.deviceOptions];
-    this.refreshSelectionSummaries();
-    this.refreshEditingDevicePassword();
-    this.changeDetector.detectChanges();
-    queueMicrotask(() => {
-      this.showEditModal = true;
-      this.changeDetector.detectChanges();
+    this.isUpdating = true;
+    this.api.getRepairById(repair.id).subscribe({
+      next: (detail) => {
+        this.isUpdating = false;
+        this.editingRepair = {
+          ...detail,
+          parts: (detail.parts || []).map((part) => ({ ...part }))
+        };
+        this.editClientOptions = [...this.clientOptions];
+        this.editDeviceOptions = [...this.deviceOptions];
+        this.refreshSelectionSummaries();
+        this.refreshEditingDevicePassword();
+        this.changeDetector.detectChanges();
+        queueMicrotask(() => {
+          this.showEditModal = true;
+          this.changeDetector.detectChanges();
+        });
+      },
+      error: (error) => {
+        this.isUpdating = false;
+        this.messageService.add({ severity: 'error', summary: 'Error', detail: this.errorDetail(error, 'No se pudo cargar el detalle de la reparación.') });
+      }
     });
   }
 

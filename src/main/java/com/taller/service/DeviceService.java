@@ -4,6 +4,7 @@ import com.taller.model.Device;
 import com.taller.model.DevicePasswordHistory;
 import com.taller.model.repository.DevicePasswordHistoryRepository;
 import com.taller.model.repository.DeviceRepository;
+import com.taller.model.repository.projection.DeviceListView;
 import com.taller.resource.dto.DeviceDTO;
 import com.taller.resource.dto.DevicePasswordHistoryDTO;
 import com.taller.resource.dto.DevicePasswordUpsertDTO;
@@ -52,9 +53,9 @@ public class DeviceService {
     }
 
     public List<DeviceDTO> getAllDevices() {
-        List<Device> devices = deviceRepository.findAll();
-        Map<String, List<DevicePasswordHistory>> historiesByDeviceId = historiesByDeviceId(devices.stream().map(Device::getId).toList());
-        return devices.stream().map(device -> toDto(device, false, historiesByDeviceId.get(device.getId()))).toList();
+        return deviceRepository.findListRows().stream()
+                .map(this::toListDto)
+                .toList();
     }
 
     public DeviceDTO getDeviceById(String id) {
@@ -62,9 +63,9 @@ public class DeviceService {
     }
 
     public List<DeviceDTO> search(String term) {
-        List<Device> devices = deviceRepository.search(term);
-        Map<String, List<DevicePasswordHistory>> historiesByDeviceId = historiesByDeviceId(devices.stream().map(Device::getId).toList());
-        return devices.stream().map(device -> toDto(device, false, historiesByDeviceId.get(device.getId()))).toList();
+        return deviceRepository.searchListRows(term).stream()
+                .map(this::toListDto)
+                .toList();
     }
 
     public void delete(String id) {
@@ -132,6 +133,18 @@ public class DeviceService {
         if (includeHistory) {
             dto.setPasswordHistory(histories.stream().sorted(Comparator.comparing(DevicePasswordHistory::getCreationDateTime).reversed()).map(this::toPasswordHistoryDto).toList());
         }
+        return dto;
+    }
+
+    private DeviceDTO toListDto(DeviceListView device) {
+        DeviceDTO dto = new DeviceDTO();
+        dto.setId(device.getId());
+        dto.setBrand(device.getBrand());
+        dto.setModel(device.getModel());
+        dto.setSerialNumber(device.getSerialNumber());
+        dto.setDeviceType(device.getDeviceType());
+        dto.setClientId(device.getClientId());
+        dto.setCurrentPassword(device.getCurrentPassword());
         return dto;
     }
 

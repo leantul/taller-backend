@@ -6,6 +6,7 @@ import { APP_CONFIG } from '../config/app-config';
 import { Device, DevicePasswordHistory } from '../../shared/models/device.model';
 import { Repair, RepairCreateDTO, RepairUpdateDTO } from '../../shared/models/repair.model';
 import { FinanceSummary } from '../../shared/models/finance.model';
+import { DashboardOverview } from '../../shared/models/dashboard.model';
 
 @Injectable({ providedIn: 'root' })
 export class ApiService {
@@ -38,11 +39,13 @@ export class ApiService {
   }
 
   getRepairs(): Observable<Repair[]> { return this.http.get<Repair[]>(`${this.baseUrl}/repair`); }
+  getRepairById(id: string): Observable<Repair> { return this.http.get<Repair>(`${this.baseUrl}/repair/${id}`); }
   searchRepairs(term: string): Observable<Repair[]> { return this.http.get<Repair[]>(`${this.baseUrl}/repair/search?term=${encodeURIComponent(term)}`); }
   createRepair(payload: RepairCreateDTO): Observable<Repair> { return this.http.post<Repair>(`${this.baseUrl}/repair`, payload); }
   updateRepair(payload: RepairUpdateDTO): Observable<Repair> { return this.http.put<Repair>(`${this.baseUrl}/repair`, payload); }
   deleteRepair(id: string): Observable<void> { return this.http.delete<void>(`${this.baseUrl}/repair/${id}`); }
 
+  getDashboardOverview(): Observable<DashboardOverview> { return this.http.get<DashboardOverview>(`${this.baseUrl}/dashboard/overview`); }
   getLatestClients(): Observable<Client[]> { return this.http.get<Client[]>(`${this.baseUrl}/dashboard/latest-clients`); }
   getLatestDevices(): Observable<Device[]> { return this.http.get<Device[]>(`${this.baseUrl}/dashboard/latest-devices`); }
   getLatestRepairs(): Observable<Repair[]> { return this.http.get<Repair[]>(`${this.baseUrl}/dashboard/latest-repairs`); }

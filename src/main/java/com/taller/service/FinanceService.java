@@ -1,9 +1,10 @@
 package com.taller.service;
 
-import com.taller.model.Repair;
+import com.taller.model.RepairPart;
 import com.taller.model.enums.RepairStatusEnum;
 import com.taller.model.repository.RepairPartRepository;
 import com.taller.model.repository.RepairRepository;
+import com.taller.model.repository.projection.RepairListView;
 import com.taller.resource.dto.FinanceRowDTO;
 import com.taller.resource.dto.FinanceSummaryDTO;
 import lombok.RequiredArgsConstructor;
@@ -14,6 +15,8 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -23,12 +26,16 @@ public class FinanceService {
     private final RepairPartRepository repairPartRepository;
 
     public FinanceSummaryDTO getSummary(LocalDate from, LocalDate to) {
-        List<Repair> filteredRepairs = repairRepository.findAll().stream()
-                .filter(repair -> matchesRange(resolveFinanceDate(repair), from, to))
-                .toList();
+        LocalDateTime fromDateTime = from != null ? from.atStartOfDay() : null;
+        LocalDateTime toDateTime = to != null ? to.plusDays(1).atStartOfDay().minusNanos(1) : null;
+        List<RepairListView> filteredRepairs = repairRepository.findFinanceRows(fromDateTime, toDateTime);
+        Map<String, List<RepairPart>> partsByRepairId = filteredRepairs.isEmpty()
+                ? Map.of()
+                : repairPartRepository.findByRepairIdIn(filteredRepairs.stream().map(RepairListView::getId).toList()).stream()
+                .collect(Collectors.groupingBy(RepairPart::getRepairId));
 
         List<FinanceRowDTO> rows = filteredRepairs.stream()
-                .map(this::toRowDto)
+                .map(repair -> toRowDto(repair, partsByRepairId.getOrDefault(repair.getId(), List.of())))
                 .sorted(Comparator.comparing(FinanceRowDTO::getDate, Comparator.nullsLast(Comparator.reverseOrder()))
                         .thenComparing(FinanceRowDTO::getOrderNumber, Comparator.nullsLast(String::compareToIgnoreCase)))
                 .toList();
@@ -62,9 +69,9 @@ public class FinanceService {
         return summary;
     }
 
-    private FinanceRowDTO toRowDto(Repair repair) {
+    private FinanceRowDTO toRowDto(RepairListView repair, List<RepairPart> parts) {
         BigDecimal income = safeMoney(repair.getPrice());
-        BigDecimal partsCost = sumPartsCost(repair.getId());
+        BigDecimal partsCost = sumPartsCost(parts);
 
         FinanceRowDTO row = new FinanceRowDTO();
         row.setRepairId(repair.getId());
@@ -77,22 +84,12 @@ public class FinanceService {
         return row;
     }
 
-    private LocalDateTime resolveFinanceDate(Repair repair) {
+    private LocalDateTime resolveFinanceDate(RepairListView repair) {
         return repair.getReturnDateTime() != null ? repair.getReturnDateTime() : repair.getReceiveDateTime();
     }
 
-    private boolean matchesRange(LocalDateTime date, LocalDate from, LocalDate to) {
-        if (date == null) {
-            return from == null && to == null;
-        }
-        LocalDate localDate = date.toLocalDate();
-        boolean matchesFrom = from == null || !localDate.isBefore(from);
-        boolean matchesTo = to == null || !localDate.isAfter(to);
-        return matchesFrom && matchesTo;
-    }
-
-    private BigDecimal sumPartsCost(String repairId) {
-        return repairPartRepository.findByRepairId(repairId).stream()
+    private BigDecimal sumPartsCost(List<RepairPart> parts) {
+        return parts.stream()
                 .map(part -> safeMoney(part.getCost()).multiply(BigDecimal.valueOf(part.getQuantity() != null ? part.getQuantity() : 1)))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }

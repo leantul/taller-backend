@@ -3,7 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { Client } from '../../shared/models/client.model';
 import { APP_CONFIG } from '../config/app-config';
-import { Device } from '../../shared/models/device.model';
+import { Device, DevicePasswordHistory } from '../../shared/models/device.model';
 import { Repair, RepairCreateDTO, RepairUpdateDTO } from '../../shared/models/repair.model';
 import { FinanceSummary } from '../../shared/models/finance.model';
 
@@ -19,10 +19,23 @@ export class ApiService {
   deleteClient(id: string): Observable<void> { return this.http.delete<void>(`${this.baseUrl}/client/${id}`); }
 
   getDevices(): Observable<Device[]> { return this.http.get<Device[]>(`${this.baseUrl}/device`); }
+  getDeviceById(id: string): Observable<Device> { return this.http.get<Device>(`${this.baseUrl}/device/${id}`); }
   searchDevices(term: string): Observable<Device[]> { return this.http.get<Device[]>(`${this.baseUrl}/device/search?term=${encodeURIComponent(term)}`); }
   createDevice(payload: Device): Observable<Device> { return this.http.post<Device>(`${this.baseUrl}/device`, payload); }
   updateDevice(payload: Device): Observable<Device> { return this.http.put<Device>(`${this.baseUrl}/device`, payload); }
   deleteDevice(id: string): Observable<void> { return this.http.delete<void>(`${this.baseUrl}/device/${id}`); }
+  addDevicePassword(deviceId: string, value: string): Observable<Device> {
+    return this.http.post<Device>(`${this.baseUrl}/device/${deviceId}/passwords`, { value });
+  }
+  updateDevicePassword(deviceId: string, passwordId: string, value: string): Observable<Device> {
+    return this.http.put<Device>(`${this.baseUrl}/device/${deviceId}/passwords/${passwordId}`, { value });
+  }
+  deleteDevicePassword(deviceId: string, passwordId: string): Observable<Device> {
+    return this.http.delete<Device>(`${this.baseUrl}/device/${deviceId}/passwords/${passwordId}`);
+  }
+  makeCurrentDevicePassword(deviceId: string, passwordId: string): Observable<Device> {
+    return this.http.post<Device>(`${this.baseUrl}/device/${deviceId}/passwords/${passwordId}/make-current`, {});
+  }
 
   getRepairs(): Observable<Repair[]> { return this.http.get<Repair[]>(`${this.baseUrl}/repair`); }
   searchRepairs(term: string): Observable<Repair[]> { return this.http.get<Repair[]>(`${this.baseUrl}/repair/search?term=${encodeURIComponent(term)}`); }

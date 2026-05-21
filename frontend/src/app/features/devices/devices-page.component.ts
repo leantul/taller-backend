@@ -9,7 +9,7 @@ import { DialogModule } from 'primeng/dialog';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { ConfirmationService } from 'primeng/api';
 import { ApiService } from '../../core/services/api.service';
-import { Device } from '../../shared/models/device.model';
+import { Device, DevicePasswordHistory } from '../../shared/models/device.model';
 import { Client } from '../../shared/models/client.model';
 
 @Component({
@@ -24,7 +24,7 @@ import { Client } from '../../shared/models/client.model';
         <span class="eyebrow">Inventario</span>
         <h1>Dispositivos</h1>
       </div>
-      <p>Relacion entre clientes y equipos, con filtros rapidos para trabajar sobre el parque activo.</p>
+      <p>Relacion entre clientes y equipos, con acceso rapido a la clave actual y su historial.</p>
     </section>
 
     <div class="page-grid">
@@ -35,6 +35,15 @@ import { Client } from '../../shared/models/client.model';
           <div class="field"><label>Modelo</label><input pInputText [(ngModel)]="draft.model" name="model" required /></div>
           <div class="field"><label>Serie / IMEI</label><input pInputText [(ngModel)]="draft.serialNumber" name="serialNumber" required /></div>
           <div class="field"><label>Tipo</label><p-select [options]="typeOptions" optionLabel="label" optionValue="value" [(ngModel)]="draft.deviceType" name="deviceType"></p-select></div>
+          <div class="field">
+            <label>Contraseña inicial</label>
+            <div class="inline-row">
+              <input class="control" [type]="showDraftPassword ? 'text' : 'password'" [(ngModel)]="draft.currentPassword" name="currentPassword" placeholder="Opcional" />
+              <button class="icon-button" type="button" [attr.aria-label]="showDraftPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'" (click)="showDraftPassword = !showDraftPassword">
+                <i [class]="showDraftPassword ? 'pi pi-eye-slash' : 'pi pi-eye'"></i>
+              </button>
+            </div>
+          </div>
           <button pButton type="submit" label="Guardar dispositivo" icon="pi pi-check"></button>
         </form>
       </p-card>
@@ -46,7 +55,7 @@ import { Client } from '../../shared/models/client.model';
         </div>
         <div class="native-table-wrap">
           <table class="native-table">
-            <thead><tr><th>Tipo</th><th>Marca</th><th>Modelo</th><th>Serie</th><th>Cliente</th><th>Acciones</th></tr></thead>
+            <thead><tr><th>Tipo</th><th>Marca</th><th>Modelo</th><th>Serie</th><th>Cliente</th><th>Contraseña actual</th><th>Acciones</th></tr></thead>
             <tbody>
               @for (d of visibleDevices; track d.id || d.serialNumber) {
                 <tr>
@@ -56,14 +65,25 @@ import { Client } from '../../shared/models/client.model';
                   <td>{{ d.serialNumber }}</td>
                   <td>{{ getClientName(d.clientId) }}</td>
                   <td>
+                    <div class="inline-row">
+                      <span>{{ formatPassword(d.currentPassword, isDevicePasswordVisible(d.id || d.serialNumber)) }}</span>
+                      @if (d.currentPassword) {
+                        <button class="icon-action" type="button" aria-label="Mostrar contraseña" (click)="toggleDevicePassword(d.id || d.serialNumber)">
+                          <i [class]="isDevicePasswordVisible(d.id || d.serialNumber) ? 'pi pi-eye-slash' : 'pi pi-eye'"></i>
+                        </button>
+                      }
+                    </div>
+                  </td>
+                  <td>
                     <div class="action-buttons">
+                      <button class="icon-action" type="button" aria-label="Gestionar contraseñas" (click)="openPasswordManager(d)"><i class="pi pi-key"></i></button>
                       <button class="icon-action" type="button" aria-label="Editar dispositivo" (click)="openEdit(d)"><i class="pi pi-pencil"></i></button>
                       <button class="icon-action danger" type="button" aria-label="Eliminar dispositivo" (click)="confirmRemove(d)"><i class="pi pi-trash"></i></button>
                     </div>
                   </td>
                 </tr>
               } @empty {
-                <tr><td class="empty-cell" colspan="6">No hay dispositivos para mostrar.</td></tr>
+                <tr><td class="empty-cell" colspan="7">No hay dispositivos para mostrar.</td></tr>
               }
             </tbody>
           </table>
@@ -85,7 +105,87 @@ import { Client } from '../../shared/models/client.model';
       <div class="field"><label>Modelo</label><input pInputText [(ngModel)]="editing.model" /></div>
       <div class="field"><label>Serie / IMEI</label><input pInputText [(ngModel)]="editing.serialNumber" /></div>
       <div class="field"><label>Tipo</label><p-select [options]="typeOptions" optionLabel="label" optionValue="value" [(ngModel)]="editing.deviceType"></p-select></div>
+      <div class="field">
+        <label>Contraseña actual</label>
+        <div class="inline-row">
+          <input class="control" [type]="showEditPassword ? 'text' : 'password'" [value]="editing.currentPassword || ''" readonly />
+          <button class="icon-button" type="button" [attr.aria-label]="showEditPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'" (click)="showEditPassword = !showEditPassword">
+            <i [class]="showEditPassword ? 'pi pi-eye-slash' : 'pi pi-eye'"></i>
+          </button>
+          <button class="secondary-button" type="button" (click)="openPasswordManager(editing)">Gestionar</button>
+        </div>
+      </div>
       <button pButton type="button" label="Guardar cambios" icon="pi pi-check" (click)="update()"></button>
+    </p-dialog>
+
+    <p-dialog header="Contraseñas del dispositivo" [(visible)]="passwordVisible" [modal]="true" [style]="{width:'46rem'}">
+      @if (passwordDevice) {
+        <div class="ops-summary-grid">
+          <div class="ops-item">
+            <span>Contraseña actual</span>
+            <div class="inline-row">
+              <strong>{{ formatPassword(passwordDevice.currentPassword, showCurrentPassword) }}</strong>
+              <button class="icon-action" type="button" (click)="showCurrentPassword = !showCurrentPassword">
+                <i [class]="showCurrentPassword ? 'pi pi-eye-slash' : 'pi pi-eye'"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="field" style="margin-top:1rem;">
+          <label>Agregar nueva contraseña</label>
+          <div class="inline-row">
+            <input class="control" [type]="showNewPassword ? 'text' : 'password'" [(ngModel)]="newPasswordValue" placeholder="Nueva contraseña" />
+            <button class="icon-button" type="button" (click)="showNewPassword = !showNewPassword">
+              <i [class]="showNewPassword ? 'pi pi-eye-slash' : 'pi pi-eye'"></i>
+            </button>
+            <button class="primary-button" type="button" (click)="addPassword()">Agregar</button>
+          </div>
+        </div>
+
+        <div class="native-table-wrap" style="margin-top:1rem;">
+          <table class="native-table">
+            <thead><tr><th>Contraseña</th><th>Alta</th><th>Actualizada</th><th>Estado</th><th>Acciones</th></tr></thead>
+            <tbody>
+              @for (entry of passwordDevice.passwordHistory || []; track entry.id) {
+                <tr>
+                  <td>
+                    @if (editingPasswordId === entry.id) {
+                      <div class="inline-row">
+                        <input class="control" [(ngModel)]="editingPasswordValue" />
+                      </div>
+                    } @else {
+                      <div class="inline-row">
+                        <span>{{ formatPassword(entry.value, isHistoryPasswordVisible(entry.id || '')) }}</span>
+                        <button class="icon-action" type="button" (click)="toggleHistoryPassword(entry.id || '')">
+                          <i [class]="isHistoryPasswordVisible(entry.id || '') ? 'pi pi-eye-slash' : 'pi pi-eye'"></i>
+                        </button>
+                      </div>
+                    }
+                  </td>
+                  <td>{{ entry.createdAt ? (entry.createdAt | date:'dd/MM/yyyy HH:mm') : '-' }}</td>
+                  <td>{{ entry.updatedAt ? (entry.updatedAt | date:'dd/MM/yyyy HH:mm') : '-' }}</td>
+                  <td><span class="status-pill" [ngClass]="entry.isCurrent ? 'is-success' : 'is-muted'">{{ entry.isCurrent ? 'Actual' : 'Histórica' }}</span></td>
+                  <td>
+                    <div class="action-buttons">
+                      @if (editingPasswordId === entry.id) {
+                        <button class="icon-action" type="button" (click)="savePasswordEdit(entry)"><i class="pi pi-check"></i></button>
+                        <button class="icon-action danger" type="button" (click)="cancelPasswordEdit()"><i class="pi pi-times"></i></button>
+                      } @else {
+                        <button class="icon-action" type="button" (click)="startPasswordEdit(entry)"><i class="pi pi-pencil"></i></button>
+                        <button class="icon-action" type="button" [disabled]="entry.isCurrent" (click)="makeCurrent(entry)"><i class="pi pi-star"></i></button>
+                        <button class="icon-action danger" type="button" (click)="removePassword(entry)"><i class="pi pi-trash"></i></button>
+                      }
+                    </div>
+                  </td>
+                </tr>
+              } @empty {
+                <tr><td class="empty-cell" colspan="5">No hay contraseñas cargadas para este dispositivo.</td></tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
     </p-dialog>
   `
 })
@@ -93,20 +193,36 @@ export class DevicesPageComponent implements OnInit {
   devices: Device[] = [];
   filteredDevices: (Device & { clientName?: string })[] = [];
   clients: Client[] = [];
-  draft: Device = { brand: '', model: '', serialNumber: '', clientId: '', deviceType: 'NOTEBOOK' };
-  editing: Device = { brand: '', model: '', serialNumber: '', clientId: '', deviceType: 'NOTEBOOK' };
+  draft: Device = { brand: '', model: '', serialNumber: '', clientId: '', deviceType: 'NOTEBOOK', currentPassword: '' };
+  editing: Device = { brand: '', model: '', serialNumber: '', clientId: '', deviceType: 'NOTEBOOK', currentPassword: '', passwordHistory: [] };
   editVisible = false;
+  passwordVisible = false;
   selectedClientId: string | null = null;
   searchTerm = '';
   currentPage = 1;
   pageSize = 10;
+  showDraftPassword = false;
+  showEditPassword = false;
+  showCurrentPassword = false;
+  showNewPassword = false;
+  passwordDevice: Device | null = null;
+  newPasswordValue = '';
+  editingPasswordId: string | null = null;
+  editingPasswordValue = '';
+  visibleDevicePasswords = new Set<string>();
+  visibleHistoryPasswords = new Set<string>();
   typeOptions = [
     { label: 'Desktop', value: 'DESKTOP' }, { label: 'Notebook', value: 'NOTEBOOK' }, { label: 'Tablet', value: 'TABLET' }, { label: 'Celular', value: 'CELULAR' }, { label: 'Otros', value: 'OTROS' }
   ];
 
   constructor(private readonly api: ApiService, private readonly confirmationService: ConfirmationService, private readonly changeDetector: ChangeDetectorRef) {}
 
-  ngOnInit(): void { this.api.getClients().subscribe((clients) => { this.clients = clients; this.reload(); }); }
+  ngOnInit(): void {
+    this.api.getClients().subscribe((clients) => {
+      this.clients = clients;
+      this.reload();
+    });
+  }
 
   get clientOptions(): { label: string; value: string }[] {
     return this.clients.map((client) => ({ label: `${client.name} ${client.lastName}`.trim(), value: client.id! }));
@@ -114,15 +230,88 @@ export class DevicesPageComponent implements OnInit {
 
   save(): void {
     this.api.createDevice(this.draft).subscribe(() => {
-      this.draft = { brand: '', model: '', serialNumber: '', clientId: '', deviceType: 'NOTEBOOK' };
+      this.draft = { brand: '', model: '', serialNumber: '', clientId: '', deviceType: 'NOTEBOOK', currentPassword: '' };
+      this.showDraftPassword = false;
       this.reload();
     });
   }
 
-  openEdit(device: Device): void { this.editing = { ...device }; this.editVisible = true; }
+  openEdit(device: Device): void {
+    if (!device.id) return;
+    this.api.getDeviceById(device.id).subscribe((detail) => {
+      this.editing = this.normalizeDevice(detail);
+      this.showEditPassword = false;
+      this.editVisible = true;
+      this.changeDetector.detectChanges();
+    });
+  }
 
   update(): void {
-    this.api.updateDevice(this.editing).subscribe(() => { this.editVisible = false; this.reload(); });
+    this.api.updateDevice(this.editing).subscribe((device) => {
+      this.syncDevice(device);
+      this.editVisible = false;
+      this.reload();
+    });
+  }
+
+  openPasswordManager(device: Device): void {
+    if (!device.id) return;
+    this.api.getDeviceById(device.id).subscribe((detail) => {
+      this.passwordDevice = this.normalizeDevice(detail);
+      this.passwordVisible = true;
+      this.showCurrentPassword = false;
+      this.showNewPassword = false;
+      this.newPasswordValue = '';
+      this.editingPasswordId = null;
+      this.editingPasswordValue = '';
+      this.visibleHistoryPasswords.clear();
+      this.changeDetector.detectChanges();
+    });
+  }
+
+  addPassword(): void {
+    if (!this.passwordDevice?.id || !this.newPasswordValue.trim()) return;
+    this.api.addDevicePassword(this.passwordDevice.id, this.newPasswordValue.trim()).subscribe((device) => {
+      this.applyPasswordDevice(device);
+      this.newPasswordValue = '';
+      this.showNewPassword = false;
+    });
+  }
+
+  startPasswordEdit(entry: DevicePasswordHistory): void {
+    this.editingPasswordId = entry.id || null;
+    this.editingPasswordValue = entry.value;
+  }
+
+  cancelPasswordEdit(): void {
+    this.editingPasswordId = null;
+    this.editingPasswordValue = '';
+  }
+
+  savePasswordEdit(entry: DevicePasswordHistory): void {
+    if (!this.passwordDevice?.id || !entry.id || !this.editingPasswordValue.trim()) return;
+    this.api.updateDevicePassword(this.passwordDevice.id, entry.id, this.editingPasswordValue.trim()).subscribe((device) => {
+      this.applyPasswordDevice(device);
+      this.cancelPasswordEdit();
+    });
+  }
+
+  makeCurrent(entry: DevicePasswordHistory): void {
+    if (!this.passwordDevice?.id || !entry.id) return;
+    this.api.makeCurrentDevicePassword(this.passwordDevice.id, entry.id).subscribe((device) => this.applyPasswordDevice(device));
+  }
+
+  removePassword(entry: DevicePasswordHistory): void {
+    if (!this.passwordDevice?.id || !entry.id) return;
+    this.confirmationService.confirm({
+      message: '¿Eliminar esta contraseña del historial?',
+      header: 'Eliminar contraseña',
+      acceptLabel: 'Eliminar',
+      rejectLabel: 'Cancelar',
+      accept: () => {
+        this.api.deleteDevicePassword(this.passwordDevice!.id!, entry.id!).subscribe((device) => this.applyPasswordDevice(device));
+      }
+    });
   }
 
   confirmRemove(device: Device): void {
@@ -146,7 +335,7 @@ export class DevicesPageComponent implements OnInit {
       .map((device) => ({ ...device, clientName: this.getClientName(device.clientId) }))
       .filter((device) => {
         const byClient = !this.selectedClientId || device.clientId === this.selectedClientId;
-        const byTerm = !term || `${device.deviceType} ${device.brand} ${device.model} ${device.serialNumber} ${device.clientId} ${device.clientName}`.toLowerCase().includes(term);
+        const byTerm = !term || `${device.deviceType} ${device.brand} ${device.model} ${device.serialNumber} ${device.clientId} ${device.clientName} ${device.currentPassword || ''}`.toLowerCase().includes(term);
         return byClient && byTerm;
       });
     this.currentPage = 1;
@@ -155,6 +344,35 @@ export class DevicesPageComponent implements OnInit {
   getClientName(clientId: string): string {
     const client = this.clients.find((c) => c.id === clientId);
     return client ? `${client.name} ${client.lastName}` : clientId;
+  }
+
+  formatPassword(value: string | undefined, visible: boolean): string {
+    if (!value) return 'Sin clave';
+    return visible ? value : '•'.repeat(Math.max(6, value.length));
+  }
+
+  isDevicePasswordVisible(key: string): boolean {
+    return this.visibleDevicePasswords.has(key);
+  }
+
+  toggleDevicePassword(key: string): void {
+    if (this.visibleDevicePasswords.has(key)) {
+      this.visibleDevicePasswords.delete(key);
+    } else {
+      this.visibleDevicePasswords.add(key);
+    }
+  }
+
+  isHistoryPasswordVisible(key: string): boolean {
+    return this.visibleHistoryPasswords.has(key);
+  }
+
+  toggleHistoryPassword(key: string): void {
+    if (this.visibleHistoryPasswords.has(key)) {
+      this.visibleHistoryPasswords.delete(key);
+    } else {
+      this.visibleHistoryPasswords.add(key);
+    }
   }
 
   get totalPages(): number {
@@ -182,5 +400,35 @@ export class DevicesPageComponent implements OnInit {
     this.currentPage = Math.min(this.totalPages, this.currentPage + 1);
   }
 
-  private reload(): void { this.api.getDevices().subscribe((devices) => { this.devices = devices.slice().reverse(); this.applyFilters(); this.changeDetector.detectChanges(); }); }
+  private reload(): void {
+    this.api.getDevices().subscribe((devices) => {
+      this.devices = devices.slice().reverse().map((device) => this.normalizeDevice(device));
+      this.applyFilters();
+      this.changeDetector.detectChanges();
+    });
+  }
+
+  private normalizeDevice(device: Device): Device {
+    return {
+      ...device,
+      currentPassword: device.currentPassword || '',
+      passwordHistory: (device.passwordHistory || []).slice().sort((left, right) => new Date(right.createdAt || 0).getTime() - new Date(left.createdAt || 0).getTime())
+    };
+  }
+
+  private applyPasswordDevice(device: Device): void {
+    const normalized = this.normalizeDevice(device);
+    this.passwordDevice = normalized;
+    this.syncDevice(normalized);
+    if (this.editing.id && normalized.id === this.editing.id) {
+      this.editing = { ...this.editing, currentPassword: normalized.currentPassword, passwordHistory: normalized.passwordHistory };
+    }
+    this.applyFilters();
+    this.changeDetector.detectChanges();
+  }
+
+  private syncDevice(device: Device): void {
+    const normalized = this.normalizeDevice(device);
+    this.devices = this.devices.map((item) => item.id === normalized.id ? { ...item, ...normalized } : item);
+  }
 }

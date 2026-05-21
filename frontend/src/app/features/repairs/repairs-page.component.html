@@ -27,6 +27,15 @@
       @if (selectedDeviceSummary) {
         <div class="selection-summary">
           <span class="summary-chip"><i class="pi pi-tag"></i> {{ selectedDeviceSummary }}</span>
+          @if (selectedDevicePassword) {
+            <span class="summary-chip">
+              <i class="pi pi-key"></i>
+              {{ showSelectedDevicePassword ? selectedDevicePassword : '••••••' }}
+              <button class="icon-action" type="button" (click)="showSelectedDevicePassword = !showSelectedDevicePassword">
+                <i [class]="showSelectedDevicePassword ? 'pi pi-eye-slash' : 'pi pi-eye'"></i>
+              </button>
+            </span>
+          }
         </div>
       }
       <div class="field"><label>Falla reportada</label><textarea class="p-inputtext" rows="5" [(ngModel)]="draft.description" name="description" required></textarea></div>
@@ -110,21 +119,33 @@
   }
 </p-dialog>
 
+@if (showEditModal) {
 <p-dialog header="Editar reparación" [(visible)]="showEditModal" [modal]="true" [style]="{width:'36rem'}">
   <div class="field">
     <label>Dispositivo</label>
     <select class="control" [(ngModel)]="editingRepair.idDevice" (ngModelChange)="onEditRepairDeviceChange()">
       <option value="">Seleccionar dispositivo</option>
-      @for (option of deviceOptions; track option.value) {
+      @for (option of editDeviceOptions; track option.value) {
         <option [value]="option.value">{{ option.label }}</option>
       }
     </select>
   </div>
+  @if (editingDevicePassword) {
+    <div class="field">
+      <label>Contraseña actual del dispositivo</label>
+      <div class="inline-row">
+        <input class="control" [type]="showEditingDevicePassword ? 'text' : 'password'" [value]="editingDevicePassword" readonly />
+        <button class="icon-button" type="button" (click)="showEditingDevicePassword = !showEditingDevicePassword">
+          <i [class]="showEditingDevicePassword ? 'pi pi-eye-slash' : 'pi pi-eye'"></i>
+        </button>
+      </div>
+    </div>
+  }
   <div class="field">
     <label>Cliente</label>
     <select class="control" [(ngModel)]="editingRepair.idClient" (ngModelChange)="onEditRepairClientChange()">
       <option value="">Seleccionar cliente</option>
-      @for (option of clientOptions; track option.value) {
+      @for (option of editClientOptions; track option.value) {
         <option [value]="option.value">{{ option.label }}</option>
       }
     </select>
@@ -139,7 +160,7 @@
     </select>
   </div>
   @if (editingRepair.status === 'RETIRADA') {
-    <div class="field"><label>Fecha y hora de retiro</label><p-datepicker [(ngModel)]="editReturnDate" [showTime]="true" hourFormat="24" dateFormat="dd-mm-yy" appendTo="body"></p-datepicker></div>
+    <div class="field"><label>Fecha y hora de retiro</label><input class="control" type="datetime-local" [(ngModel)]="editReturnDateTimeLocal" /></div>
   }
   <div class="field"><label>Presupuesto enviado</label><input class="control" type="number" min="0" step="0.01" [(ngModel)]="editingRepair.quotedAmount" /></div>
   <div class="field"><label>Detalle del presupuesto</label><textarea class="p-inputtext" rows="4" [(ngModel)]="editingRepair.quoteNotes"></textarea></div>
@@ -162,6 +183,7 @@
   </div>
   <button pButton type="button" label="Guardar cambios" icon="pi pi-check" (click)="saveRepairChanges()"></button>
 </p-dialog>
+}
 
 <p-dialog header="Seleccionar cliente" [(visible)]="showClientModal" [modal]="true" [style]="{width:'60rem'}">
   <div class="field"><label>Buscar cliente</label><input pInputText [(ngModel)]="clientSearch" (ngModelChange)="updateFilteredClients()" placeholder="Nombre, apellido, teléfono o email" /></div>
@@ -190,6 +212,15 @@
   <div class="field"><label>Marca</label><input pInputText [(ngModel)]="draftDevice.brand"/></div>
   <div class="field"><label>Modelo</label><input pInputText [(ngModel)]="draftDevice.model"/></div>
   <div class="field"><label>Serie</label><input pInputText [(ngModel)]="draftDevice.serialNumber"/></div>
+  <div class="field">
+    <label>Contraseña inicial</label>
+    <div class="inline-row">
+      <input class="control" [type]="showDraftDevicePassword ? 'text' : 'password'" [(ngModel)]="draftDevice.currentPassword" />
+      <button class="icon-button" type="button" (click)="showDraftDevicePassword = !showDraftDevicePassword">
+        <i [class]="showDraftDevicePassword ? 'pi pi-eye-slash' : 'pi pi-eye'"></i>
+      </button>
+    </div>
+  </div>
   <button pButton type="button" label="Guardar dispositivo" (click)="createDeviceInline()"></button>
 </p-dialog>
 

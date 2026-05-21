@@ -61,7 +61,14 @@ export class RepairsPageComponent implements OnInit {
   filteredClientsList: Client[] = [];
   selectedClientSummary = '';
   selectedDeviceSummary = '';
-  draftDevice: Device = { brand: '', model: '', serialNumber: '', clientId: '', deviceType: 'NOTEBOOK' };
+  selectedDevicePassword = '';
+  editingDevicePassword = '';
+  showSelectedDevicePassword = false;
+  showEditingDevicePassword = false;
+  showDraftDevicePassword = false;
+  editClientOptions: { label: string; value: string }[] = [];
+  editDeviceOptions: { label: string; value: string }[] = [];
+  draftDevice: Device = { brand: '', model: '', serialNumber: '', clientId: '', deviceType: 'NOTEBOOK', currentPassword: '' };
   showClientModal = false;
   showDeviceModal = false;
   showStatusModal = false;
@@ -136,8 +143,9 @@ export class RepairsPageComponent implements OnInit {
       this.rebuildStaticOptions();
       this.rebuildClientDeviceOptions();
       this.draft.idDevice = device.id || '';
-      this.draftDevice = { brand: '', model: '', serialNumber: '', clientId: this.draft.idClient, deviceType: 'NOTEBOOK' };
+      this.draftDevice = { brand: '', model: '', serialNumber: '', clientId: this.draft.idClient, deviceType: 'NOTEBOOK', currentPassword: '' };
       this.showDeviceModal = false;
+      this.showDraftDevicePassword = false;
       this.refreshSelectionSummaries();
       this.changeDetector.detectChanges();
     });
@@ -237,13 +245,21 @@ export class RepairsPageComponent implements OnInit {
   }
 
   openEditModal(repair: Repair): void {
+    this.showEditModal = false;
+    this.showEditingDevicePassword = false;
     this.editingRepair = {
       ...repair,
       parts: (repair.parts || []).map((part) => ({ ...part }))
     };
+    this.editClientOptions = [...this.clientOptions];
+    this.editDeviceOptions = [...this.deviceOptions];
     this.refreshSelectionSummaries();
-    this.showEditModal = true;
+    this.refreshEditingDevicePassword();
     this.changeDetector.detectChanges();
+    queueMicrotask(() => {
+      this.showEditModal = true;
+      this.changeDetector.detectChanges();
+    });
   }
 
   onEditStatusChange(): void {
@@ -378,6 +394,23 @@ export class RepairsPageComponent implements OnInit {
     this.editingRepair.returnDateTime = value ? value.toISOString() : undefined;
   }
 
+  get editReturnDateTimeLocal(): string {
+    if (!this.editingRepair.returnDateTime) {
+      return '';
+    }
+    const date = new Date(this.editingRepair.returnDateTime);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  }
+
+  set editReturnDateTimeLocal(value: string) {
+    this.editingRepair.returnDateTime = value ? new Date(value).toISOString() : undefined;
+  }
+
   get filteredClients(): Client[] {
     return this.filteredClientsList;
   }
@@ -437,15 +470,16 @@ export class RepairsPageComponent implements OnInit {
   }
 
   onEditRepairClientChange(): void {
-    if (!this.clientOptions.some((option) => option.value === this.editingRepair.idClient)) {
+    if (!this.editClientOptions.some((option) => option.value === this.editingRepair.idClient)) {
       this.editingRepair.idClient = '';
     }
   }
 
   onEditRepairDeviceChange(): void {
-    if (!this.deviceOptions.some((option) => option.value === this.editingRepair.idDevice)) {
+    if (!this.editDeviceOptions.some((option) => option.value === this.editingRepair.idDevice)) {
       this.editingRepair.idDevice = '';
     }
+    this.refreshEditingDevicePassword();
   }
 
   updateFilteredClients(): void {
@@ -475,6 +509,12 @@ export class RepairsPageComponent implements OnInit {
     this.selectedClientSummary = client ? `${client.name} ${client.lastName}`.trim() : '';
     const device = this.clientDevices.find((item) => item.id === this.draft.idDevice) || this.devicesById.get(this.draft.idDevice);
     this.selectedDeviceSummary = device ? `${device.deviceType} · ${device.brand} ${device.model}`.replace(/\s+/g, ' ').trim() : '';
+    this.selectedDevicePassword = device?.currentPassword || '';
+  }
+
+  private refreshEditingDevicePassword(): void {
+    const device = this.allDevices.find((item) => item.id === this.editingRepair.idDevice) || this.devicesById.get(this.editingRepair.idDevice);
+    this.editingDevicePassword = device?.currentPassword || '';
   }
 
   private formatMoney(value: unknown): string {

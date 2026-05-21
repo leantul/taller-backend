@@ -3,7 +3,6 @@ import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { forkJoin, Subscription } from 'rxjs';
 import { CardModule } from 'primeng/card';
-import { ChartModule } from 'primeng/chart';
 import { ApiService } from '../../core/services/api.service';
 import { ThemeMode, ThemeService } from '../../core/services/theme.service';
 import { Client } from '../../shared/models/client.model';
@@ -15,7 +14,7 @@ type BreakdownRow = { label: string; value: number };
 @Component({
   selector: 'app-dashboard-page',
   standalone: true,
-  imports: [CommonModule, RouterLink, CardModule, ChartModule],
+  imports: [CommonModule, RouterLink, CardModule],
   template: `
     <section class="page-heading">
       <div>

@@ -13,6 +13,16 @@
   --p-primary-500: var(--brand-500);
   --p-highlight-background: rgba(12, 138, 159, .14);
   --p-highlight-color: var(--brand-700);
+  /* Fallback theme variables (dark) — prevents invisible content if data-theme
+     is not yet applied when CSS is first parsed. */
+  --bg: #111417;
+  --surface: #171b1f;
+  --surface-soft: #20262b;
+  --surface-strong: #0c0f12;
+  --text: #eef2f3;
+  --muted: #a6b0b4;
+  --border: #303940;
+  --shadow: rgba(0, 0, 0, .26);
   color-scheme: light;
 }
 

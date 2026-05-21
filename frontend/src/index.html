@@ -13,9 +13,16 @@
     (function() {
       try {
         var stored = localStorage.getItem('theme-mode');
-        document.documentElement.setAttribute('data-theme', stored === 'light' ? 'light' : 'dark');
+        var theme = stored === 'light' ? 'light' : 'dark';
+        document.documentElement.setAttribute('data-theme', theme);
+        if (theme === 'dark') {
+          document.documentElement.classList.add('p-dark');
+        } else {
+          document.documentElement.classList.remove('p-dark');
+        }
       } catch(e) {
         document.documentElement.setAttribute('data-theme', 'dark');
+        document.documentElement.classList.add('p-dark');
       }
     })();
   </script>

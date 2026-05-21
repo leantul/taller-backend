@@ -26,6 +26,11 @@ export class ThemeService {
   initTheme(): ThemeMode {
     const mode = this.modeSubject.value;
     document.documentElement.setAttribute('data-theme', mode);
+    if (mode === 'dark') {
+      document.documentElement.classList.add('p-dark');
+    } else {
+      document.documentElement.classList.remove('p-dark');
+    }
     return mode;
   }
 
@@ -41,6 +46,11 @@ export class ThemeService {
 
   private setTheme(mode: ThemeMode): void {
     document.documentElement.setAttribute('data-theme', mode);
+    if (mode === 'dark') {
+      document.documentElement.classList.add('p-dark');
+    } else {
+      document.documentElement.classList.remove('p-dark');
+    }
     localStorage.setItem(THEME_STORAGE_KEY, mode);
     this.modeSubject.next(mode);
   }

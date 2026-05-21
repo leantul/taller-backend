@@ -7,7 +7,7 @@ import { ButtonModule } from 'primeng/button';
 import { SelectModule } from 'primeng/select';
 import { DialogModule } from 'primeng/dialog';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
-import { ConfirmationService } from 'primeng/api';
+import { ConfirmationService, MessageService } from 'primeng/api';
 import { ApiService } from '../../core/services/api.service';
 import { Device, DevicePasswordHistory } from '../../shared/models/device.model';
 import { Client } from '../../shared/models/client.model';
@@ -16,7 +16,7 @@ import { Client } from '../../shared/models/client.model';
   selector: 'app-devices-page',
   standalone: true,
   imports: [CommonModule, FormsModule, CardModule, InputTextModule, ButtonModule, SelectModule, DialogModule, ConfirmDialogModule],
-  providers: [ConfirmationService],
+  providers: [ConfirmationService, MessageService],
   template: `
     <p-confirmdialog></p-confirmdialog>
     <section class="page-heading">
@@ -30,7 +30,13 @@ import { Client } from '../../shared/models/client.model';
     <div class="page-grid">
       <p-card header="Nuevo dispositivo">
         <form class="p-fluid" (ngSubmit)="save()">
-          <div class="field"><label>Cliente</label><p-select [options]="clientOptions" optionLabel="label" optionValue="value" [(ngModel)]="draft.clientId" name="clientId" [filter]="true" filterBy="label" required></p-select></div>
+          <div class="field">
+            <label>Cliente</label>
+            <div class="inline-row">
+              <p-select [options]="clientOptions" optionLabel="label" optionValue="value" [(ngModel)]="draft.clientId" name="clientId" [filter]="true" filterBy="label" required></p-select>
+              <button pButton type="button" size="small" class="p-button-sm" icon="pi pi-user-plus" [rounded]="true" [text]="true" (click)="openNewClientModal('draft')"></button>
+            </div>
+          </div>
           <div class="field"><label>Marca</label><input pInputText [(ngModel)]="draft.brand" name="brand" required /></div>
           <div class="field"><label>Modelo</label><input pInputText [(ngModel)]="draft.model" name="model" required /></div>
           <div class="field"><label>Serie / IMEI</label><input pInputText [(ngModel)]="draft.serialNumber" name="serialNumber" required /></div>
@@ -100,7 +106,13 @@ import { Client } from '../../shared/models/client.model';
     </div>
 
     <p-dialog header="Editar dispositivo" [(visible)]="editVisible" [modal]="true" [style]="{width:'34rem'}">
-      <div class="field"><label>Cliente</label><p-select [options]="clientOptions" optionLabel="label" optionValue="value" [(ngModel)]="editing.clientId" [filter]="true" filterBy="label"></p-select></div>
+      <div class="field">
+        <label>Cliente</label>
+        <div class="inline-row">
+          <p-select [options]="clientOptions" optionLabel="label" optionValue="value" [(ngModel)]="editing.clientId" [filter]="true" filterBy="label"></p-select>
+          <button pButton type="button" size="small" class="p-button-sm" icon="pi pi-user-plus" [rounded]="true" [text]="true" (click)="openNewClientModal('edit')"></button>
+        </div>
+      </div>
       <div class="field"><label>Marca</label><input pInputText [(ngModel)]="editing.brand" /></div>
       <div class="field"><label>Modelo</label><input pInputText [(ngModel)]="editing.model" /></div>
       <div class="field"><label>Serie / IMEI</label><input pInputText [(ngModel)]="editing.serialNumber" /></div>
@@ -187,6 +199,15 @@ import { Client } from '../../shared/models/client.model';
         </div>
       }
     </p-dialog>
+
+    <p-dialog header="Nuevo cliente" [(visible)]="showNewClientModal" [modal]="true" [style]="{width:'34rem'}">
+      <div class="field"><label>Nombre</label><input pInputText [(ngModel)]="draftClient.name" /></div>
+      <div class="field"><label>Apellido</label><input pInputText [(ngModel)]="draftClient.lastName" /></div>
+      <div class="field"><label>DNI</label><input pInputText [(ngModel)]="draftClient.dni" /></div>
+      <div class="field"><label>Email</label><input pInputText [(ngModel)]="draftClient.email" /></div>
+      <div class="field"><label>Celular</label><input pInputText [(ngModel)]="draftClient.phone" /></div>
+      <button pButton type="button" label="Guardar cliente" icon="pi pi-check" (click)="createClientInline()"></button>
+    </p-dialog>
   `
 })
 export class DevicesPageComponent implements OnInit {
@@ -195,8 +216,10 @@ export class DevicesPageComponent implements OnInit {
   clients: Client[] = [];
   draft: Device = { brand: '', model: '', serialNumber: '', clientId: '', deviceType: 'NOTEBOOK', currentPassword: '' };
   editing: Device = { brand: '', model: '', serialNumber: '', clientId: '', deviceType: 'NOTEBOOK', currentPassword: '', passwordHistory: [] };
+  draftClient: Client = { name: '', lastName: '', dni: '', email: '', phone: '' };
   editVisible = false;
   passwordVisible = false;
+  showNewClientModal = false;
   selectedClientId: string | null = null;
   searchTerm = '';
   currentPage = 1;
@@ -211,11 +234,17 @@ export class DevicesPageComponent implements OnInit {
   editingPasswordValue = '';
   visibleDevicePasswords = new Set<string>();
   visibleHistoryPasswords = new Set<string>();
+  private newClientTarget: 'draft' | 'edit' = 'draft';
   typeOptions = [
     { label: 'Desktop', value: 'DESKTOP' }, { label: 'Notebook', value: 'NOTEBOOK' }, { label: 'Tablet', value: 'TABLET' }, { label: 'Celular', value: 'CELULAR' }, { label: 'Otros', value: 'OTROS' }
   ];
 
-  constructor(private readonly api: ApiService, private readonly confirmationService: ConfirmationService, private readonly changeDetector: ChangeDetectorRef) {}
+  constructor(
+    private readonly api: ApiService,
+    private readonly confirmationService: ConfirmationService,
+    private readonly changeDetector: ChangeDetectorRef,
+    private readonly messageService: MessageService
+  ) {}
 
   ngOnInit(): void {
     this.api.getClients().subscribe((clients) => {
@@ -251,6 +280,37 @@ export class DevicesPageComponent implements OnInit {
       this.syncDevice(device);
       this.editVisible = false;
       this.reload();
+    });
+  }
+
+  openNewClientModal(target: 'draft' | 'edit'): void {
+    this.newClientTarget = target;
+    this.draftClient = { name: '', lastName: '', dni: '', email: '', phone: '' };
+    this.showNewClientModal = true;
+  }
+
+  createClientInline(): void {
+    if (!this.draftClient.name?.trim() || !this.draftClient.lastName?.trim() || !this.draftClient.phone?.trim()) {
+      this.messageService.add({ severity: 'warn', summary: 'Faltan datos', detail: 'Completá al menos nombre, apellido y teléfono.' });
+      return;
+    }
+
+    this.api.createClient(this.draftClient).subscribe({
+      next: (client) => {
+        this.clients = [client, ...this.clients];
+        if (this.newClientTarget === 'draft') {
+          this.draft.clientId = client.id || '';
+        } else {
+          this.editing.clientId = client.id || '';
+        }
+        this.draftClient = { name: '', lastName: '', dni: '', email: '', phone: '' };
+        this.showNewClientModal = false;
+        this.applyFilters();
+        this.changeDetector.detectChanges();
+      },
+      error: () => {
+        this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudo crear el cliente.' });
+      }
     });
   }
 

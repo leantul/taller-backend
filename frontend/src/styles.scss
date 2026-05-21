@@ -262,6 +262,14 @@ a { color: inherit; }
   grid-template-columns: repeat(4, minmax(170px, 1fr));
 }
 
+.dashboard-metrics {
+  grid-template-columns: repeat(3, minmax(170px, 1fr));
+}
+
+.finance-metrics {
+  grid-template-columns: repeat(4, minmax(170px, 1fr));
+}
+
 .dashboard-topline {
   display: grid;
   grid-template-columns: minmax(0, 1.2fr) minmax(300px, .8fr);
@@ -333,6 +341,10 @@ a { color: inherit; }
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: .75rem;
+}
+
+.dashboard-focus-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .ops-item {
@@ -670,10 +682,43 @@ textarea.p-inputtext {
 }
 
 .p-select-label,
+.p-select-label-container,
+.p-select-dropdown,
+.p-select-clear-icon,
+.p-select-dropdown-icon,
 .p-inputnumber-input,
+.p-inputnumber-button,
 .p-datepicker-input,
+.p-datepicker-dropdown,
+.p-datepicker-dropdown-icon,
+.p-autocomplete-input,
+.p-autocomplete-dropdown,
 .p-inputtext {
   padding: .5rem .62rem !important;
+}
+
+.p-select,
+.p-inputnumber,
+.p-datepicker,
+.p-autocomplete,
+.p-autocomplete-input,
+.p-select-label-container,
+.p-select-dropdown,
+.p-datepicker-dropdown,
+.p-autocomplete-dropdown,
+.p-inputnumber-button {
+  background: var(--surface) !important;
+  color: var(--text) !important;
+  border-color: var(--border) !important;
+}
+
+.control::placeholder,
+.p-inputtext::placeholder,
+.p-inputnumber-input::placeholder,
+.p-datepicker-input::placeholder,
+.p-autocomplete-input::placeholder {
+  color: var(--muted) !important;
+  opacity: 1;
 }
 
 .p-datatable-table-container,
@@ -685,6 +730,8 @@ textarea.p-inputtext {
 .p-dialog-content,
 .p-select-overlay,
 .p-select-option,
+.p-autocomplete-overlay,
+.p-autocomplete-option,
 .p-datepicker-panel,
 .p-paginator {
   background: var(--surface) !important;
@@ -779,6 +826,10 @@ textarea.p-inputtext {
 
 .finance-layout {
   grid-template-columns: minmax(320px, .85fr) minmax(0, 1.15fr);
+}
+
+.finance-charts {
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .finance-breakdown {
@@ -938,7 +989,7 @@ textarea.p-inputtext {
 
 .status-board {
   display: grid;
-  grid-template-columns: repeat(5, minmax(210px, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: .85rem;
   align-items: start;
 }
@@ -1115,7 +1166,7 @@ textarea.p-inputtext {
 
 .chart-surface {
   position: relative;
-  min-height: 250px;
+  min-height: 320px;
 }
 
 .chart-placeholder {

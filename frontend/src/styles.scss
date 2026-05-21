@@ -404,10 +404,11 @@ textarea.p-inputtext {
 }
 
 .control,
+.p-inputtext,
 textarea.p-inputtext {
-  border: 1px solid var(--border);
-  background: var(--surface);
-  color: var(--text);
+  border: 1px solid var(--border) !important;
+  background: var(--surface) !important;
+  color: var(--text) !important;
   padding: .55rem .65rem;
 }
 

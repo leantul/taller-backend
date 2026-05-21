@@ -232,15 +232,14 @@ export class DashboardPageComponent implements OnInit, OnDestroy {
   }
 
   private refreshCharts(remount: boolean): void {
-    const styles = getComputedStyle(document.documentElement);
-    const textColor = styles.getPropertyValue('--text').trim() || '#1d2529';
-    const mutedColor = styles.getPropertyValue('--muted').trim() || '#667176';
-    const borderColor = styles.getPropertyValue('--border').trim() || '#d7d2c8';
-    const brandColor = styles.getPropertyValue('--brand-500').trim() || '#0c8a9f';
-    const accentColor = styles.getPropertyValue('--accent-500').trim() || '#d79324';
-    const successColor = styles.getPropertyValue('--success-500').trim() || '#177245';
-    const dangerColor = styles.getPropertyValue('--danger-500').trim() || '#b73636';
-    const infoColor = styles.getPropertyValue('--info-500').trim() || '#2364aa';
+    const textColor = this.themeMode === 'dark' ? '#eef2f3' : '#1d2529';
+    const mutedColor = this.themeMode === 'dark' ? '#a6b0b4' : '#667176';
+    const borderColor = this.themeMode === 'dark' ? '#303940' : '#d7d2c8';
+    const brandColor = '#0c8a9f';
+    const accentColor = '#d79324';
+    const successColor = '#177245';
+    const dangerColor = '#b73636';
+    const infoColor = '#2364aa';
     const palette = [brandColor, accentColor, successColor, infoColor, '#8b5cf6', '#ef4444', '#14b8a6', '#f97316'];
 
     this.deviceTypeChartData = {

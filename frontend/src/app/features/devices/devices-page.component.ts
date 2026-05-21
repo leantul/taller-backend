@@ -20,6 +20,14 @@ import { Client } from '../../shared/models/client.model';
   providers: [ConfirmationService],
   template: `
     <p-confirmdialog></p-confirmdialog>
+    <section class="page-heading">
+      <div>
+        <span class="eyebrow">Inventario</span>
+        <h1>Dispositivos</h1>
+      </div>
+      <p>Relacion entre clientes y equipos, con filtros rapidos para trabajar sobre el parque activo.</p>
+    </section>
+
     <div class="page-grid">
       <p-card header="Nuevo dispositivo">
         <form class="p-fluid" (ngSubmit)="save()">

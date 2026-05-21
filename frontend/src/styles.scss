@@ -459,6 +459,11 @@ textarea.p-inputtext {
   margin-bottom: .75rem;
 }
 
+.table-toolbar .filter-search {
+  display: inline-flex;
+  width: min(28rem, 100%);
+}
+
 .repairs-filters {
   display: flex;
   flex-wrap: wrap;
@@ -619,6 +624,22 @@ textarea.p-inputtext {
   gap: .6rem;
 }
 
+.status-column-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: .75rem;
+}
+
+.status-column-head strong {
+  display: block;
+  font-size: .95rem;
+}
+
+.status-column-head small {
+  color: var(--muted);
+}
+
 .status-card {
   display: flex;
   flex-direction: column;
@@ -635,6 +656,90 @@ textarea.p-inputtext {
   align-items: center;
   justify-content: space-between;
   gap: .5rem;
+}
+
+.status-empty {
+  display: grid;
+  min-height: 7rem;
+  place-items: center;
+  padding: .8rem;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .8rem;
+}
+
+.detail-item {
+  display: grid;
+  gap: .28rem;
+  padding: .75rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--surface-soft), var(--surface) 40%);
+}
+
+.detail-item label {
+  color: var(--muted);
+  font-size: .75rem;
+  font-weight: 700;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+
+.detail-wide {
+  grid-column: 1 / -1;
+}
+
+.placeholder-panel,
+.settings-form {
+  max-width: 42rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: 0 10px 28px var(--shadow);
+}
+
+.placeholder-panel {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.1rem;
+}
+
+.placeholder-icon {
+  display: grid;
+  width: 3rem;
+  height: 3rem;
+  place-items: center;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--brand-500), transparent 84%);
+  color: var(--brand-500);
+  font-size: 1.25rem;
+}
+
+.placeholder-copy {
+  display: grid;
+  gap: .2rem;
+}
+
+.placeholder-copy p,
+.inline-message {
+  margin: 0;
+  color: var(--muted);
+}
+
+.settings-shell {
+  display: grid;
+}
+
+.settings-form {
+  padding: 1rem;
 }
 
 .p-chart canvas {
@@ -711,6 +816,15 @@ textarea.p-inputtext {
   }
 
   .table-pager {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .detail-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .placeholder-panel {
     align-items: flex-start;
     flex-direction: column;
   }

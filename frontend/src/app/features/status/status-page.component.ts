@@ -3,7 +3,6 @@ import { CommonModule } from '@angular/common';
 import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { CardModule } from 'primeng/card';
 import { DialogModule } from 'primeng/dialog';
-import { TagModule } from 'primeng/tag';
 import { MessageService } from 'primeng/api';
 import { ApiService } from '../../core/services/api.service';
 import { Repair } from '../../shared/models/repair.model';
@@ -14,7 +13,7 @@ import { forkJoin } from 'rxjs';
 @Component({
   selector: 'app-status-page',
   standalone: true,
-  imports: [CommonModule, DragDropModule, CardModule, TagModule, DialogModule],
+  imports: [CommonModule, DragDropModule, CardModule, DialogModule],
   templateUrl: './status-page.component.html'
 })
 export class StatusPageComponent implements OnInit {
@@ -64,6 +63,30 @@ export class StatusPageComponent implements OnInit {
   deviceLabel(item: Repair): string {
     const device = this.devicesById.get(item.idDevice);
     return device ? `${device.deviceType} ${device.brand} ${device.model}`.trim() : item.idDevice;
+  }
+
+  statusLabel(status: Repair['status']): string {
+    switch (status) {
+      case 'POR_RECIBIR': return 'Por recibir';
+      case 'RECIBIDA': return 'A reparar';
+      case 'PRESUPUESTADA_ESPERANDO_RESPUESTA': return 'Presupuestada';
+      case 'HACIENDO': return 'En proceso';
+      case 'ESPERANDO_RETIRO': return 'Lista para entregar';
+      case 'RETIRADA': return 'Entregada';
+      default: return status;
+    }
+  }
+
+  statusClass(status: Repair['status']): string {
+    switch (status) {
+      case 'POR_RECIBIR': return 'is-muted';
+      case 'RECIBIDA': return 'is-info';
+      case 'PRESUPUESTADA_ESPERANDO_RESPUESTA': return 'is-warning';
+      case 'HACIENDO': return 'is-active';
+      case 'ESPERANDO_RETIRO': return 'is-success';
+      case 'RETIRADA': return 'is-closed';
+      default: return 'is-muted';
+    }
   }
 
   private reload(): void {

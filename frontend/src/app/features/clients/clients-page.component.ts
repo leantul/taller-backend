@@ -20,6 +20,14 @@ import { Repair } from '../../shared/models/repair.model';
   providers: [ConfirmationService],
   template: `
     <p-confirmdialog></p-confirmdialog>
+    <section class="page-heading">
+      <div>
+        <span class="eyebrow">Personas</span>
+        <h1>Clientes</h1>
+      </div>
+      <p>Alta, edicion y consulta del historial de reparaciones de cada cliente.</p>
+    </section>
+
     <div class="page-grid">
       <p-card header="Nuevo cliente">
         <form class="p-fluid" (ngSubmit)="save()">
@@ -34,7 +42,7 @@ import { Repair } from '../../shared/models/repair.model';
 
       <p-card header="Clientes">
         <div class="table-toolbar">
-          <span class="p-input-icon-left"><i class="pi pi-search"></i><input pInputText [(ngModel)]="searchTerm" (ngModelChange)="onSearch()" placeholder="Buscar por nombre, DNI o email" /></span>
+          <span class="p-input-icon-left filter-search"><i class="pi pi-search"></i><input pInputText [(ngModel)]="searchTerm" (ngModelChange)="onSearch()" placeholder="Buscar por nombre, DNI o email" /></span>
         </div>
         <p-table [value]="clients" size="small" [paginator]="true" [rows]="10" sortMode="multiple">
           <ng-template pTemplate="header"><tr><th pSortableColumn="name">Nombre <p-sortIcon field="name"></p-sortIcon></th><th pSortableColumn="dni">DNI <p-sortIcon field="dni"></p-sortIcon></th><th pSortableColumn="email">Email <p-sortIcon field="email"></p-sortIcon></th><th pSortableColumn="phone">Teléfono <p-sortIcon field="phone"></p-sortIcon></th><th>Acciones</th></tr></ng-template>

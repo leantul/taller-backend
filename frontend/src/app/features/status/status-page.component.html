@@ -1,17 +1,33 @@
+<section class="page-heading">
+  <div>
+    <span class="eyebrow">Seguimiento</span>
+    <h1>Tablero de estado</h1>
+  </div>
+  <p>Arrastrá las reparaciones entre columnas para actualizar el flujo de trabajo del taller.</p>
+</section>
+
 <section class="status-board">
   @for (col of columns; track col.status) {
-    <p-card class="status-column" [header]="col.title + ' (' + col.items.length + ')'">
+    <p-card class="status-column">
+      <div class="status-column-head">
+        <div>
+          <strong>{{ col.title }}</strong>
+          <small>{{ col.items.length }} ordenes</small>
+        </div>
+      </div>
       <div cdkDropList [cdkDropListData]="col.items" class="status-list" (cdkDropListDropped)="drop($event, col.status)">
         @for (item of col.items; track item.id) {
           <article class="status-card" cdkDrag (click)="openDetail(item)">
             <div class="card-head">
               <strong>#{{ item.orderNumber }}</strong>
-              <p-tag [value]="item.status"></p-tag>
+              <span class="status-pill" [ngClass]="statusClass(item.status)">{{ statusLabel(item.status) }}</span>
             </div>
-            <small><strong>Cliente:</strong> {{ clientName(item) }}</small>
-            <small><strong>Equipo:</strong> {{ deviceLabel(item) }}</small>
-            <small><strong>Monto:</strong> {{ item.price | currency:'ARS':'symbol':'1.2-2':'es-AR' }}</small>
+            <small>{{ clientName(item) }}</small>
+            <small>{{ deviceLabel(item) }}</small>
+            <small>{{ item.price | currency:'ARS':'symbol':'1.2-2':'es-AR' }}</small>
           </article>
+        } @empty {
+          <div class="status-empty">Sin ordenes en esta etapa.</div>
         }
       </div>
     </p-card>
@@ -20,13 +36,15 @@
 
 <p-dialog header="Detalle de reparación" [(visible)]="showDetailModal" [modal]="true" [style]="{width:'36rem'}">
   @if (selectedRepair) {
-    <div class="field"><label>Orden</label><div>#{{ selectedRepair.orderNumber }}</div></div>
-    <div class="field"><label>Estado</label><p-tag [value]="selectedRepair.status"></p-tag></div>
-    <div class="field"><label>Cliente</label><div>{{ clientName(selectedRepair) }}</div></div>
-    <div class="field"><label>Equipo</label><div>{{ deviceLabel(selectedRepair) }}</div></div>
-    <div class="field"><label>Descripción</label><div>{{ selectedRepair.description || 'Sin descripción' }}</div></div>
-    <div class="field"><label>Monto</label><div>{{ selectedRepair.price | currency:'ARS':'symbol':'1.2-2':'es-AR' }}</div></div>
-    <div class="field"><label>Presupuesto</label><div>{{ (selectedRepair.quotedAmount || 0) | currency:'ARS':'symbol':'1.2-2':'es-AR' }}</div></div>
-    <div class="field"><label>Fecha ingreso</label><div>{{ selectedRepair.receiveDateTime ? (selectedRepair.receiveDateTime | date:'dd/MM/yyyy HH:mm') : '-' }}</div></div>
+    <div class="detail-grid">
+      <div class="detail-item"><label>Orden</label><div>#{{ selectedRepair.orderNumber }}</div></div>
+      <div class="detail-item"><label>Estado</label><div><span class="status-pill" [ngClass]="statusClass(selectedRepair.status)">{{ statusLabel(selectedRepair.status) }}</span></div></div>
+      <div class="detail-item"><label>Cliente</label><div>{{ clientName(selectedRepair) }}</div></div>
+      <div class="detail-item"><label>Equipo</label><div>{{ deviceLabel(selectedRepair) }}</div></div>
+      <div class="detail-item detail-wide"><label>Descripción</label><div>{{ selectedRepair.description || 'Sin descripción' }}</div></div>
+      <div class="detail-item"><label>Monto</label><div>{{ selectedRepair.price | currency:'ARS':'symbol':'1.2-2':'es-AR' }}</div></div>
+      <div class="detail-item"><label>Presupuesto</label><div>{{ (selectedRepair.quotedAmount || 0) | currency:'ARS':'symbol':'1.2-2':'es-AR' }}</div></div>
+      <div class="detail-item"><label>Fecha ingreso</label><div>{{ selectedRepair.receiveDateTime ? (selectedRepair.receiveDateTime | date:'dd/MM/yyyy HH:mm') : '-' }}</div></div>
+    </div>
   }
 </p-dialog>

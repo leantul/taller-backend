@@ -7,19 +7,36 @@ import { AuthService } from '../../core/auth/auth.service';
   standalone: true,
   imports: [FormsModule],
   template: `
-    <h2>Cambiar contraseña</h2>
-    <form (ngSubmit)="submit()">
-      <label>Contraseña actual</label>
-      <input [(ngModel)]="currentPassword" name="currentPassword" type="password" required />
+    <section class="page-heading">
+      <div>
+        <span class="eyebrow">Cuenta</span>
+        <h1>Cambiar contraseña</h1>
+      </div>
+      <p>Actualizá la clave de acceso sin salir del panel.</p>
+    </section>
 
-      <label>Nueva contraseña</label>
-      <input [(ngModel)]="newPassword" name="newPassword" type="password" required />
+    <section class="settings-shell">
+      <form class="settings-form" (ngSubmit)="submit()">
+        <label class="field" for="currentPassword">
+          <span>Contraseña actual</span>
+          <input id="currentPassword" class="control" [(ngModel)]="currentPassword" name="currentPassword" type="password" autocomplete="current-password" required />
+        </label>
 
-      <button type="submit">Actualizar</button>
-    </form>
-    @if (message) {
-      <p>{{ message }}</p>
-    }
+        <label class="field" for="newPassword">
+          <span>Nueva contraseña</span>
+          <input id="newPassword" class="control" [(ngModel)]="newPassword" name="newPassword" type="password" autocomplete="new-password" required />
+        </label>
+
+        <button class="primary-button" type="submit">
+          <i class="pi pi-key"></i>
+          <span>Actualizar contraseña</span>
+        </button>
+
+        @if (message) {
+          <p class="inline-message">{{ message }}</p>
+        }
+      </form>
+    </section>
   `
 })
 export class ChangePasswordPageComponent {

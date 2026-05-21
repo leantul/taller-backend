@@ -19,6 +19,17 @@ import { Client } from '../../shared/models/client.model';
 import { Device } from '../../shared/models/device.model';
 import { MessageService } from 'primeng/api';
 
+type RepairTableRow = {
+  repair: Repair;
+  orderLabel: string;
+  clientLabel: string;
+  deviceLabel: string;
+  statusLabel: string;
+  statusClass: string;
+  quotedAmountLabel: string;
+  priceLabel: string;
+};
+
 @Component({
   selector: 'app-repairs-page',
   standalone: true,
@@ -38,7 +49,7 @@ export class RepairsPageComponent implements OnInit {
 
   repairs: Repair[] = [];
   filteredRepairs: Repair[] = [];
-  visibleRepairs: Repair[] = [];
+  visibleRepairRows: RepairTableRow[] = [];
   clients: Client[] = [];
   clientsById = new Map<string, Client>();
   devicesById = new Map<string, Device>();
@@ -302,8 +313,8 @@ export class RepairsPageComponent implements OnInit {
     }
   }
 
-  repairTrackBy: TrackByFunction<Repair> = (index, repair) =>
-    repair.id || repair.orderNumber || `${repair.idClient}-${repair.idDevice}-${repair.receiveDateTime || index}`;
+  repairTrackBy: TrackByFunction<RepairTableRow> = (index, row) =>
+    row.repair.id || row.repair.orderNumber || `${row.repair.idClient}-${row.repair.idDevice}-${row.repair.receiveDateTime || index}`;
 
   previousPage(): void {
     this.currentPage = Math.max(1, this.currentPage - 1);
@@ -374,14 +385,17 @@ export class RepairsPageComponent implements OnInit {
     this.totalPages = Math.max(1, Math.ceil(this.filteredRepairs.length / this.pageSize));
     const page = Math.min(this.currentPage, this.totalPages);
     const start = (page - 1) * this.pageSize;
-    this.visibleRepairs = [...this.filteredRepairs.slice(start, start + this.pageSize)];
+    this.currentPage = page;
+    this.visibleRepairRows = this.filteredRepairs
+      .slice(start, start + this.pageSize)
+      .map((repair) => this.toTableRow(repair));
     if (!this.filteredRepairs.length) {
       this.paginationLabel = '0 reparaciones';
     } else {
       const end = Math.min(start + this.pageSize, this.filteredRepairs.length);
       this.paginationLabel = `${start + 1}-${end} de ${this.filteredRepairs.length} reparaciones`;
     }
-    queueMicrotask(() => this.changeDetector.detectChanges());
+    this.changeDetector.detectChanges();
   }
 
   private compareRepairs(left: Repair, right: Repair): number {
@@ -402,5 +416,59 @@ export class RepairsPageComponent implements OnInit {
   private sortTimestamp(repair: Repair): number {
     const raw = repair.receiveDateTime || repair.returnDateTime;
     return raw ? new Date(raw).getTime() : 0;
+  }
+
+  private toTableRow(repair: Repair): RepairTableRow {
+    return {
+      repair,
+      orderLabel: `#${repair.orderNumber || '-'}`,
+      clientLabel: this.clientLabel(repair),
+      deviceLabel: this.deviceLabel(repair),
+      statusLabel: this.statusLabel(repair.status),
+      statusClass: this.statusClass(repair.status),
+      quotedAmountLabel: this.formatMoney(repair.quotedAmount),
+      priceLabel: this.formatMoney(repair.price)
+    };
+  }
+
+  private formatMoney(value: unknown): string {
+    return new Intl.NumberFormat('es-AR', {
+      style: 'currency',
+      currency: 'ARS',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(this.asMoney(value));
+  }
+
+  private asMoney(value: unknown): number {
+    if (typeof value === 'number') {
+      return Number.isFinite(value) ? value : 0;
+    }
+
+    if (typeof value === 'string') {
+      const sanitized = value.trim().replace(/\s+/g, '').replace(/[^0-9,.-]/g, '');
+      if (!sanitized) {
+        return 0;
+      }
+
+      let normalized = sanitized;
+      if (sanitized.includes(',') && sanitized.includes('.')) {
+        normalized = sanitized.lastIndexOf(',') > sanitized.lastIndexOf('.')
+          ? sanitized.replace(/\./g, '').replace(',', '.')
+          : sanitized.replace(/,/g, '');
+      } else if (sanitized.includes(',')) {
+        normalized = sanitized.replace(/\./g, '').replace(',', '.');
+      }
+
+      const parsed = Number(normalized);
+      return Number.isFinite(parsed) ? parsed : 0;
+    }
+
+    if (value && typeof value === 'object') {
+      const nestedValue = (value as { amount?: unknown; value?: unknown }).amount ?? (value as { value?: unknown }).value;
+      return this.asMoney(nestedValue);
+    }
+
+    return 0;
   }
 }

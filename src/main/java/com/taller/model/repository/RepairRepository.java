@@ -78,11 +78,79 @@ public interface RepairRepository extends JpaRepository<Repair, String> {
                    r.rejected AS rejected,
                    r.readyNotifiedAt AS readyNotifiedAt
             FROM Repair r
-            WHERE (:from IS NULL OR COALESCE(r.returnDateTime, r.receiveDateTime) >= :from)
-              AND (:to IS NULL OR COALESCE(r.returnDateTime, r.receiveDateTime) <= :to)
+            WHERE COALESCE(r.returnDateTime, r.receiveDateTime) >= :from
+              AND COALESCE(r.returnDateTime, r.receiveDateTime) <= :to
             ORDER BY COALESCE(r.returnDateTime, r.receiveDateTime) DESC, r.orderNumber DESC
             """)
-    List<RepairListView> findFinanceRows(@Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
+    List<RepairListView> findFinanceRowsBetween(@Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
+
+    @Query("""
+            SELECT r.id AS id,
+                   r.idDevice AS idDevice,
+                   r.idClient AS idClient,
+                   r.description AS description,
+                   r.orderNumber AS orderNumber,
+                   r.status AS status,
+                   r.receiveDateTime AS receiveDateTime,
+                   r.returnDateTime AS returnDateTime,
+                   r.price AS price,
+                   r.laborAmount AS laborAmount,
+                   r.extraAmount AS extraAmount,
+                   r.quotedAmount AS quotedAmount,
+                   r.quoteNotes AS quoteNotes,
+                   r.approved AS approved,
+                   r.rejected AS rejected,
+                   r.readyNotifiedAt AS readyNotifiedAt
+            FROM Repair r
+            WHERE COALESCE(r.returnDateTime, r.receiveDateTime) >= :from
+            ORDER BY COALESCE(r.returnDateTime, r.receiveDateTime) DESC, r.orderNumber DESC
+            """)
+    List<RepairListView> findFinanceRowsFrom(@Param("from") LocalDateTime from);
+
+    @Query("""
+            SELECT r.id AS id,
+                   r.idDevice AS idDevice,
+                   r.idClient AS idClient,
+                   r.description AS description,
+                   r.orderNumber AS orderNumber,
+                   r.status AS status,
+                   r.receiveDateTime AS receiveDateTime,
+                   r.returnDateTime AS returnDateTime,
+                   r.price AS price,
+                   r.laborAmount AS laborAmount,
+                   r.extraAmount AS extraAmount,
+                   r.quotedAmount AS quotedAmount,
+                   r.quoteNotes AS quoteNotes,
+                   r.approved AS approved,
+                   r.rejected AS rejected,
+                   r.readyNotifiedAt AS readyNotifiedAt
+            FROM Repair r
+            WHERE COALESCE(r.returnDateTime, r.receiveDateTime) <= :to
+            ORDER BY COALESCE(r.returnDateTime, r.receiveDateTime) DESC, r.orderNumber DESC
+            """)
+    List<RepairListView> findFinanceRowsTo(@Param("to") LocalDateTime to);
+
+    @Query("""
+            SELECT r.id AS id,
+                   r.idDevice AS idDevice,
+                   r.idClient AS idClient,
+                   r.description AS description,
+                   r.orderNumber AS orderNumber,
+                   r.status AS status,
+                   r.receiveDateTime AS receiveDateTime,
+                   r.returnDateTime AS returnDateTime,
+                   r.price AS price,
+                   r.laborAmount AS laborAmount,
+                   r.extraAmount AS extraAmount,
+                   r.quotedAmount AS quotedAmount,
+                   r.quoteNotes AS quoteNotes,
+                   r.approved AS approved,
+                   r.rejected AS rejected,
+                   r.readyNotifiedAt AS readyNotifiedAt
+            FROM Repair r
+            ORDER BY COALESCE(r.returnDateTime, r.receiveDateTime) DESC, r.orderNumber DESC
+            """)
+    List<RepairListView> findFinanceRowsAll();
 
     List<Repair> findByReturnDateTimeBetween(LocalDateTime from, LocalDateTime to);
 

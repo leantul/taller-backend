@@ -1,13 +1,12 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpContext } from '@angular/common/http';
-import { Observable, catchError, throwError } from 'rxjs';
+import { HttpClient } from '@angular/common/http';
+import { Observable } from 'rxjs';
 import { Client } from '../../shared/models/client.model';
 import { APP_CONFIG } from '../config/app-config';
 import { Device, DevicePasswordHistory } from '../../shared/models/device.model';
 import { Repair, RepairCreateDTO, RepairUpdateDTO } from '../../shared/models/repair.model';
 import { FinanceSummary } from '../../shared/models/finance.model';
 import { DashboardOverview } from '../../shared/models/dashboard.model';
-import { SKIP_AUTH_LOGOUT } from '../auth/auth.interceptor';
 
 @Injectable({ providedIn: 'root' })
 export class ApiService {
@@ -55,17 +54,6 @@ export class ApiService {
     if (from) params.set('from', from);
     if (to) params.set('to', to);
     const query = params.toString();
-    const context = new HttpContext().set(SKIP_AUTH_LOGOUT, true);
-    const dashboardUrl = `${this.baseUrl}/dashboard/finance-summary${query ? `?${query}` : ''}`;
-    const financeUrl = `${this.baseUrl}/finance/summary${query ? `?${query}` : ''}`;
-
-    return this.http.get<FinanceSummary>(dashboardUrl, { context }).pipe(
-      catchError((error) => {
-        if (error?.status === 404 || error?.status === 401 || error?.status === 403) {
-          return this.http.get<FinanceSummary>(financeUrl, { context });
-        }
-        return throwError(() => error);
-      })
-    );
+    return this.http.get<FinanceSummary>(`${this.baseUrl}/finance/summary${query ? `?${query}` : ''}`);
   }
 }

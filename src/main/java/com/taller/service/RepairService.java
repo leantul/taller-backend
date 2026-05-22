@@ -122,7 +122,7 @@ public class RepairService {
     }
 
     public BigDecimal totalIncome(LocalDateTime from, LocalDateTime to) {
-        List<RepairListView> repairs = repairRepository.findFinanceRows(from, to);
+        List<RepairListView> repairs = repairRepository.findFinanceRowsBetween(from, to);
         Map<String, List<RepairPart>> partsByRepairId = partsByRepairId(repairs.stream().map(RepairListView::getId).toList());
 
         return repairs.stream()

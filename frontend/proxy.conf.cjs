@@ -25,6 +25,7 @@ module.exports = {
   '/client': route(),
   '/device': route(),
   '/repair': route(),
+  '/finance': route(),
   '/dashboard': route(),
   '/finance': route(),
   '/notifications': route(),

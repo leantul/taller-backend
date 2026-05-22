@@ -35,6 +35,17 @@
   --muted: #a6b0b4;
   --border: #303940;
   --shadow: rgba(0, 0, 0, .26);
+  --p-form-field-background: var(--surface);
+  --p-form-field-color: var(--text);
+  --p-form-field-border-color: var(--border);
+  --p-form-field-placeholder-color: var(--muted);
+  --p-form-field-disabled-background: var(--surface-soft);
+  --p-content-background: var(--surface);
+  --p-content-color: var(--text);
+  --p-content-border-color: var(--border);
+  --p-overlay-select-background: var(--surface);
+  --p-overlay-select-color: var(--text);
+  --p-overlay-select-border-color: var(--border);
   color-scheme: dark;
 }
 
@@ -47,6 +58,18 @@
   --muted: #667176;
   --border: #d7d2c8;
   --shadow: rgba(32, 38, 43, .08);
+  --p-form-field-background: var(--surface);
+  --p-form-field-color: var(--text);
+  --p-form-field-border-color: var(--border);
+  --p-form-field-placeholder-color: var(--muted);
+  --p-form-field-disabled-background: var(--surface-soft);
+  --p-content-background: var(--surface);
+  --p-content-color: var(--text);
+  --p-content-border-color: var(--border);
+  --p-overlay-select-background: var(--surface);
+  --p-overlay-select-color: var(--text);
+  --p-overlay-select-border-color: var(--border);
+  color-scheme: light;
 }
 
 * { box-sizing: border-box; }
@@ -404,12 +427,29 @@ textarea.p-inputtext {
 }
 
 .control,
+select.control,
+input.control,
+textarea.control,
 .p-inputtext,
+.p-inputnumber-input,
+.p-datepicker-input,
+.p-autocomplete-input,
 textarea.p-inputtext {
-  border: 1px solid var(--border) !important;
+  border: 1px solid var(--border);
   background: var(--surface) !important;
   color: var(--text) !important;
   padding: .55rem .65rem;
+}
+
+.control:focus,
+.p-inputtext:enabled:focus,
+.p-inputnumber-input:enabled:focus,
+.p-datepicker-input:enabled:focus,
+.p-autocomplete-input:enabled:focus,
+.p-select:not(.p-disabled).p-focus {
+  outline: 0;
+  border-color: var(--brand-500) !important;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--brand-500), transparent 82%) !important;
 }
 
 textarea.p-inputtext {
@@ -712,8 +752,12 @@ textarea.p-inputtext {
 .p-inputnumber,
 .p-datepicker,
 .p-autocomplete,
+.p-inputtext,
+.p-inputnumber-input,
+.p-datepicker-input,
 .p-autocomplete-input,
 .p-select-label-container,
+.p-select-label,
 .p-select-dropdown,
 .p-datepicker-dropdown,
 .p-autocomplete-dropdown,
@@ -741,13 +785,25 @@ textarea.p-inputtext {
 .p-dialog-content,
 .p-select-overlay,
 .p-select-option,
+.p-select-list,
 .p-autocomplete-overlay,
 .p-autocomplete-option,
+.p-autocomplete-list,
 .p-datepicker-panel,
+.p-datepicker-header,
 .p-paginator {
   background: var(--surface) !important;
   color: var(--text) !important;
   border-color: var(--border) !important;
+}
+
+.p-select-option.p-select-option-selected,
+.p-autocomplete-option.p-autocomplete-option-selected,
+.p-datepicker-day-selected,
+.p-datepicker-month-selected,
+.p-datepicker-year-selected {
+  background: color-mix(in srgb, var(--brand-500), transparent 84%) !important;
+  color: var(--text) !important;
 }
 
 .p-datatable-thead > tr > th {
@@ -1167,17 +1223,24 @@ textarea.p-inputtext {
   margin-top: 1rem;
 }
 
-.p-chart canvas {
-  max-height: 210px;
-}
-
 .chart-card {
   cursor: zoom-in;
 }
 
 .chart-surface {
   position: relative;
-  min-height: 320px;
+  min-height: 280px;
+}
+
+.chart-surface .p-chart {
+  display: block;
+  width: 100%;
+  height: 280px;
+}
+
+.chart-surface .p-chart canvas {
+  width: 100% !important;
+  height: 100% !important;
 }
 
 .chart-placeholder {

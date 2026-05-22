@@ -1,9 +1,10 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, NgZone, OnDestroy, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Subscription } from 'rxjs';
 import { CardModule } from 'primeng/card';
 import { UIChart } from 'primeng/chart';
+import { MessageService } from 'primeng/api';
 import { ApiService } from '../../core/services/api.service';
 import { FinanceRow, FinanceSummary } from '../../shared/models/finance.model';
 import { Repair } from '../../shared/models/repair.model';
@@ -108,7 +109,9 @@ export class FinancePageComponent implements OnInit, OnDestroy {
   constructor(
     private readonly api: ApiService,
     private readonly changeDetector: ChangeDetectorRef,
-    private readonly themeService: ThemeService
+    private readonly themeService: ThemeService,
+    private readonly messageService: MessageService,
+    private readonly zone: NgZone
   ) {
     this.themeMode = this.themeService.currentTheme();
   }
@@ -116,10 +119,12 @@ export class FinancePageComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.subscriptions.add(
       this.themeService.mode$.subscribe((mode) => {
-        this.themeMode = mode;
-        if (this.lastSummary) {
-          this.buildMonthlyNetChart(this.lastSummary);
-        }
+        this.zone.run(() => {
+          this.themeMode = mode;
+          if (this.lastSummary) {
+            this.buildMonthlyNetChart(this.lastSummary);
+          }
+        });
       })
     );
     this.setCurrentMonthRange();
@@ -133,11 +138,26 @@ export class FinancePageComponent implements OnInit, OnDestroy {
   private lastSummary: FinanceSummary | null = null;
 
   applyFilters(): void {
-    this.api.getFinanceSummary(this.draftFromDate || undefined, this.draftToDate || undefined).subscribe((summary) => {
-      this.lastSummary = summary;
-      this.hydrateSummary(summary);
-      this.buildMonthlyNetChart(summary);
-      this.changeDetector.detectChanges();
+    this.api.getFinanceSummary(this.draftFromDate || undefined, this.draftToDate || undefined).subscribe({
+      next: (summary) => {
+        this.zone.run(() => {
+          this.lastSummary = summary;
+          this.hydrateSummary(summary);
+          this.buildMonthlyNetChart(summary);
+          this.changeDetector.detectChanges();
+        });
+      },
+      error: (error) => {
+        this.zone.run(() => {
+          this.chartVisible = false;
+          this.messageService.add({
+            severity: 'error',
+            summary: 'No se pudo cargar Finanzas',
+            detail: this.financeErrorDetail(error)
+          });
+          this.changeDetector.detectChanges();
+        });
+      }
     });
   }
 
@@ -260,8 +280,10 @@ export class FinancePageComponent implements OnInit, OnDestroy {
     this.changeDetector.detectChanges();
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
-        this.chartVisible = true;
-        this.changeDetector.detectChanges();
+        this.zone.run(() => {
+          this.chartVisible = true;
+          this.changeDetector.detectChanges();
+        });
       });
     });
   }
@@ -277,6 +299,18 @@ export class FinancePageComponent implements OnInit, OnDestroy {
     const month = `${value.getMonth() + 1}`.padStart(2, '0');
     const day = `${value.getDate()}`.padStart(2, '0');
     return `${year}-${month}-${day}`;
+  }
+
+  private financeErrorDetail(error: any): string {
+    if (error?.status === 403) {
+      return 'No autorizado (403). La pantalla queda abierta; revisa permisos o token de sesion.';
+    }
+
+    if (error?.status === 401) {
+      return 'Sesion vencida o token invalido. Volve a iniciar sesion.';
+    }
+
+    return `Error ${error?.status || 'sin codigo'} al consultar el resumen.`;
   }
 }
 

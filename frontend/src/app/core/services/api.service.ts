@@ -62,7 +62,7 @@ export class ApiService {
     return this.http.get<FinanceSummary>(dashboardUrl, { context }).pipe(
       catchError((error) => {
         if (error?.status === 404 || error?.status === 401 || error?.status === 403) {
-          return this.http.get<FinanceSummary>(financeUrl, { context });
+          return this.http.get<FinanceSummary>(financeUrl);
         }
         return throwError(() => error);
       })

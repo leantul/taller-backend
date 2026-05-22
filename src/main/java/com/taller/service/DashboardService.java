@@ -49,7 +49,7 @@ public class DashboardService {
         LocalDateTime to = from.plusMonths(1).minusSeconds(1);
 
         BigDecimal income = repairService.totalIncome(from, to);
-        List<RepairListView> repairs = repairRepository.findFinanceRows(from, to);
+        List<RepairListView> repairs = repairRepository.findFinanceRowsBetween(from, to);
         BigDecimal costs = repairPartRepository.findByRepairIdIn(repairs.stream().map(RepairListView::getId).toList()).stream()
                 .map(part -> safeMoney(part.getCost()).multiply(BigDecimal.valueOf(part.getQuantity() != null ? part.getQuantity() : 1)))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);

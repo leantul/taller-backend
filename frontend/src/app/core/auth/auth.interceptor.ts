@@ -1,10 +1,8 @@
-import { HttpContextToken, HttpInterceptorFn } from '@angular/common/http';
+import { HttpInterceptorFn } from '@angular/common/http';
 import { ApplicationRef, inject, NgZone } from '@angular/core';
 import { catchError, finalize, throwError } from 'rxjs';
 import { LoadingService } from '../services/loading.service';
 import { AuthService } from './auth.service';
-
-export const SKIP_AUTH_LOGOUT = new HttpContextToken<boolean>(() => false);
 
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const loading = inject(LoadingService);
@@ -22,7 +20,7 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
 
   return next(request).pipe(
     catchError((error) => {
-      if (error?.status === 401 && !isAuthRequest && !req.context.get(SKIP_AUTH_LOGOUT)) {
+      if (error?.status === 401 && !isAuthRequest) {
         authService.logout();
       }
       return throwError(() => error);

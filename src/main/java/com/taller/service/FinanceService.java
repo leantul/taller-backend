@@ -31,7 +31,7 @@ public class FinanceService {
     public FinanceSummaryDTO getSummary(LocalDate from, LocalDate to) {
         LocalDateTime fromDateTime = from != null ? from.atStartOfDay() : null;
         LocalDateTime toDateTime = to != null ? to.plusDays(1).atStartOfDay().minusNanos(1) : null;
-        List<RepairListView> filteredRepairs = repairRepository.findFinanceRows(fromDateTime, toDateTime);
+        List<RepairListView> filteredRepairs = findFinanceRows(fromDateTime, toDateTime);
         Map<String, List<RepairPart>> partsByRepairId = filteredRepairs.isEmpty()
                 ? Map.of()
                 : repairPartRepository.findByRepairIdIn(filteredRepairs.stream().map(RepairListView::getId).toList()).stream()
@@ -78,7 +78,7 @@ public class FinanceService {
         YearMonth firstMonth = currentMonth.minusMonths(11);
         LocalDateTime from = firstMonth.atDay(1).atStartOfDay();
 
-        List<RepairListView> repairs = repairRepository.findFinanceRows(from, null);
+        List<RepairListView> repairs = findFinanceRows(from, null);
         Map<String, List<RepairPart>> partsByRepairId = repairs.isEmpty()
                 ? Map.of()
                 : repairPartRepository.findByRepairIdIn(repairs.stream().map(RepairListView::getId).toList()).stream()
@@ -139,6 +139,22 @@ public class FinanceService {
 
     private BigDecimal safeMoney(BigDecimal value) {
         return value != null ? value : BigDecimal.ZERO;
+    }
+
+    private List<RepairListView> findFinanceRows(LocalDateTime from, LocalDateTime to) {
+        if (from != null && to != null) {
+            return repairRepository.findFinanceRowsBetween(from, to);
+        }
+
+        if (from != null) {
+            return repairRepository.findFinanceRowsFrom(from);
+        }
+
+        if (to != null) {
+            return repairRepository.findFinanceRowsTo(to);
+        }
+
+        return repairRepository.findFinanceRowsAll();
     }
 
     private String formatMonth(YearMonth month) {

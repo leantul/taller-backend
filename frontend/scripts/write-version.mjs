@@ -1,12 +1,37 @@
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { access, mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const frontendDir = path.resolve(__dirname, '..');
-const repoRoot = path.resolve(frontendDir, '..');
-const versionConfigPath = path.join(repoRoot, 'app-version.json');
 const outputPath = path.join(frontendDir, 'src', 'assets', 'version.json');
+
+async function fileExists(filePath) {
+  try {
+    await access(filePath);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function findUp(filename, startDir) {
+  let currentDir = path.resolve(startDir);
+
+  while (true) {
+    const candidate = path.join(currentDir, filename);
+    if (await fileExists(candidate)) {
+      return candidate;
+    }
+
+    const parentDir = path.dirname(currentDir);
+    if (parentDir === currentDir) {
+      return null;
+    }
+
+    currentDir = parentDir;
+  }
+}
 
 function normalizeBaseVersion(value) {
   const baseVersion = String(value || '').trim();
@@ -36,6 +61,13 @@ function resolvePrNumber() {
   }
 
   return 0;
+}
+
+const versionConfigPath = await findUp('app-version.json', process.cwd())
+  || await findUp('app-version.json', frontendDir);
+
+if (!versionConfigPath) {
+  throw new Error(`No se encontro app-version.json buscando desde ${process.cwd()} y ${frontendDir}`);
 }
 
 const config = JSON.parse(await readFile(versionConfigPath, 'utf8'));

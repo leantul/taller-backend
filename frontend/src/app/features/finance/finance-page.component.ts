@@ -303,7 +303,7 @@ export class FinancePageComponent implements OnInit, OnDestroy {
 
   private financeErrorDetail(error: any): string {
     if (error?.status === 403) {
-      return 'No autorizado (403). La pantalla queda abierta; revisa permisos o token de sesion.';
+      return 'No autorizado (403). La sesion se mantiene y la pantalla queda abierta; revisa permisos o el endpoint.';
     }
 
     if (error?.status === 401) {

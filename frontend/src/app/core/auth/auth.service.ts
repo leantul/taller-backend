@@ -36,12 +36,19 @@ export class AuthService {
 
   isLoggedIn(): boolean {
     const token = localStorage.getItem('token');
-    if (!token) return false;
-    if (this.isTokenExpired(token)) {
-      this.logout();
-      return false;
+    return !!token && !this.isTokenExpired(token);
+  }
+
+  ensureLoggedIn(): boolean {
+    if (this.isLoggedIn()) {
+      return true;
     }
-    return true;
+
+    if (localStorage.getItem('token')) {
+      this.logout();
+    }
+
+    return false;
   }
 
   isTokenExpired(token: string): boolean {
@@ -56,7 +63,8 @@ export class AuthService {
   }
 
   getToken(): string | null {
-    return localStorage.getItem('token');
+    const token = localStorage.getItem('token');
+    return token && !this.isTokenExpired(token) ? token : null;
   }
 
   private parseJwtPayload(token: string): Record<string, unknown> {

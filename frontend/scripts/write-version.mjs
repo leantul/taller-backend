@@ -41,6 +41,15 @@ function normalizeBaseVersion(value) {
   return baseVersion;
 }
 
+function baseVersionFromPackageVersion(value) {
+  const rawVersion = String(value || '').trim();
+  const match = rawVersion.match(/^(\d+\.\d+\.\d+)/);
+  if (!match) {
+    throw new Error(`version invalida en package.json: "${rawVersion}"`);
+  }
+  return match[1];
+}
+
 function resolvePrNumber() {
   const envCandidates = [
     process.env.PR_NUMBER,
@@ -66,12 +75,20 @@ function resolvePrNumber() {
 const versionConfigPath = await findUp('app-version.json', process.cwd())
   || await findUp('app-version.json', frontendDir);
 
-if (!versionConfigPath) {
-  throw new Error(`No se encontro app-version.json buscando desde ${process.cwd()} y ${frontendDir}`);
+let baseVersion;
+let versionSource;
+
+if (versionConfigPath) {
+  const config = JSON.parse(await readFile(versionConfigPath, 'utf8'));
+  baseVersion = normalizeBaseVersion(config.baseVersion);
+  versionSource = versionConfigPath;
+} else {
+  const packageJsonPath = path.join(frontendDir, 'package.json');
+  const packageJson = JSON.parse(await readFile(packageJsonPath, 'utf8'));
+  baseVersion = baseVersionFromPackageVersion(packageJson.version);
+  versionSource = packageJsonPath;
 }
 
-const config = JSON.parse(await readFile(versionConfigPath, 'utf8'));
-const baseVersion = normalizeBaseVersion(config.baseVersion);
 const prNumber = resolvePrNumber();
 const fullVersion = `${baseVersion}.${prNumber}`;
 
@@ -80,7 +97,8 @@ const payload = {
   prNumber,
   fullVersion,
   generatedAt: new Date().toISOString(),
-  source: prNumber > 0 ? 'pull_request' : 'local'
+  source: prNumber > 0 ? 'pull_request' : 'local',
+  versionSource
 };
 
 await mkdir(path.dirname(outputPath), { recursive: true });

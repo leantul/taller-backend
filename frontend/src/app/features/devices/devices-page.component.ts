@@ -74,7 +74,8 @@ const HISTORY_DATE_FORMATTER = new Intl.DateTimeFormat('es-AR', {
             [(ngModel)]="selectedClientTerm"
             [suggestions]="clientFilterSuggestions"
             (completeMethod)="filterClientOptions($event.query)"
-            (ngModelChange)="applyFilters()"
+            (ngModelChange)="onClientFilterChange($event)"
+            (onSelect)="onClientFilterSelect($event.value)"
             optionLabel="label"
             placeholder="Filtrar por cliente"
             styleClass="compact-filter client-filter-autocomplete"
@@ -242,6 +243,7 @@ export class DevicesPageComponent implements OnInit {
   passwordVisible = false;
   showNewClientModal = false;
   selectedClientTerm: string | { label: string; value: string } = '';
+  selectedClientId: string | null = null;
   searchTerm = '';
   currentPage = 1;
   pageSize = 10;
@@ -284,6 +286,20 @@ export class DevicesPageComponent implements OnInit {
     this.clientFilterSuggestions = this.clientOptions
       .filter((client) => !term || client.label.toLowerCase().includes(term))
       .slice(0, 10);
+  }
+
+  onClientFilterChange(value: string | { label: string; value: string } | null): void {
+    this.selectedClientTerm = value || '';
+    if (!value || typeof value === 'string') {
+      this.selectedClientId = null;
+    }
+    this.applyFilters();
+  }
+
+  onClientFilterSelect(selection: { label: string; value: string }): void {
+    this.selectedClientTerm = selection;
+    this.selectedClientId = selection?.value || null;
+    this.applyFilters();
   }
 
   save(): void {
@@ -424,7 +440,9 @@ export class DevicesPageComponent implements OnInit {
     this.filteredDevices = this.devices
       .map((device) => ({ ...device, clientName: this.getClientName(device.clientId) }))
       .filter((device) => {
-        const byClient = !clientTerm || (device.clientName || '').toLowerCase().includes(clientTerm);
+        const byClient = this.selectedClientId
+          ? device.clientId === this.selectedClientId
+          : (!clientTerm || (device.clientName || '').toLowerCase().includes(clientTerm));
         const byTerm = !term || `${device.deviceType} ${device.brand} ${device.model} ${device.serialNumber} ${device.clientId} ${device.clientName} ${device.currentPassword || ''}`.toLowerCase().includes(term);
         return byClient && byTerm;
       });

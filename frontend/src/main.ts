@@ -13,12 +13,18 @@ import { authInterceptor } from './app/core/auth/auth.interceptor';
 
 registerLocaleData(localeEsAr);
 
+const storedTheme = localStorage.getItem('theme-mode');
+document.documentElement.setAttribute('data-theme', storedTheme === 'light' ? 'light' : 'dark');
+
 bootstrapApplication(AppComponent, {
   providers: [
     provideAnimations(),
     providePrimeNG({
       theme: {
-        preset: Aura
+        preset: Aura,
+        options: {
+          darkModeSelector: '[data-theme="dark"]'
+        }
       }
     }),
     provideHttpClient(withInterceptors([authInterceptor])),

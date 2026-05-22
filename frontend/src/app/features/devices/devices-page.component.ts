@@ -12,6 +12,18 @@ import { ApiService } from '../../core/services/api.service';
 import { Device, DevicePasswordHistory } from '../../shared/models/device.model';
 import { Client } from '../../shared/models/client.model';
 
+const ARGENTINA_TIME_ZONE = 'America/Argentina/Buenos_Aires';
+const HISTORY_DATE_HAS_TIME_ZONE = /(?:z|[+-]\d{2}:?\d{2})$/i;
+const HISTORY_DATE_FORMATTER = new Intl.DateTimeFormat('es-AR', {
+  timeZone: ARGENTINA_TIME_ZONE,
+  day: '2-digit',
+  month: '2-digit',
+  year: 'numeric',
+  hour: '2-digit',
+  minute: '2-digit',
+  hour12: false
+});
+
 @Component({
   selector: 'app-devices-page',
   standalone: true,
@@ -175,8 +187,8 @@ import { Client } from '../../shared/models/client.model';
                       </div>
                     }
                   </td>
-                  <td>{{ entry.createdAt ? (entry.createdAt | date:'dd/MM/yyyy HH:mm') : '-' }}</td>
-                  <td>{{ entry.updatedAt ? (entry.updatedAt | date:'dd/MM/yyyy HH:mm') : '-' }}</td>
+                  <td>{{ formatHistoryDate(entry.createdAt) }}</td>
+                  <td>{{ formatHistoryDate(entry.updatedAt) }}</td>
                   <td><span class="status-pill" [ngClass]="entry.isCurrent ? 'is-success' : 'is-muted'">{{ entry.isCurrent ? 'Actual' : 'Histórica' }}</span></td>
                   <td>
                     <div class="action-buttons">
@@ -411,6 +423,14 @@ export class DevicesPageComponent implements OnInit {
     return visible ? value : '•'.repeat(Math.max(6, value.length));
   }
 
+  formatHistoryDate(value: string | undefined): string {
+    const date = this.parseHistoryDate(value);
+    if (!date) return '-';
+
+    const parts = new Map(HISTORY_DATE_FORMATTER.formatToParts(date).map((part) => [part.type, part.value]));
+    return `${parts.get('day')}/${parts.get('month')}/${parts.get('year')} ${parts.get('hour')}:${parts.get('minute')}`;
+  }
+
   isDevicePasswordVisible(key: string): boolean {
     return this.visibleDevicePasswords.has(key);
   }
@@ -472,8 +492,26 @@ export class DevicesPageComponent implements OnInit {
     return {
       ...device,
       currentPassword: device.currentPassword || '',
-      passwordHistory: (device.passwordHistory || []).slice().sort((left, right) => new Date(right.createdAt || 0).getTime() - new Date(left.createdAt || 0).getTime())
+      passwordHistory: (device.passwordHistory || [])
+        .slice()
+        .sort((left, right) => this.historyTimestamp(right.createdAt) - this.historyTimestamp(left.createdAt))
     };
+  }
+
+  private historyTimestamp(value: string | undefined): number {
+    return this.parseHistoryDate(value)?.getTime() || 0;
+  }
+
+  private parseHistoryDate(value: string | undefined): Date | null {
+    const trimmed = value?.trim();
+    if (!trimmed) return null;
+
+    const normalized = trimmed.includes('T') ? trimmed : trimmed.replace(' ', 'T');
+    const withTime = /^\d{4}-\d{2}-\d{2}$/.test(normalized) ? `${normalized}T00:00:00` : normalized;
+    const isoValue = HISTORY_DATE_HAS_TIME_ZONE.test(withTime) ? withTime : `${withTime}Z`;
+    const date = new Date(isoValue);
+
+    return Number.isNaN(date.getTime()) ? null : date;
   }
 
   private applyPasswordDevice(device: Device): void {

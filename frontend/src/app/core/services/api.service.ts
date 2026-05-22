@@ -54,6 +54,6 @@ export class ApiService {
     if (from) params.set('from', from);
     if (to) params.set('to', to);
     const query = params.toString();
-    return this.http.get<FinanceSummary>(`${this.baseUrl}/finance/summary${query ? `?${query}` : ''}`);
+    return this.http.get<FinanceSummary>(`${this.baseUrl}/dashboard/finance-summary${query ? `?${query}` : ''}`);
   }
 }

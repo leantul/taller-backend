@@ -4,9 +4,12 @@ import com.taller.resource.dto.ClientDTO;
 import com.taller.resource.dto.DashboardDTO;
 import com.taller.resource.dto.DashboardOverviewDTO;
 import com.taller.resource.dto.DeviceDTO;
+import com.taller.resource.dto.FinanceSummaryDTO;
 import com.taller.resource.dto.RepairDTO;
 import com.taller.service.DashboardService;
+import com.taller.service.FinanceService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -18,6 +21,7 @@ import java.util.List;
 public class DashboardController {
 
     private final DashboardService dashboardService;
+    private final FinanceService financeService;
 
     @GetMapping("/month")
     public DashboardDTO monthSummary(@RequestParam(required = false) Integer year,
@@ -41,4 +45,12 @@ public class DashboardController {
 
     @GetMapping("/latest-repairs")
     public List<RepairDTO> latestRepairs() { return dashboardService.latestRepairs(); }
+
+    @GetMapping("/finance-summary")
+    public FinanceSummaryDTO financeSummary(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to
+    ) {
+        return financeService.getSummary(from, to);
+    }
 }

@@ -5,11 +5,11 @@ import { LoadingService } from '../services/loading.service';
 import { AuthService } from './auth.service';
 
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
-  const token = localStorage.getItem('token');
   const loading = inject(LoadingService);
   const authService = inject(AuthService);
   const appRef = inject(ApplicationRef);
   const zone = inject(NgZone);
+  const token = authService.getToken();
 
   zone.run(() => loading.show());
   const isAuthRequest = req.url.includes('/auth/login');

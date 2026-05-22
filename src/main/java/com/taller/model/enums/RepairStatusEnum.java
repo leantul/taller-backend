@@ -57,4 +57,8 @@ public enum RepairStatusEnum {
     public String getStatus() {
         return name();
     }
+
+    public String getLabel() {
+        return status;
+    }
 }

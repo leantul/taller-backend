@@ -184,7 +184,7 @@ public class DashboardService {
     }
 
     private String statusLabel(RepairStatusEnum status) {
-        return status != null ? status.getStatus() : "-";
+        return status != null ? status.getLabel() : "-";
     }
 
     private String deviceTypeLabel(DeviceTypeEnum deviceType) {

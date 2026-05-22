@@ -20,7 +20,7 @@ import { forkJoin } from 'rxjs';
 export class StatusPageComponent implements OnInit {
   columns: { title: string; status: Repair['status']; items: Repair[] }[] = [
     { title: 'Por recibir', status: 'POR_RECIBIR', items: [] },
-    { title: 'A reparar', status: 'RECIBIDA', items: [] },
+    { title: 'Recibida', status: 'RECIBIDA', items: [] },
     { title: 'En proceso', status: 'HACIENDO', items: [] },
     { title: 'Lista para entregar', status: 'ESPERANDO_RETIRO', items: [] }
   ];
@@ -32,7 +32,7 @@ export class StatusPageComponent implements OnInit {
   isSavingStatus = false;
   statusOptions = [
     { label: 'Por recibir', value: 'POR_RECIBIR' },
-    { label: 'A reparar', value: 'RECIBIDA' },
+    { label: 'Recibida', value: 'RECIBIDA' },
     { label: 'En proceso', value: 'HACIENDO' },
     { label: 'Lista para entregar', value: 'ESPERANDO_RETIRO' }
   ];
@@ -92,7 +92,7 @@ export class StatusPageComponent implements OnInit {
   statusLabel(status: Repair['status']): string {
     switch (status) {
       case 'POR_RECIBIR': return 'Por recibir';
-      case 'RECIBIDA': return 'A reparar';
+      case 'RECIBIDA': return 'Recibida';
       case 'PRESUPUESTADA_ESPERANDO_RESPUESTA': return 'Presupuestada';
       case 'HACIENDO': return 'En proceso';
       case 'ESPERANDO_RETIRO': return 'Lista para entregar';

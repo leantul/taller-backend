@@ -11,7 +11,7 @@ public class CommonService {
     public Map<Integer, String> getRepairStatus() {
         Map<Integer, String> repairStatus = new java.util.LinkedHashMap<>();
         for (RepairStatusEnum repairStatusEnum : RepairStatusEnum.values()) {
-            repairStatus.put(repairStatusEnum.getCode(), repairStatusEnum.getStatus());
+            repairStatus.put(repairStatusEnum.getCode(), repairStatusEnum.getLabel());
         }
         return repairStatus;
     }

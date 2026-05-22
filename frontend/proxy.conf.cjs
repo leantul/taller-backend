@@ -27,6 +27,7 @@ module.exports = {
   '/repair': route(),
   '/finance': route(),
   '/dashboard': route(),
+  '/finance': route(),
   '/notifications': route(),
   '/common': route()
 };

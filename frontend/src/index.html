@@ -6,9 +6,30 @@
   <base href="/">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <script src="assets/env.js"></script>
+  <script>
+    // Apply theme before Angular boots so CSS variables are available from the first paint.
+    // Without this, :root has no --text/--bg/etc. until Angular's ThemeService.initTheme() runs,
+    // causing charts and table elements to render with missing colors.
+    (function() {
+      try {
+        var stored = localStorage.getItem('theme-mode');
+        var theme = stored === 'light' ? 'light' : 'dark';
+        document.documentElement.setAttribute('data-theme', theme);
+        if (theme === 'dark') {
+          document.documentElement.classList.add('p-dark');
+        } else {
+          document.documentElement.classList.remove('p-dark');
+        }
+      } catch(e) {
+        document.documentElement.setAttribute('data-theme', 'dark');
+        document.documentElement.classList.add('p-dark');
+      }
+    })();
+  </script>
 </head>
 <body>
   <app-root></app-root>
 </body>
 </html>
+
 

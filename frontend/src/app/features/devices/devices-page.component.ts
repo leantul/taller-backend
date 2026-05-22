@@ -5,6 +5,7 @@ import { CardModule } from 'primeng/card';
 import { InputTextModule } from 'primeng/inputtext';
 import { ButtonModule } from 'primeng/button';
 import { SelectModule } from 'primeng/select';
+import { AutoCompleteModule } from 'primeng/autocomplete';
 import { DialogModule } from 'primeng/dialog';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { ConfirmationService, MessageService } from 'primeng/api';
@@ -27,7 +28,7 @@ const HISTORY_DATE_FORMATTER = new Intl.DateTimeFormat('es-AR', {
 @Component({
   selector: 'app-devices-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, CardModule, InputTextModule, ButtonModule, SelectModule, DialogModule, ConfirmDialogModule],
+  imports: [CommonModule, FormsModule, CardModule, InputTextModule, ButtonModule, SelectModule, AutoCompleteModule, DialogModule, ConfirmDialogModule],
   providers: [ConfirmationService, MessageService],
   template: `
     <p-confirmdialog></p-confirmdialog>
@@ -41,22 +42,22 @@ const HISTORY_DATE_FORMATTER = new Intl.DateTimeFormat('es-AR', {
 
     <div class="page-grid">
       <p-card header="Nuevo dispositivo">
-        <form class="p-fluid" (ngSubmit)="save()">
+        <form class="p-fluid" autocomplete="off" (ngSubmit)="save()">
           <div class="field">
             <label>Cliente</label>
             <div class="inline-row">
-              <p-select [options]="clientOptions" optionLabel="label" optionValue="value" [(ngModel)]="draft.clientId" name="clientId" [filter]="true" filterBy="label" required></p-select>
+              <p-select [options]="clientOptions" optionLabel="label" optionValue="value" [(ngModel)]="draft.clientId" name="deviceClientId" [filter]="true" filterBy="label" required></p-select>
               <button pButton type="button" size="small" class="p-button-sm" icon="pi pi-user-plus" [rounded]="true" [text]="true" (click)="openNewClientModal('draft')"></button>
             </div>
           </div>
-          <div class="field"><label>Marca</label><input pInputText [(ngModel)]="draft.brand" name="brand" required /></div>
-          <div class="field"><label>Modelo</label><input pInputText [(ngModel)]="draft.model" name="model" required /></div>
-          <div class="field"><label>Serie / IMEI</label><input pInputText [(ngModel)]="draft.serialNumber" name="serialNumber" required /></div>
+          <div class="field"><label>Marca</label><input pInputText [(ngModel)]="draft.brand" name="deviceBrand" autocomplete="off" required /></div>
+          <div class="field"><label>Modelo</label><input pInputText [(ngModel)]="draft.model" name="deviceModel" autocomplete="off" required /></div>
+          <div class="field"><label>Serie / IMEI</label><input pInputText [(ngModel)]="draft.serialNumber" name="deviceSerialNumber" autocomplete="off" required /></div>
           <div class="field"><label>Tipo</label><p-select [options]="typeOptions" optionLabel="label" optionValue="value" [(ngModel)]="draft.deviceType" name="deviceType"></p-select></div>
           <div class="field">
             <label>Contraseña inicial</label>
             <div class="inline-row">
-              <input class="control" [type]="showDraftPassword ? 'text' : 'password'" [(ngModel)]="draft.currentPassword" name="currentPassword" placeholder="Opcional" />
+              <input class="control" [type]="showDraftPassword ? 'text' : 'password'" [(ngModel)]="draft.currentPassword" name="deviceCurrentPassword" autocomplete="new-password" placeholder="Opcional" />
               <button class="icon-button" type="button" [attr.aria-label]="showDraftPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'" (click)="showDraftPassword = !showDraftPassword">
                 <i [class]="showDraftPassword ? 'pi pi-eye-slash' : 'pi pi-eye'"></i>
               </button>
@@ -69,7 +70,16 @@ const HISTORY_DATE_FORMATTER = new Intl.DateTimeFormat('es-AR', {
       <p-card header="Dispositivos">
         <div class="table-toolbar multi repairs-filters">
           <span class="p-input-icon-left filter-search"><i class="pi pi-search"></i><input pInputText [(ngModel)]="searchTerm" (ngModelChange)="applyFilters()" placeholder="Buscar por cualquier campo" /></span>
-          <p-select styleClass="compact-filter" [options]="clientOptions" optionLabel="label" optionValue="value" [(ngModel)]="selectedClientId" (ngModelChange)="applyFilters()" placeholder="Filtrar por cliente" [showClear]="true" appendTo="body"></p-select>
+          <p-autoComplete
+            [(ngModel)]="selectedClientTerm"
+            [suggestions]="clientFilterSuggestions"
+            (completeMethod)="filterClientOptions($event.query)"
+            (ngModelChange)="onClientFilterChange($event)"
+            (onSelect)="onClientFilterSelect($event.value)"
+            optionLabel="label"
+            placeholder="Filtrar por cliente"
+            styleClass="compact-filter client-filter-autocomplete"
+            appendTo="body"></p-autoComplete>
         </div>
         <div class="native-table-wrap">
           <table class="native-table">
@@ -82,7 +92,7 @@ const HISTORY_DATE_FORMATTER = new Intl.DateTimeFormat('es-AR', {
                   <td>{{ d.model }}</td>
                   <td>{{ d.serialNumber }}</td>
                   <td>{{ getClientName(d.clientId) }}</td>
-                  <td>
+                  <td class="cell-actions">
                     <div class="inline-row">
                       <span>{{ formatPassword(d.currentPassword, isDevicePasswordVisible(d.id || d.serialNumber)) }}</span>
                       @if (d.currentPassword) {
@@ -125,9 +135,9 @@ const HISTORY_DATE_FORMATTER = new Intl.DateTimeFormat('es-AR', {
           <button pButton type="button" size="small" class="p-button-sm" icon="pi pi-user-plus" [rounded]="true" [text]="true" (click)="openNewClientModal('edit')"></button>
         </div>
       </div>
-      <div class="field"><label>Marca</label><input pInputText [(ngModel)]="editing.brand" /></div>
-      <div class="field"><label>Modelo</label><input pInputText [(ngModel)]="editing.model" /></div>
-      <div class="field"><label>Serie / IMEI</label><input pInputText [(ngModel)]="editing.serialNumber" /></div>
+      <div class="field"><label>Marca</label><input pInputText [(ngModel)]="editing.brand" autocomplete="off" /></div>
+      <div class="field"><label>Modelo</label><input pInputText [(ngModel)]="editing.model" autocomplete="off" /></div>
+      <div class="field"><label>Serie / IMEI</label><input pInputText [(ngModel)]="editing.serialNumber" autocomplete="off" /></div>
       <div class="field"><label>Tipo</label><p-select [options]="typeOptions" optionLabel="label" optionValue="value" [(ngModel)]="editing.deviceType"></p-select></div>
       <div class="field">
         <label>Contraseña actual</label>
@@ -159,7 +169,7 @@ const HISTORY_DATE_FORMATTER = new Intl.DateTimeFormat('es-AR', {
         <div class="field" style="margin-top:1rem;">
           <label>Agregar nueva contraseña</label>
           <div class="inline-row">
-            <input class="control" [type]="showNewPassword ? 'text' : 'password'" [(ngModel)]="newPasswordValue" placeholder="Nueva contraseña" />
+            <input class="control" [type]="showNewPassword ? 'text' : 'password'" [(ngModel)]="newPasswordValue" autocomplete="new-password" placeholder="Nueva contraseña" />
             <button class="icon-button" type="button" (click)="showNewPassword = !showNewPassword">
               <i [class]="showNewPassword ? 'pi pi-eye-slash' : 'pi pi-eye'"></i>
             </button>
@@ -176,7 +186,7 @@ const HISTORY_DATE_FORMATTER = new Intl.DateTimeFormat('es-AR', {
                   <td>
                     @if (editingPasswordId === entry.id) {
                       <div class="inline-row">
-                        <input class="control" [(ngModel)]="editingPasswordValue" />
+                        <input class="control" [(ngModel)]="editingPasswordValue" autocomplete="off" />
                       </div>
                     } @else {
                       <div class="inline-row">
@@ -213,11 +223,11 @@ const HISTORY_DATE_FORMATTER = new Intl.DateTimeFormat('es-AR', {
     </p-dialog>
 
     <p-dialog header="Nuevo cliente" [(visible)]="showNewClientModal" [modal]="true" [style]="{width:'34rem'}">
-      <div class="field"><label>Nombre</label><input pInputText [(ngModel)]="draftClient.name" /></div>
-      <div class="field"><label>Apellido</label><input pInputText [(ngModel)]="draftClient.lastName" /></div>
-      <div class="field"><label>DNI</label><input pInputText [(ngModel)]="draftClient.dni" /></div>
-      <div class="field"><label>Email</label><input pInputText [(ngModel)]="draftClient.email" /></div>
-      <div class="field"><label>Celular</label><input pInputText [(ngModel)]="draftClient.phone" /></div>
+      <div class="field"><label>Nombre</label><input pInputText [(ngModel)]="draftClient.name" autocomplete="off" /></div>
+      <div class="field"><label>Apellido</label><input pInputText [(ngModel)]="draftClient.lastName" autocomplete="off" /></div>
+      <div class="field"><label>DNI</label><input pInputText [(ngModel)]="draftClient.dni" autocomplete="off" /></div>
+      <div class="field"><label>Email</label><input pInputText [(ngModel)]="draftClient.email" autocomplete="off" /></div>
+      <div class="field"><label>Celular</label><input pInputText [(ngModel)]="draftClient.phone" autocomplete="off" /></div>
       <button pButton type="button" label="Guardar cliente" icon="pi pi-check" (click)="createClientInline()"></button>
     </p-dialog>
   `
@@ -232,6 +242,7 @@ export class DevicesPageComponent implements OnInit {
   editVisible = false;
   passwordVisible = false;
   showNewClientModal = false;
+  selectedClientTerm: string | { label: string; value: string } = '';
   selectedClientId: string | null = null;
   searchTerm = '';
   currentPage = 1;
@@ -246,6 +257,7 @@ export class DevicesPageComponent implements OnInit {
   editingPasswordValue = '';
   visibleDevicePasswords = new Set<string>();
   visibleHistoryPasswords = new Set<string>();
+  clientFilterSuggestions: { label: string; value: string }[] = [];
   private newClientTarget: 'draft' | 'edit' = 'draft';
   typeOptions = [
     { label: 'Desktop', value: 'DESKTOP' }, { label: 'Notebook', value: 'NOTEBOOK' }, { label: 'Tablet', value: 'TABLET' }, { label: 'Celular', value: 'CELULAR' }, { label: 'Otros', value: 'OTROS' }
@@ -267,6 +279,27 @@ export class DevicesPageComponent implements OnInit {
 
   get clientOptions(): { label: string; value: string }[] {
     return this.clients.map((client) => ({ label: `${client.name} ${client.lastName}`.trim(), value: client.id! }));
+  }
+
+  filterClientOptions(query: string): void {
+    const term = (query || '').trim().toLowerCase();
+    this.clientFilterSuggestions = this.clientOptions
+      .filter((client) => !term || client.label.toLowerCase().includes(term))
+      .slice(0, 10);
+  }
+
+  onClientFilterChange(value: string | { label: string; value: string } | null): void {
+    this.selectedClientTerm = value || '';
+    if (!value || typeof value === 'string') {
+      this.selectedClientId = null;
+    }
+    this.applyFilters();
+  }
+
+  onClientFilterSelect(selection: { label: string; value: string }): void {
+    this.selectedClientTerm = selection;
+    this.selectedClientId = selection?.value || null;
+    this.applyFilters();
   }
 
   save(): void {
@@ -403,10 +436,13 @@ export class DevicesPageComponent implements OnInit {
 
   applyFilters(): void {
     const term = this.searchTerm.trim().toLowerCase();
+    const clientTerm = this.selectedClientSearchText();
     this.filteredDevices = this.devices
       .map((device) => ({ ...device, clientName: this.getClientName(device.clientId) }))
       .filter((device) => {
-        const byClient = !this.selectedClientId || device.clientId === this.selectedClientId;
+        const byClient = this.selectedClientId
+          ? device.clientId === this.selectedClientId
+          : (!clientTerm || (device.clientName || '').toLowerCase().includes(clientTerm));
         const byTerm = !term || `${device.deviceType} ${device.brand} ${device.model} ${device.serialNumber} ${device.clientId} ${device.clientName} ${device.currentPassword || ''}`.toLowerCase().includes(term);
         return byClient && byTerm;
       });
@@ -512,6 +548,13 @@ export class DevicesPageComponent implements OnInit {
     const date = new Date(isoValue);
 
     return Number.isNaN(date.getTime()) ? null : date;
+  }
+
+  private selectedClientSearchText(): string {
+    const raw = typeof this.selectedClientTerm === 'string'
+      ? this.selectedClientTerm
+      : this.selectedClientTerm?.label || '';
+    return raw.trim().toLowerCase();
   }
 
   private applyPasswordDevice(device: Device): void {

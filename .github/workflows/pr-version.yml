@@ -1,0 +1,42 @@
+name: PR Version
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+
+jobs:
+  resolve-version:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate app version
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          VERSION=$(npm run --silent version:generate)
+          echo "APP_VERSION=$VERSION" >> "$GITHUB_ENV"
+          echo "Version generada: $VERSION" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload version artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-version
+          path: frontend/src/assets/version.json

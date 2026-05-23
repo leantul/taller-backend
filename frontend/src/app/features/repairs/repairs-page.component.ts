@@ -242,11 +242,14 @@ export class RepairsPageComponent implements OnInit {
     event.stopPropagation();
   }
 
-  onWhatsAppClick(event: Event, phone: string): void {
+  openWhatsApp(event: Event, phone: string): void {
     event.stopPropagation();
-    if (!phone) {
-      event.preventDefault();
+    event.preventDefault();
+    const url = this.whatsAppLink(phone);
+    if (!url) {
+      return;
     }
+    window.open(url, '_blank', 'noopener');
   }
 
   openStatusModal(repair: Repair): void {
@@ -420,7 +423,7 @@ export class RepairsPageComponent implements OnInit {
 
   whatsAppLink(phone: string): string {
     const digits = (phone || "").replace(/\D/g, "");
-    return `https://wa.me/${digits}`;
+    return digits ? `https://wa.me/${digits}` : '';
   }
   filterClientSuggestions(query: string): void {
     const term = (query || '').trim().toLowerCase();

@@ -76,17 +76,15 @@
               <td>{{ row.quotedAmountLabel }}</td>
               <td class="cell-actions">
                 <div class="action-buttons">
-                  <a
-                    class="icon-action"
+                  <button
+                    class="icon-action whatsapp-action"
+                    type="button"
                     [class.is-disabled]="!row.clientPhone"
-                    [attr.aria-disabled]="!row.clientPhone"
+                    [disabled]="!row.clientPhone"
                     [attr.aria-label]="row.clientPhone ? 'Enviar WhatsApp' : 'Cliente sin teléfono'"
-                    [attr.href]="row.clientPhone ? whatsAppLink(row.clientPhone) : null"
-                    [attr.target]="row.clientPhone ? '_blank' : null"
-                    [attr.rel]="row.clientPhone ? 'noopener' : null"
-                    (click)="onWhatsAppClick($event, row.clientPhone)">
+                    (click)="openWhatsApp($event, row.clientPhone)">
                     <i class="pi pi-whatsapp"></i>
-                  </a>
+                  </button>
                   <button class="icon-action" type="button" aria-label="Cambiar estado" (click)="onRowActionClick($event); openStatusModal(row.repair)"><i class="pi pi-sync"></i></button>
                   <button class="icon-action" type="button" aria-label="Editar reparación" (click)="onRowActionClick($event); openEditModal(row.repair)"><i class="pi pi-pencil"></i></button>
                   <button class="icon-action danger" type="button" aria-label="Eliminar reparación" [disabled]="isDeleting" (click)="onRowActionClick($event); confirmDeleteRepair(row.repair)"><i class="pi pi-trash"></i></button>
@@ -132,49 +130,51 @@
   header="Detalle de reparación"
   [(visible)]="showDetailModal"
   [modal]="true"
-  [style]="{width:'72rem', maxWidth:'96vw'}"
-  [contentStyle]="{overflow:'hidden'}">
+  [style]="{width:'70rem', maxWidth:'95vw'}"
+  [contentStyle]="{overflow:'hidden', padding:'0.35rem'}">
   @if (detailRepair) {
-    <div class="detail-grid repair-detail-grid">
-      <div class="detail-item"><label>Orden</label><strong>#{{ detailRepair.orderNumber || '-' }}</strong></div>
-      <div class="detail-item"><label>Estado</label><span class="status-pill" [ngClass]="statusClass(detailRepair.status)">{{ statusLabel(detailRepair.status) }}</span></div>
-      <div class="detail-item"><label>Cliente</label><strong>{{ clientLabel(detailRepair) }}</strong></div>
-      <div class="detail-item"><label>Dispositivo</label><strong>{{ deviceLabel(detailRepair) }}</strong></div>
-      <div class="detail-item"><label>Ingreso</label><strong>{{ formatDateTime(detailRepair.receiveDateTime) }}</strong></div>
-      <div class="detail-item"><label>Retiro</label><strong>{{ formatDateTime(detailRepair.returnDateTime) }}</strong></div>
-      <div class="detail-item"><label>Presupuesto</label><strong>{{ detailRepair.quotedAmount || 0 | currency:'ARS':'symbol':'1.2-2':'es-AR' }}</strong></div>
-      <div class="detail-item"><label>Mano de obra</label><strong>{{ detailRepair.laborAmount || 0 | currency:'ARS':'symbol':'1.2-2':'es-AR' }}</strong></div>
-      <div class="detail-item"><label>Monto final</label><strong>{{ detailRepair.price || 0 | currency:'ARS':'symbol':'1.2-2':'es-AR' }}</strong></div>
-      <div class="detail-item detail-wide detail-text-block">
-        <label>Falla reportada</label>
-        <div class="detail-scrollable">{{ detailRepair.description || 'Sin descripción' }}</div>
-      </div>
-      <div class="detail-item detail-wide detail-text-block">
-        <label>Detalle del presupuesto</label>
-        <div class="detail-scrollable">{{ detailRepair.quoteNotes || 'Sin detalle cargado' }}</div>
-      </div>
-      <div class="detail-item detail-wide">
-        <label>Repuestos cambiados</label>
-        @if (detailRepair.parts?.length) {
-          <div class="native-table-wrap compact-table-wrap">
-            <table class="native-table compact-native-table">
-              <thead><tr><th>Repuesto</th><th>Cant.</th><th>Proveedor</th><th>Costo</th><th>Venta</th></tr></thead>
-              <tbody>
-                @for (part of detailRepair.parts || []; track part.id || $index) {
-                  <tr>
-                    <td>{{ part.name }}</td>
-                    <td>{{ part.quantity }}</td>
-                    <td>{{ part.provider || '-' }}</td>
-                    <td>{{ part.cost | currency:'ARS':'symbol':'1.2-2':'es-AR' }}</td>
-                    <td>{{ part.salePrice | currency:'ARS':'symbol':'1.2-2':'es-AR' }}</td>
-                  </tr>
-                }
-              </tbody>
-            </table>
-          </div>
-        } @else {
-          <strong>Sin repuestos cargados</strong>
-        }
+    <div class="detail-dialog-body">
+      <div class="detail-grid repair-detail-grid">
+        <div class="detail-item"><label>Orden</label><strong>#{{ detailRepair.orderNumber || '-' }}</strong></div>
+        <div class="detail-item"><label>Estado</label><span class="status-pill" [ngClass]="statusClass(detailRepair.status)">{{ statusLabel(detailRepair.status) }}</span></div>
+        <div class="detail-item"><label>Cliente</label><strong>{{ clientLabel(detailRepair) }}</strong></div>
+        <div class="detail-item"><label>Dispositivo</label><strong>{{ deviceLabel(detailRepair) }}</strong></div>
+        <div class="detail-item"><label>Ingreso</label><strong>{{ formatDateTime(detailRepair.receiveDateTime) }}</strong></div>
+        <div class="detail-item"><label>Retiro</label><strong>{{ formatDateTime(detailRepair.returnDateTime) }}</strong></div>
+        <div class="detail-item"><label>Presupuesto</label><strong>{{ detailRepair.quotedAmount || 0 | currency:'ARS':'symbol':'1.2-2':'es-AR' }}</strong></div>
+        <div class="detail-item"><label>Mano de obra</label><strong>{{ detailRepair.laborAmount || 0 | currency:'ARS':'symbol':'1.2-2':'es-AR' }}</strong></div>
+        <div class="detail-item detail-wide"><label>Monto final</label><strong>{{ detailRepair.price || 0 | currency:'ARS':'symbol':'1.2-2':'es-AR' }}</strong></div>
+        <div class="detail-item detail-wide detail-text-block">
+          <label>Falla reportada</label>
+          <div class="detail-scrollable">{{ detailRepair.description || 'Sin descripción' }}</div>
+        </div>
+        <div class="detail-item detail-wide detail-text-block">
+          <label>Detalle del presupuesto</label>
+          <div class="detail-scrollable">{{ detailRepair.quoteNotes || 'Sin detalle cargado' }}</div>
+        </div>
+        <div class="detail-item detail-wide">
+          <label>Repuestos cambiados</label>
+          @if (detailRepair.parts?.length) {
+            <div class="native-table-wrap compact-table-wrap">
+              <table class="native-table compact-native-table">
+                <thead><tr><th>Repuesto</th><th>Cant.</th><th>Proveedor</th><th>Costo</th><th>Venta</th></tr></thead>
+                <tbody>
+                  @for (part of detailRepair.parts || []; track part.id || $index) {
+                    <tr>
+                      <td>{{ part.name }}</td>
+                      <td>{{ part.quantity }}</td>
+                      <td>{{ part.provider || '-' }}</td>
+                      <td>{{ part.cost | currency:'ARS':'symbol':'1.2-2':'es-AR' }}</td>
+                      <td>{{ part.salePrice | currency:'ARS':'symbol':'1.2-2':'es-AR' }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          } @else {
+            <strong>Sin repuestos cargados</strong>
+          }
+        </div>
       </div>
     </div>
   }

@@ -975,13 +975,19 @@ textarea.p-inputtext {
   word-break: break-word;
 }
 
+.repairs-table {
+  min-width: 720px;
+}
+
 .repairs-table td {
-  font-size: .98rem;
-  line-height: 1.45;
+  padding: .58rem .68rem;
+  font-size: .92rem;
+  line-height: 1.32;
 }
 
 .repairs-table th {
-  font-size: .76rem;
+  padding: .58rem .68rem;
+  font-size: .72rem;
 }
 
 .native-table th {
@@ -1088,6 +1094,15 @@ textarea.p-inputtext {
   pointer-events: none;
 }
 
+.whatsapp-action {
+  color: #18a957;
+  text-decoration: none;
+}
+
+.whatsapp-action:hover:not(:disabled) {
+  color: #128746;
+}
+
 .icon-action:disabled,
 .pager-button:disabled {
   cursor: not-allowed;
@@ -1182,10 +1197,17 @@ textarea.p-inputtext {
 }
 
 .repair-detail-grid {
-  max-height: min(72vh, 52rem);
+  max-height: none;
+  overflow: visible;
+  padding-right: 0;
+}
+
+.detail-dialog-body {
+  max-height: min(78vh, 54rem);
   overflow-y: auto;
   overflow-x: hidden;
-  padding-right: .2rem;
+  padding: .15rem;
+  scrollbar-gutter: stable;
 }
 
 .detail-item {
@@ -1217,7 +1239,7 @@ textarea.p-inputtext {
 }
 
 .detail-scrollable {
-  max-height: 9.5rem;
+  max-height: 10rem;
   overflow-y: auto;
   overflow-x: hidden;
   white-space: pre-wrap;
@@ -1228,6 +1250,7 @@ textarea.p-inputtext {
 
 .repair-detail-grid .compact-table-wrap {
   overflow-x: hidden;
+  overflow-y: hidden;
 }
 
 .repair-detail-grid .compact-native-table {

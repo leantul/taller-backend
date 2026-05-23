@@ -238,6 +238,17 @@ export class RepairsPageComponent implements OnInit {
     }).format(date);
   }
 
+  onRowActionClick(event: Event): void {
+    event.stopPropagation();
+  }
+
+  onWhatsAppClick(event: Event, phone: string): void {
+    event.stopPropagation();
+    if (!phone) {
+      event.preventDefault();
+    }
+  }
+
   openStatusModal(repair: Repair): void {
     this.statusEditingRepair = { ...repair };
     this.showStatusModal = true;

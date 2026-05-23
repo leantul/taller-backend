@@ -21,8 +21,9 @@ export class StatusPageComponent implements OnInit {
   columns: { title: string; status: Repair['status']; items: Repair[] }[] = [
     { title: 'Por recibir', status: 'POR_RECIBIR', items: [] },
     { title: 'Recibida', status: 'RECIBIDA', items: [] },
+    { title: 'Presupuestada', status: 'PRESUPUESTADA_ESPERANDO_RESPUESTA', items: [] },
     { title: 'En proceso', status: 'HACIENDO', items: [] },
-    { title: 'Lista para entregar', status: 'ESPERANDO_RETIRO', items: [] }
+    { title: 'Esperando retiro', status: 'ESPERANDO_RETIRO', items: [] }
   ];
 
   selectedRepair: Repair | null = null;
@@ -33,8 +34,9 @@ export class StatusPageComponent implements OnInit {
   statusOptions = [
     { label: 'Por recibir', value: 'POR_RECIBIR' },
     { label: 'Recibida', value: 'RECIBIDA' },
+    { label: 'Presupuestada', value: 'PRESUPUESTADA_ESPERANDO_RESPUESTA' },
     { label: 'En proceso', value: 'HACIENDO' },
-    { label: 'Lista para entregar', value: 'ESPERANDO_RETIRO' }
+    { label: 'Esperando retiro', value: 'ESPERANDO_RETIRO' }
   ];
 
   constructor(private readonly api: ApiService, private readonly messageService: MessageService, private readonly changeDetector: ChangeDetectorRef) {}
@@ -95,7 +97,7 @@ export class StatusPageComponent implements OnInit {
       case 'RECIBIDA': return 'Recibida';
       case 'PRESUPUESTADA_ESPERANDO_RESPUESTA': return 'Presupuestada';
       case 'HACIENDO': return 'En proceso';
-      case 'ESPERANDO_RETIRO': return 'Lista para entregar';
+      case 'ESPERANDO_RETIRO': return 'Esperando retiro';
       case 'RETIRADA': return 'Entregada';
       default: return status;
     }

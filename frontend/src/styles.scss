@@ -74,7 +74,7 @@
 
 * { box-sizing: border-box; }
 
-html { font-size: 14px; }
+html { font-size: 15px; }
 
 body {
   min-height: 100vh;
@@ -216,8 +216,9 @@ a { color: inherit; }
 
 .app-content {
   min-width: 0;
-  width: min(1240px, 100%);
-  padding: 1.1rem 1.35rem 2rem;
+  width: 100%;
+  max-width: none;
+  padding: 1.25rem 1.6rem 2rem;
 }
 
 .app-shell:not(.is-authenticated) .app-content {
@@ -271,8 +272,8 @@ a { color: inherit; }
 
 .page-grid {
   display: grid;
-  grid-template-columns: minmax(300px, 360px) minmax(0, 1fr);
-  gap: 1rem;
+  grid-template-columns: minmax(340px, 420px) minmax(0, 1fr);
+  gap: 1.15rem;
   align-items: start;
 }
 
@@ -836,14 +837,27 @@ textarea.p-inputtext {
 
 .table-toolbar .p-input-icon-left,
 .repairs-filters .p-input-icon-left {
+  position: relative;
   display: inline-flex;
   align-items: center;
   width: 100%;
 }
 
+.table-toolbar .p-input-icon-left > i,
+.repairs-filters .p-input-icon-left > i {
+  position: absolute;
+  top: 50%;
+  left: .82rem;
+  z-index: 1;
+  color: var(--muted);
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
 .table-toolbar .p-input-icon-left > .p-inputtext,
 .repairs-filters .p-input-icon-left > .p-inputtext {
   width: 100%;
+  padding-left: 2.35rem !important;
 }
 
 .repairs-filters {
@@ -858,8 +872,8 @@ textarea.p-inputtext {
 }
 
 .repairs-filters .compact-filter {
-  width: 10rem;
-  min-width: 10rem;
+  width: 14rem;
+  min-width: 14rem;
 }
 
 .selection-summary {
@@ -942,8 +956,9 @@ textarea.p-inputtext {
 
 .native-table {
   width: 100%;
-  min-width: 820px;
+  min-width: 100%;
   border-collapse: collapse;
+  table-layout: auto;
 }
 
 .dashboard-table {
@@ -957,6 +972,7 @@ textarea.p-inputtext {
   text-align: left;
   vertical-align: middle;
   font-size: .9rem;
+  word-break: break-word;
 }
 
 .repairs-table td {
@@ -986,6 +1002,38 @@ textarea.p-inputtext {
 
 .native-table tbody tr:hover {
   background: color-mix(in srgb, var(--brand-500), transparent 94%);
+}
+
+.clickable-row {
+  cursor: pointer;
+}
+
+.cell-actions {
+  width: 1%;
+  white-space: nowrap;
+}
+
+.repair-detail-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.detail-text-block {
+  align-content: start;
+}
+
+.detail-scrollable {
+  max-height: 8.5rem;
+  overflow: auto;
+  white-space: pre-wrap;
+  line-height: 1.45;
+}
+
+.compact-table-wrap {
+  overflow: hidden;
+}
+
+.compact-native-table {
+  min-width: 100%;
 }
 
 .order-chip {
@@ -1070,7 +1118,7 @@ textarea.p-inputtext {
 
 .status-board {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: .85rem;
   align-items: start;
 }
@@ -1382,6 +1430,10 @@ textarea.p-inputtext {
   }
 
   .detail-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .repair-detail-grid {
     grid-template-columns: 1fr;
   }
 

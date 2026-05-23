@@ -975,6 +975,15 @@ textarea.p-inputtext {
   word-break: break-word;
 }
 
+.repairs-table td {
+  font-size: .98rem;
+  line-height: 1.45;
+}
+
+.repairs-table th {
+  font-size: .76rem;
+}
+
 .native-table th {
   position: sticky;
   top: 0;
@@ -1072,6 +1081,11 @@ textarea.p-inputtext {
 
 .icon-action.danger {
   color: var(--danger-500);
+}
+
+.icon-action.is-disabled {
+  opacity: .4;
+  pointer-events: none;
 }
 
 .icon-action:disabled,

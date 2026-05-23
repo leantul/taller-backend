@@ -67,19 +67,18 @@ import { ThemeMode, ThemeService } from '../../core/services/theme.service';
       <p-card header="Detalle por reparación">
         <div class="native-table-wrap">
           <table class="native-table finance-table">
-            <thead><tr><th>Orden</th><th>Fecha</th><th>Estado</th><th>Ingreso</th><th>Repuestos</th><th>Neto</th></tr></thead>
+            <thead><tr><th>Orden</th><th>Fecha</th><th>Ingreso</th><th>Repuestos</th><th>Neto</th></tr></thead>
             <tbody>
-              @for (row of financeRows; track row.repairId + row.date) {
+              @for (row of deliveredFinanceRows; track row.repairId + row.date) {
                 <tr>
                   <td>#{{ row.orderNumber || '-' }}</td>
                   <td>{{ row.date ? (row.date | date:'dd/MM/yyyy') : '-' }}</td>
-                  <td>{{ statusLabel(row.status) }}</td>
                   <td>{{ formatMoney(row.income) }}</td>
                   <td>{{ formatMoney(row.partsCost) }}</td>
                   <td>{{ formatMoney(row.net) }}</td>
                 </tr>
               } @empty {
-                <tr><td class="empty-cell" colspan="6">No hay reparaciones dentro del rango elegido.</td></tr>
+                <tr><td class="empty-cell" colspan="5">No hay reparaciones retiradas dentro del rango elegido.</td></tr>
               }
             </tbody>
           </table>
@@ -228,6 +227,10 @@ export class FinancePageComponent implements OnInit, OnDestroy {
     this.netIncome = this.asMoney(summary.netIncome);
     this.averageNet = this.asMoney(summary.averageNet);
     this.deliveredCount = summary.deliveredCount || 0;
+  }
+
+  get deliveredFinanceRows(): FinanceRow[] {
+    return this.financeRows.filter((row) => row.status === 'RETIRADA');
   }
 
   private buildMonthlyNetChart(summary: FinanceSummary): void {

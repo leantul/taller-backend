@@ -27,7 +27,7 @@ type RepairTableRow = {
   statusLabel: string;
   statusClass: string;
   quotedAmountLabel: string;
-  priceLabel: string;
+  clientPhone: string;
 };
 
 @Component({
@@ -372,6 +372,10 @@ export class RepairsPageComponent implements OnInit {
     return client ? `${client.name} ${client.lastName}`.trim() : repair.idClient;
   }
 
+  clientPhone(repair: Repair): string {
+    return this.clientsById.get(repair.idClient)?.phone || '';
+  }
+
   deviceLabel(repair: Repair): string {
     const device = this.devicesById.get(repair.idDevice);
     if (!device) return repair.idDevice || '-';
@@ -501,7 +505,7 @@ export class RepairsPageComponent implements OnInit {
       statusLabel: this.statusLabel(repair.status),
       statusClass: this.statusClass(repair.status),
       quotedAmountLabel: this.formatMoney(repair.quotedAmount),
-      priceLabel: this.formatMoney(repair.price)
+      clientPhone: this.clientPhone(repair)
     };
   }
 

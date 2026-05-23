@@ -32,12 +32,15 @@ public class FinanceService {
         LocalDateTime fromDateTime = from != null ? from.atStartOfDay() : null;
         LocalDateTime toDateTime = to != null ? to.plusDays(1).atStartOfDay().minusNanos(1) : null;
         List<RepairListView> filteredRepairs = findFinanceRows(fromDateTime, toDateTime);
-        Map<String, List<RepairPart>> partsByRepairId = filteredRepairs.isEmpty()
+        List<RepairListView> deliveredRepairs = filteredRepairs.stream()
+                .filter(repair -> repair.getStatus() == RepairStatusEnum.RETIRADA)
+                .toList();
+        Map<String, List<RepairPart>> partsByRepairId = deliveredRepairs.isEmpty()
                 ? Map.of()
-                : repairPartRepository.findByRepairIdIn(filteredRepairs.stream().map(RepairListView::getId).toList()).stream()
+                : repairPartRepository.findByRepairIdIn(deliveredRepairs.stream().map(RepairListView::getId).toList()).stream()
                 .collect(Collectors.groupingBy(RepairPart::getRepairId));
 
-        List<FinanceRowDTO> rows = filteredRepairs.stream()
+        List<FinanceRowDTO> rows = deliveredRepairs.stream()
                 .map(repair -> toRowDto(repair, partsByRepairId.getOrDefault(repair.getId(), List.of())))
                 .sorted(Comparator.comparing(FinanceRowDTO::getDate, Comparator.nullsLast(Comparator.reverseOrder()))
                         .thenComparing(FinanceRowDTO::getOrderNumber, Comparator.nullsLast(String::compareToIgnoreCase)))
@@ -49,16 +52,13 @@ public class FinanceService {
         BigDecimal totalPartsCost = rows.stream()
                 .map(FinanceRowDTO::getPartsCost)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
-        BigDecimal totalLabor = filteredRepairs.stream()
+        BigDecimal totalLabor = deliveredRepairs.stream()
                 .map(repair -> safeMoney(repair.getLaborAmount()))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
-        BigDecimal totalQuoted = filteredRepairs.stream()
+        BigDecimal totalQuoted = deliveredRepairs.stream()
                 .map(repair -> safeMoney(repair.getQuotedAmount()))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
-        List<FinanceRowDTO> deliveredRows = rows.stream()
-                .filter(row -> row.getStatus() == RepairStatusEnum.RETIRADA)
-                .toList();
-        BigDecimal netIncome = deliveredRows.stream()
+        BigDecimal netIncome = rows.stream()
                 .map(FinanceRowDTO::getNet)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
@@ -75,7 +75,7 @@ public class FinanceService {
                 .map(FinanceRowDTO::getNet)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         summary.setAverageNet(rows.isEmpty() ? BigDecimal.ZERO : currentAverageNet.divide(BigDecimal.valueOf(rows.size()), 2, java.math.RoundingMode.HALF_UP));
-        summary.setDeliveredCount(rows.stream().filter(row -> row.getStatus() == RepairStatusEnum.RETIRADA).count());
+        summary.setDeliveredCount(rows.size());
         summary.setMonthlyNet(buildMonthlyNetSeries());
         summary.setRows(rows);
         return summary;
@@ -86,7 +86,9 @@ public class FinanceService {
         YearMonth firstMonth = currentMonth.minusMonths(11);
         LocalDateTime from = firstMonth.atDay(1).atStartOfDay();
 
-        List<RepairListView> repairs = findFinanceRows(from, null);
+        List<RepairListView> repairs = findFinanceRows(from, null).stream()
+                .filter(repair -> repair.getStatus() == RepairStatusEnum.RETIRADA)
+                .toList();
         Map<String, List<RepairPart>> partsByRepairId = repairs.isEmpty()
                 ? Map.of()
                 : repairPartRepository.findByRepairIdIn(repairs.stream().map(RepairListView::getId).toList()).stream()

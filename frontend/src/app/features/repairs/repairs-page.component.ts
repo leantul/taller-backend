@@ -73,12 +73,14 @@ export class RepairsPageComponent implements OnInit {
   showDeviceModal = false;
   showStatusModal = false;
   showEditModal = false;
+  showDetailModal = false;
   showNewClientModal = false;
   clientSearch = '';
   selectedClientName = '';
   clientSuggestions: { label: string; value: string }[] = [];
   draft: Repair = { idDevice: '', idClient: '', orderNumber: '', description: '', status: 'POR_RECIBIR', price: 0, quotedAmount: 0, quoteNotes: '', parts: [] };
   editingRepair: Repair = { idDevice: '', idClient: '', orderNumber: '', description: '', status: 'POR_RECIBIR', price: 0, quotedAmount: 0, quoteNotes: '', parts: [] };
+  detailRepair: Repair | null = null;
   draftClient: Client = { name: '', lastName: '', dni: '', email: '', phone: '' };
   statusEditingRepair: Repair | null = null;
   searchTerm = '';
@@ -225,6 +227,28 @@ export class RepairsPageComponent implements OnInit {
   statusLabel(status: Repair['status']): string {
     return this.statusOptions.find((s) => s.value === status)?.label || status;
   }
+
+  formatDateTime(value?: string): string {
+    if (!value) return '-';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '-';
+    return new Intl.DateTimeFormat('es-AR', {
+      dateStyle: 'short',
+      timeStyle: 'short'
+    }).format(date);
+  }
+
+  onRowActionClick(event: Event): void {
+    event.stopPropagation();
+  }
+
+  onWhatsAppClick(event: Event, phone: string): void {
+    event.stopPropagation();
+    if (!phone) {
+      event.preventDefault();
+    }
+  }
+
   openStatusModal(repair: Repair): void {
     this.statusEditingRepair = { ...repair };
     this.showStatusModal = true;
@@ -261,6 +285,26 @@ export class RepairsPageComponent implements OnInit {
           this.showEditModal = true;
           this.changeDetector.detectChanges();
         });
+      },
+      error: (error) => {
+        this.isUpdating = false;
+        this.messageService.add({ severity: 'error', summary: 'Error', detail: this.errorDetail(error, 'No se pudo cargar el detalle de la reparación.') });
+      }
+    });
+  }
+
+  openDetailModal(repair: Repair): void {
+    if (!repair.id) return;
+    this.isUpdating = true;
+    this.api.getRepairById(repair.id).subscribe({
+      next: (detail) => {
+        this.isUpdating = false;
+        this.detailRepair = {
+          ...detail,
+          parts: (detail.parts || []).map((part) => ({ ...part }))
+        };
+        this.showDetailModal = true;
+        this.changeDetector.detectChanges();
       },
       error: (error) => {
         this.isUpdating = false;

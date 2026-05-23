@@ -63,7 +63,6 @@
             <th>Dispositivo</th>
             <th>Estado</th>
             <th>Presupuesto</th>
-            <th>Monto</th>
             <th>Acción</th>
           </tr>
         </thead>
@@ -75,9 +74,19 @@
               <td>{{ row.deviceLabel }}</td>
               <td><span class="status-pill" [ngClass]="row.statusClass">{{ row.statusLabel }}</span></td>
               <td>{{ row.quotedAmountLabel }}</td>
-              <td>{{ row.priceLabel }}</td>
-              <td>
+              <td class="cell-actions">
                 <div class="action-buttons">
+                  <a
+                    class="icon-action"
+                    [class.is-disabled]="!row.clientPhone"
+                    [attr.aria-disabled]="!row.clientPhone"
+                    [attr.aria-label]="row.clientPhone ? 'Enviar WhatsApp' : 'Cliente sin teléfono'"
+                    [attr.href]="row.clientPhone ? whatsAppLink(row.clientPhone) : null"
+                    [attr.target]="row.clientPhone ? '_blank' : null"
+                    [attr.rel]="row.clientPhone ? 'noopener' : null"
+                    (click)="!row.clientPhone && $event.preventDefault()">
+                    <i class="pi pi-whatsapp"></i>
+                  </a>
                   <button class="icon-action" type="button" aria-label="Cambiar estado" (click)="openStatusModal(row.repair)"><i class="pi pi-sync"></i></button>
                   <button class="icon-action" type="button" aria-label="Editar reparación" (click)="openEditModal(row.repair)"><i class="pi pi-pencil"></i></button>
                   <button class="icon-action danger" type="button" aria-label="Eliminar reparación" [disabled]="isDeleting" (click)="confirmDeleteRepair(row.repair)"><i class="pi pi-trash"></i></button>
@@ -87,7 +96,7 @@
           </ng-container>
           <ng-template #emptyRepairRows>
             <tr>
-              <td class="empty-cell" colspan="7">No hay reparaciones para los filtros aplicados.</td>
+              <td class="empty-cell" colspan="6">No hay reparaciones para los filtros aplicados.</td>
             </tr>
           </ng-template>
         </tbody>

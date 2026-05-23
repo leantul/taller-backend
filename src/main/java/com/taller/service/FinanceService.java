@@ -55,7 +55,12 @@ public class FinanceService {
         BigDecimal totalQuoted = filteredRepairs.stream()
                 .map(repair -> safeMoney(repair.getQuotedAmount()))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
-        BigDecimal netIncome = totalIncome.subtract(totalPartsCost);
+        List<FinanceRowDTO> deliveredRows = rows.stream()
+                .filter(row -> row.getStatus() == RepairStatusEnum.RETIRADA)
+                .toList();
+        BigDecimal netIncome = deliveredRows.stream()
+                .map(FinanceRowDTO::getNet)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         FinanceSummaryDTO summary = new FinanceSummaryDTO();
         summary.setFrom(from);
@@ -66,7 +71,10 @@ public class FinanceService {
         summary.setTotalLabor(totalLabor);
         summary.setTotalQuoted(totalQuoted);
         summary.setNetIncome(netIncome);
-        summary.setAverageNet(rows.isEmpty() ? BigDecimal.ZERO : netIncome.divide(BigDecimal.valueOf(rows.size()), 2, java.math.RoundingMode.HALF_UP));
+        BigDecimal currentAverageNet = rows.stream()
+                .map(FinanceRowDTO::getNet)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        summary.setAverageNet(rows.isEmpty() ? BigDecimal.ZERO : currentAverageNet.divide(BigDecimal.valueOf(rows.size()), 2, java.math.RoundingMode.HALF_UP));
         summary.setDeliveredCount(rows.stream().filter(row -> row.getStatus() == RepairStatusEnum.RETIRADA).count());
         summary.setMonthlyNet(buildMonthlyNetSeries());
         summary.setRows(rows);

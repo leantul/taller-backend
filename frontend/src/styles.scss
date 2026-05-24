@@ -876,6 +876,96 @@ textarea.p-inputtext {
   min-width: 14rem;
 }
 
+.repairs-heading {
+  margin-bottom: .8rem;
+}
+
+.repairs-heading h1 {
+  font-size: 1.52rem;
+}
+
+.repairs-heading p {
+  font-size: .88rem;
+}
+
+.repairs-heading + .page-grid.modern-grid {
+  grid-template-columns: minmax(300px, 370px) minmax(0, 1fr);
+  gap: .9rem;
+}
+
+.repairs-heading + .page-grid .p-card .p-card-body {
+  padding: .82rem !important;
+}
+
+.repairs-heading + .page-grid .p-card .p-card-title {
+  font-size: .94rem;
+}
+
+.repairs-heading + .page-grid .field {
+  gap: .24rem;
+  margin-bottom: .58rem;
+}
+
+.repairs-heading + .page-grid .field label,
+.repairs-heading + .page-grid .field > span {
+  font-size: .81rem;
+}
+
+.repairs-heading + .page-grid .control,
+.repairs-heading + .page-grid .p-inputtext,
+.repairs-heading + .page-grid .p-select,
+.repairs-heading + .page-grid .p-inputnumber,
+.repairs-heading + .page-grid .p-datepicker,
+.repairs-heading + .page-grid textarea.p-inputtext {
+  min-height: 2.05rem;
+  font-size: .86rem;
+}
+
+.repairs-heading + .page-grid .p-select-label,
+.repairs-heading + .page-grid .p-select-label-container,
+.repairs-heading + .page-grid .p-select-dropdown,
+.repairs-heading + .page-grid .p-select-clear-icon,
+.repairs-heading + .page-grid .p-select-dropdown-icon,
+.repairs-heading + .page-grid .p-inputnumber-input,
+.repairs-heading + .page-grid .p-inputnumber-button,
+.repairs-heading + .page-grid .p-datepicker-input,
+.repairs-heading + .page-grid .p-datepicker-dropdown,
+.repairs-heading + .page-grid .p-datepicker-dropdown-icon,
+.repairs-heading + .page-grid .p-autocomplete-input,
+.repairs-heading + .page-grid .p-autocomplete-dropdown,
+.repairs-heading + .page-grid .p-inputtext {
+  padding: .42rem .54rem !important;
+}
+
+.repairs-heading + .page-grid textarea.p-inputtext {
+  min-height: 5rem;
+}
+
+.repairs-heading + .page-grid .selection-summary {
+  gap: .35rem;
+  margin: -.1rem 0 .45rem;
+}
+
+.repairs-heading + .page-grid .summary-chip {
+  min-height: 1.72rem;
+  padding: 0 .52rem;
+  font-size: .79rem;
+}
+
+.repairs-heading + .page-grid .table-toolbar {
+  gap: .45rem;
+  margin-bottom: .6rem;
+}
+
+.repairs-heading + .page-grid .repairs-filters .filter-search {
+  width: min(24rem, 100%);
+}
+
+.repairs-heading + .page-grid .repairs-filters .compact-filter {
+  width: 12rem;
+  min-width: 12rem;
+}
+
 .selection-summary {
   display: flex;
   flex-wrap: wrap;

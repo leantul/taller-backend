@@ -21,6 +21,11 @@ public class NotificationController {
         return notificationService.latest();
     }
 
+    @GetMapping("/unread-count")
+    public long unreadCount() {
+        return notificationService.unreadCount();
+    }
+
     @PostMapping
     public NotificationDTO save(@RequestBody NotificationDTO dto) {
         return notificationService.save(dto);

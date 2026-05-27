@@ -32,4 +32,7 @@ public class Notification extends BasicEntity {
 
     @Column(name = "entity_id")
     private String entityId;
+
+    @Column(name = "repair_id")
+    private String repairId;
 }

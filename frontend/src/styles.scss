@@ -144,6 +144,7 @@ a { color: inherit; }
   color: var(--muted);
   font-weight: 600;
   text-decoration: none;
+  position: relative;
 }
 
 .app-nav a:hover,
@@ -155,6 +156,22 @@ a { color: inherit; }
 .app-nav i {
   width: 1.1rem;
   color: var(--brand-500);
+}
+
+.nav-badge {
+  margin-left: auto;
+  min-width: 1.35rem;
+  height: 1.35rem;
+  padding: 0 .35rem;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--brand-500);
+  color: #fff;
+  font-size: .72rem;
+  font-weight: 700;
+  line-height: 1;
 }
 
 .sidebar-footer {
@@ -1362,6 +1379,99 @@ textarea.p-inputtext {
   border-radius: 8px;
   background: var(--surface);
   box-shadow: 0 10px 28px var(--shadow);
+}
+
+.notifications-page {
+  display: grid;
+  gap: 1rem;
+}
+
+.notifications-list {
+  display: grid;
+  gap: .9rem;
+}
+
+.notification-card {
+  position: relative;
+  display: grid;
+  gap: .8rem;
+  padding: 1.05rem 1.1rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  box-shadow: 0 10px 28px var(--shadow);
+  cursor: pointer;
+}
+
+.notification-card-head {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.notification-card-head h2 {
+  margin: .25rem 0 0;
+  font-size: 1.02rem;
+}
+
+.notification-card-head time {
+  color: var(--muted);
+  font-size: .85rem;
+  white-space: nowrap;
+}
+
+.notification-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: .25rem .55rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--brand-500), transparent 86%);
+  color: var(--brand-500);
+  font-size: .72rem;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.notification-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .8rem 1rem;
+  color: var(--muted);
+  font-size: .92rem;
+}
+
+.notification-meta span {
+  display: inline-flex;
+  gap: .38rem;
+  align-items: center;
+}
+
+.notification-dismiss {
+  position: absolute;
+  top: .8rem;
+  right: .8rem;
+  width: 2rem;
+  height: 2rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-soft);
+  color: var(--muted);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.notification-dismiss:hover {
+  color: var(--text);
+}
+
+.notification-detail-actions {
+  display: flex;
+  justify-content: flex-end;
+  padding: 1rem .15rem .25rem;
 }
 
 .placeholder-panel {

@@ -1,3 +1,5 @@
+export type DeviceType = 'DESKTOP' | 'NOTEBOOK' | 'TABLET' | 'CELULAR' | 'OTROS';
+
 export interface DevicePasswordHistory {
   id?: string;
   value: string;
@@ -11,7 +13,7 @@ export interface Device {
   brand: string;
   model: string;
   serialNumber: string;
-  deviceType: 'DESKTOP' | 'NOTEBOOK' | 'TABLET' | 'CELULAR' | 'OTROS';
+  deviceType: DeviceType;
   clientId: string;
   currentPassword?: string;
   passwordHistory?: DevicePasswordHistory[];

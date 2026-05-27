@@ -1,11 +1,13 @@
-import { Component } from '@angular/core';
-import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { Component, OnInit } from '@angular/core';
+import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { CommonModule } from '@angular/common';
+import { filter } from 'rxjs';
 import { AuthService } from './core/auth/auth.service';
 import { ThemeMode, ThemeService } from './core/services/theme.service';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { ToastModule } from 'primeng/toast';
 import { LoadingService } from './core/services/loading.service';
+import { NotificationStateService } from './core/services/notification-state.service';
 
 @Component({
   selector: 'app-root',
@@ -30,6 +32,9 @@ import { LoadingService } from './core/services/loading.service';
               <a [routerLink]="item.path" routerLinkActive="is-active" [routerLinkActiveOptions]="item.exact ? { exact: true } : { exact: false }">
                 <i [class]="item.icon"></i>
                 <span>{{ item.label }}</span>
+                @if (item.path === '/notificaciones' && unreadNotifications > 0) {
+                  <span class="nav-badge">{{ unreadNotifications }}</span>
+                }
               </a>
             }
           </nav>
@@ -55,8 +60,9 @@ import { LoadingService } from './core/services/loading.service';
     </main>
   `
 })
-export class AppComponent {
+export class AppComponent implements OnInit {
   themeMode: ThemeMode;
+  unreadNotifications = 0;
   navItems = [
     { label: 'Dashboard', icon: 'pi pi-home', path: '/', exact: true },
     { label: 'Clientes', icon: 'pi pi-users', path: '/clientes' },
@@ -88,9 +94,34 @@ export class AppComponent {
   }
 
 
-  constructor(public readonly auth: AuthService, private readonly router: Router, private readonly themeService: ThemeService, public readonly loadingService: LoadingService) {
+  constructor(
+    public readonly auth: AuthService,
+    private readonly router: Router,
+    private readonly themeService: ThemeService,
+    public readonly loadingService: LoadingService,
+    private readonly notificationState: NotificationStateService
+  ) {
     this.themeMode = this.themeService.initTheme();
   }
+
+  ngOnInit(): void {
+    this.notificationState.unreadCount$.subscribe((count) => {
+      this.unreadNotifications = count;
+    });
+
+    if (this.auth.isLoggedIn()) {
+      this.notificationState.refreshUnreadCount();
+    }
+
+    this.router.events
+      .pipe(filter((event) => event instanceof NavigationEnd))
+      .subscribe(() => {
+        if (this.auth.isLoggedIn()) {
+          this.notificationState.refreshUnreadCount();
+        }
+      });
+  }
+
   toggleTheme(): void { this.themeMode = this.themeService.toggleTheme(this.themeMode); }
   goToPassword(): void { this.router.navigate(['/cambiar-password']); }
 }

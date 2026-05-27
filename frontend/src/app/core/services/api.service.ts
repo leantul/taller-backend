@@ -7,6 +7,7 @@ import { Device, DevicePasswordHistory } from '../../shared/models/device.model'
 import { Repair, RepairCreateDTO, RepairUpdateDTO } from '../../shared/models/repair.model';
 import { FinanceSummary } from '../../shared/models/finance.model';
 import { DashboardOverview } from '../../shared/models/dashboard.model';
+import { NotificationItem } from '../../shared/models/notification.model';
 
 @Injectable({ providedIn: 'root' })
 export class ApiService {
@@ -44,6 +45,9 @@ export class ApiService {
   createRepair(payload: RepairCreateDTO): Observable<Repair> { return this.http.post<Repair>(`${this.baseUrl}/repair`, payload); }
   updateRepair(payload: RepairUpdateDTO): Observable<Repair> { return this.http.put<Repair>(`${this.baseUrl}/repair`, payload); }
   deleteRepair(id: string): Observable<void> { return this.http.delete<void>(`${this.baseUrl}/repair/${id}`); }
+  getNotifications(): Observable<NotificationItem[]> { return this.http.get<NotificationItem[]>(`${this.baseUrl}/notifications`); }
+  getUnreadNotificationCount(): Observable<number> { return this.http.get<number>(`${this.baseUrl}/notifications/unread-count`); }
+  markNotificationAsRead(id: string): Observable<void> { return this.http.patch<void>(`${this.baseUrl}/notifications/${id}/read`, {}); }
 
   getDashboardOverview(): Observable<DashboardOverview> { return this.http.get<DashboardOverview>(`${this.baseUrl}/dashboard/overview`); }
   getLatestClients(): Observable<Client[]> { return this.http.get<Client[]>(`${this.baseUrl}/dashboard/latest-clients`); }

@@ -4,7 +4,11 @@ import com.taller.model.Notification;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
+import java.util.Optional;
+import java.time.LocalDateTime;
 
 public interface NotificationRepository extends JpaRepository<Notification, String> {
-    List<Notification> findTop20ByOrderByEventDateDesc();
+    List<Notification> findByReadedFalseOrderByEventDateDesc();
+    long countByReadedFalse();
+    Optional<Notification> findByEntityIdAndTypeAndEventDate(String entityId, String type, LocalDateTime eventDate);
 }

@@ -4,11 +4,7 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
-import lombok.Getter;
-import lombok.Setter;
 
-@Getter
-@Setter
 @Entity
 @Table(name = "app_metadata")
 public class AppMetadata {
@@ -19,4 +15,20 @@ public class AppMetadata {
 
     @Column(name = "metadata_value", columnDefinition = "TEXT")
     private String value;
+
+    public String getKey() {
+        return this.key;
+    }
+
+    public String getValue() {
+        return this.value;
+    }
+
+    public void setKey(String key) {
+        this.key = key;
+    }
+
+    public void setValue(String value) {
+        this.value = value;
+    }
 }

@@ -1,15 +1,11 @@
 package com.taller.model;
 
 import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.Setter;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
-@Getter
-@Setter
 @Table(name = "clients")
 @Entity
 @AttributeOverride(name = "id", column = @Column(name = "id_client"))
@@ -54,4 +50,84 @@ public class Client extends BasicEntity {
 
     @OneToMany(mappedBy = "client")
     private List<Device> devices;
+
+    public String getName() {
+        return this.name;
+    }
+
+    public String getLastName() {
+        return this.lastName;
+    }
+
+    public String getDni() {
+        return this.dni;
+    }
+
+    public String getEmail() {
+        return this.email;
+    }
+
+    public String getAddress() {
+        return this.address;
+    }
+
+    public String getPhone() {
+        return this.phone;
+    }
+
+    public LocalDate getBirthDate() {
+        return this.birthDate;
+    }
+
+    public String getNotes() {
+        return this.notes;
+    }
+
+    public List<Repair> getRepairs() {
+        return this.repairs;
+    }
+
+    public List<Device> getDevices() {
+        return this.devices;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public void setLastName(String lastName) {
+        this.lastName = lastName;
+    }
+
+    public void setDni(String dni) {
+        this.dni = dni;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    public void setAddress(String address) {
+        this.address = address;
+    }
+
+    public void setPhone(String phone) {
+        this.phone = phone;
+    }
+
+    public void setBirthDate(LocalDate birthDate) {
+        this.birthDate = birthDate;
+    }
+
+    public void setNotes(String notes) {
+        this.notes = notes;
+    }
+
+    public void setRepairs(List<Repair> repairs) {
+        this.repairs = repairs;
+    }
+
+    public void setDevices(List<Device> devices) {
+        this.devices = devices;
+    }
 }

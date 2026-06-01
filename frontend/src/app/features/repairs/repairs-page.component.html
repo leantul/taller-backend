@@ -39,6 +39,18 @@
         </div>
       }
       <div class="field"><label>Falla reportada</label><textarea class="p-inputtext" rows="5" [(ngModel)]="draft.description" name="description" required></textarea></div>
+      <div class="field">
+        <div class="inline-row" style="justify-content:space-between;align-items:center;">
+          <label>Observaciones del dispositivo</label>
+          <button pButton type="button" icon="pi pi-plus" class="p-button-sm" label="Agregar" (click)="addDraftObservationRow()"></button>
+        </div>
+        @for (observation of draft.observations || []; track $index) {
+          <div class="inline-row" style="gap:.5rem; margin-bottom:.5rem;">
+            <input pInputText [(ngModel)]="observation.note" [ngModelOptions]="{standalone:true}" placeholder="Ej: batería dañada, carcasa quebrada" />
+            <button pButton type="button" icon="pi pi-trash" class="p-button-danger p-button-text" (click)="removeDraftObservationRow($index)"></button>
+          </div>
+        }
+      </div>
       <div class="field"><label>Estado</label><p-select [options]="statusOptions" optionLabel="label" optionValue="value" [(ngModel)]="draft.status" name="status"></p-select></div>
       <div class="field"><label>Presupuesto enviado</label><p-inputNumber [(ngModel)]="draft.quotedAmount" name="quotedAmount" mode="currency" currency="ARS" locale="es-AR" [min]="0"></p-inputNumber></div>
       <div class="field"><label>Detalle del presupuesto</label><textarea class="p-inputtext" rows="5" [(ngModel)]="draft.quoteNotes" name="quoteNotes" placeholder="Detalle completo del trabajo"></textarea></div>
@@ -153,6 +165,18 @@
           <div class="detail-scrollable">{{ detailRepair.quoteNotes || 'Sin detalle cargado' }}</div>
         </div>
         <div class="detail-item detail-wide">
+          <label>Observaciones del dispositivo</label>
+          @if (detailRepair.observations?.length) {
+            <div class="observation-list">
+              @for (observation of detailRepair.observations || []; track observation.id || $index) {
+                <span class="observation-chip" [class.is-resolved]="observation.resolvedAt">{{ observation.note }}</span>
+              }
+            </div>
+          } @else {
+            <strong>Sin observaciones cargadas</strong>
+          }
+        </div>
+        <div class="detail-item detail-wide">
           <label>Repuestos cambiados</label>
           @if (detailRepair.parts?.length) {
             <div class="native-table-wrap compact-table-wrap">
@@ -212,6 +236,18 @@
     </select>
   </div>
   <div class="field"><label>Falla reportada</label><textarea class="p-inputtext" rows="4" [(ngModel)]="editingRepair.description"></textarea></div>
+  <div class="field">
+    <div class="inline-row" style="justify-content:space-between;align-items:center;">
+      <label>Observaciones del dispositivo</label>
+      <button pButton type="button" icon="pi pi-plus" class="p-button-sm" label="Agregar" (click)="addObservationRow()"></button>
+    </div>
+    @for (observation of editingRepair.observations || []; track observation.id || $index) {
+      <div class="inline-row" style="gap:.5rem; margin-bottom:.5rem;">
+        <input pInputText [(ngModel)]="observation.note" [ngModelOptions]="{standalone:true}" placeholder="Observación" />
+        <button pButton type="button" icon="pi pi-trash" class="p-button-danger p-button-text" (click)="removeObservationRow($index)"></button>
+      </div>
+    }
+  </div>
   <div class="field">
     <label>Estado</label>
     <select class="control" [(ngModel)]="editingRepair.status" (ngModelChange)="onEditStatusChange()">

@@ -1,16 +1,20 @@
 package com.taller.service;
 
 import com.taller.model.Device;
+import com.taller.model.DeviceObservation;
 import com.taller.model.DevicePasswordHistory;
+import com.taller.model.repository.DeviceObservationRepository;
 import com.taller.model.repository.DevicePasswordHistoryRepository;
 import com.taller.model.repository.DeviceRepository;
 import com.taller.model.repository.projection.DeviceListView;
 import com.taller.resource.dto.DeviceDTO;
+import com.taller.resource.dto.DeviceObservationDTO;
 import com.taller.resource.dto.DevicePasswordHistoryDTO;
 import com.taller.resource.dto.DevicePasswordUpsertDTO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
@@ -24,6 +28,7 @@ public class DeviceService {
 
     private final DeviceRepository deviceRepository;
     private final DevicePasswordHistoryRepository devicePasswordHistoryRepository;
+    private final DeviceObservationRepository deviceObservationRepository;
 
     public DeviceDTO save(DeviceDTO deviceDTO) {
         Device device = deviceDTO.getId() != null
@@ -53,8 +58,10 @@ public class DeviceService {
     }
 
     public List<DeviceDTO> getAllDevices() {
-        return deviceRepository.findListRows().stream()
-                .map(this::toListDto)
+        List<DeviceListView> rows = deviceRepository.findListRows();
+        Map<String, List<DeviceObservation>> observationsByDeviceId = observationsByDeviceId(rows.stream().map(DeviceListView::getId).toList());
+        return rows.stream()
+                .map(device -> toListDto(device, observationsByDeviceId.getOrDefault(device.getId(), List.of())))
                 .toList();
     }
 
@@ -63,8 +70,10 @@ public class DeviceService {
     }
 
     public List<DeviceDTO> search(String term) {
-        return deviceRepository.searchListRows(term).stream()
-                .map(this::toListDto)
+        List<DeviceListView> rows = deviceRepository.searchListRows(term);
+        Map<String, List<DeviceObservation>> observationsByDeviceId = observationsByDeviceId(rows.stream().map(DeviceListView::getId).toList());
+        return rows.stream()
+                .map(device -> toListDto(device, observationsByDeviceId.getOrDefault(device.getId(), List.of())))
                 .toList();
     }
 
@@ -114,6 +123,37 @@ public class DeviceService {
         return getDeviceById(deviceId);
     }
 
+    public DeviceDTO addObservation(String deviceId, DeviceObservationDTO request) {
+        deviceRepository.findById(deviceId).orElseThrow();
+        if (!hasText(request.getNote())) {
+            throw new IllegalArgumentException("Observation note is required");
+        }
+        deviceObservationRepository.save(toObservation(deviceId, null, request, new DeviceObservation()));
+        return getDeviceById(deviceId);
+    }
+
+    public DeviceDTO updateObservation(String deviceId, String observationId, DeviceObservationDTO request) {
+        DeviceObservation observation = deviceObservationRepository.findByIdAndDeviceId(observationId, deviceId).orElseThrow();
+        if (!hasText(request.getNote())) {
+            throw new IllegalArgumentException("Observation note is required");
+        }
+        deviceObservationRepository.save(toObservation(deviceId, observation.getRepairId(), request, observation));
+        return getDeviceById(deviceId);
+    }
+
+    public DeviceDTO resolveObservation(String deviceId, String observationId) {
+        DeviceObservation observation = deviceObservationRepository.findByIdAndDeviceId(observationId, deviceId).orElseThrow();
+        observation.setResolvedAt(LocalDateTime.now());
+        deviceObservationRepository.save(observation);
+        return getDeviceById(deviceId);
+    }
+
+    public DeviceDTO deleteObservation(String deviceId, String observationId) {
+        DeviceObservation observation = deviceObservationRepository.findByIdAndDeviceId(observationId, deviceId).orElseThrow();
+        deviceObservationRepository.delete(observation);
+        return getDeviceById(deviceId);
+    }
+
     private DeviceDTO toDto(Device device, boolean includeHistory) {
         List<DevicePasswordHistory> histories = devicePasswordHistoryRepository.findByDeviceIdOrderByCreationDateTimeDesc(device.getId());
         return toDto(device, includeHistory, histories);
@@ -132,11 +172,14 @@ public class DeviceService {
         dto.setCurrentPassword(resolveCurrentPassword(device, histories));
         if (includeHistory) {
             dto.setPasswordHistory(histories.stream().sorted(Comparator.comparing(DevicePasswordHistory::getCreationDateTime).reversed()).map(this::toPasswordHistoryDto).toList());
+            dto.setObservations(deviceObservationRepository.findByDeviceIdOrderByObservedAtDesc(device.getId()).stream().map(this::toObservationDto).toList());
+        } else {
+            dto.setObservations(deviceObservationRepository.findByDeviceIdAndResolvedAtIsNullOrderByObservedAtDesc(device.getId()).stream().map(this::toObservationDto).toList());
         }
         return dto;
     }
 
-    private DeviceDTO toListDto(DeviceListView device) {
+    private DeviceDTO toListDto(DeviceListView device, List<DeviceObservation> observations) {
         DeviceDTO dto = new DeviceDTO();
         dto.setId(device.getId());
         dto.setBrand(device.getBrand());
@@ -145,6 +188,7 @@ public class DeviceService {
         dto.setDeviceType(device.getDeviceType());
         dto.setClientId(device.getClientId());
         dto.setCurrentPassword(device.getCurrentPassword());
+        dto.setObservations(observations.stream().map(this::toObservationDto).toList());
         return dto;
     }
 
@@ -164,6 +208,14 @@ public class DeviceService {
         }
         return devicePasswordHistoryRepository.findByDeviceIdIn(deviceIds).stream()
                 .collect(Collectors.groupingBy(DevicePasswordHistory::getDeviceId));
+    }
+
+    private Map<String, List<DeviceObservation>> observationsByDeviceId(Collection<String> deviceIds) {
+        if (deviceIds == null || deviceIds.isEmpty()) {
+            return Map.of();
+        }
+        return deviceObservationRepository.findByDeviceIdInAndResolvedAtIsNullOrderByObservedAtDesc(deviceIds).stream()
+                .collect(Collectors.groupingBy(DeviceObservation::getDeviceId));
     }
 
     private String resolveCurrentPassword(Device device, List<DevicePasswordHistory> histories) {
@@ -211,6 +263,31 @@ public class DeviceService {
         DevicePasswordUpsertDTO request = new DevicePasswordUpsertDTO();
         request.setValue(currentPassword);
         return request;
+    }
+
+    private DeviceObservation toObservation(String deviceId, String repairId, DeviceObservationDTO dto, DeviceObservation observation) {
+        LocalDateTime observedAt = dto.getObservedAt() != null
+                ? dto.getObservedAt()
+                : (observation.getObservedAt() != null ? observation.getObservedAt() : LocalDateTime.now());
+        observation.setDeviceId(deviceId);
+        observation.setRepairId(repairId != null ? repairId : dto.getRepairId());
+        observation.setNote(dto.getNote() != null ? dto.getNote().trim() : null);
+        observation.setObservedAt(observedAt);
+        observation.setFollowUpAt(dto.getFollowUpAt() != null ? dto.getFollowUpAt() : observedAt.plusMonths(3));
+        observation.setResolvedAt(dto.getResolvedAt());
+        return observation;
+    }
+
+    private DeviceObservationDTO toObservationDto(DeviceObservation observation) {
+        DeviceObservationDTO dto = new DeviceObservationDTO();
+        dto.setId(observation.getId());
+        dto.setDeviceId(observation.getDeviceId());
+        dto.setRepairId(observation.getRepairId());
+        dto.setNote(observation.getNote());
+        dto.setObservedAt(observation.getObservedAt());
+        dto.setFollowUpAt(observation.getFollowUpAt());
+        dto.setResolvedAt(observation.getResolvedAt());
+        return dto;
     }
 
     private boolean hasText(String value) {

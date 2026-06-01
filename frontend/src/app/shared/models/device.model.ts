@@ -8,6 +8,16 @@ export interface DevicePasswordHistory {
   updatedAt?: string;
 }
 
+export interface DeviceObservation {
+  id?: string;
+  deviceId?: string;
+  repairId?: string;
+  note: string;
+  observedAt?: string;
+  followUpAt?: string;
+  resolvedAt?: string;
+}
+
 export interface Device {
   id?: string;
   brand: string;
@@ -17,4 +27,5 @@ export interface Device {
   clientId: string;
   currentPassword?: string;
   passwordHistory?: DevicePasswordHistory[];
+  observations?: DeviceObservation[];
 }

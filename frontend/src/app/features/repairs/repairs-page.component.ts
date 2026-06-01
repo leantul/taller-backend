@@ -78,8 +78,8 @@ export class RepairsPageComponent implements OnInit {
   clientSearch = '';
   selectedClientName = '';
   clientSuggestions: { label: string; value: string }[] = [];
-  draft: Repair = { idDevice: '', idClient: '', orderNumber: '', description: '', status: 'POR_RECIBIR', price: 0, quotedAmount: 0, quoteNotes: '', parts: [] };
-  editingRepair: Repair = { idDevice: '', idClient: '', orderNumber: '', description: '', status: 'POR_RECIBIR', price: 0, quotedAmount: 0, quoteNotes: '', parts: [] };
+  draft: Repair = { idDevice: '', idClient: '', orderNumber: '', description: '', status: 'POR_RECIBIR', price: 0, quotedAmount: 0, quoteNotes: '', parts: [], observations: [] };
+  editingRepair: Repair = { idDevice: '', idClient: '', orderNumber: '', description: '', status: 'POR_RECIBIR', price: 0, quotedAmount: 0, quoteNotes: '', parts: [], observations: [] };
   detailRepair: Repair | null = null;
   draftClient: Client = { name: '', lastName: '', dni: '', email: '', phone: '' };
   statusEditingRepair: Repair | null = null;
@@ -162,7 +162,7 @@ export class RepairsPageComponent implements OnInit {
       next: () => {
         this.isSaving = false;
         this.messageService.add({ severity: 'success', summary: 'Reparación guardada', detail: 'Alta creada correctamente.' });
-      this.draft = { idDevice: '', idClient: '', orderNumber: '', description: '', status: 'POR_RECIBIR', price: 0, quotedAmount: 0, quoteNotes: '', parts: [] };
+      this.draft = { idDevice: '', idClient: '', orderNumber: '', description: '', status: 'POR_RECIBIR', price: 0, quotedAmount: 0, quoteNotes: '', parts: [], observations: [] };
         this.selectedClientName='';
         this.clientDevices=[];
         this.rebuildClientDeviceOptions();
@@ -224,6 +224,24 @@ export class RepairsPageComponent implements OnInit {
     this.editingRepair.parts = (this.editingRepair.parts || []).filter((_, i) => i !== index);
   }
 
+  addDraftObservationRow(): void {
+    this.draft.observations = this.draft.observations || [];
+    this.draft.observations.push({ note: '' });
+  }
+
+  removeDraftObservationRow(index: number): void {
+    this.draft.observations = (this.draft.observations || []).filter((_, i) => i !== index);
+  }
+
+  addObservationRow(): void {
+    this.editingRepair.observations = this.editingRepair.observations || [];
+    this.editingRepair.observations.push({ note: '' });
+  }
+
+  removeObservationRow(index: number): void {
+    this.editingRepair.observations = (this.editingRepair.observations || []).filter((_, i) => i !== index);
+  }
+
   statusLabel(status: Repair['status']): string {
     return this.statusOptions.find((s) => s.value === status)?.label || status;
   }
@@ -277,7 +295,8 @@ export class RepairsPageComponent implements OnInit {
         this.isUpdating = false;
         this.editingRepair = {
           ...detail,
-          parts: (detail.parts || []).map((part) => ({ ...part }))
+          parts: (detail.parts || []).map((part) => ({ ...part })),
+          observations: (detail.observations || []).map((observation) => ({ ...observation }))
         };
         this.editClientOptions = [...this.clientOptions];
         this.editDeviceOptions = [...this.deviceOptions];
@@ -304,7 +323,8 @@ export class RepairsPageComponent implements OnInit {
         this.isUpdating = false;
         this.detailRepair = {
           ...detail,
-          parts: (detail.parts || []).map((part) => ({ ...part }))
+          parts: (detail.parts || []).map((part) => ({ ...part })),
+          observations: (detail.observations || []).map((observation) => ({ ...observation }))
         };
         this.showDetailModal = true;
         this.changeDetector.detectChanges();

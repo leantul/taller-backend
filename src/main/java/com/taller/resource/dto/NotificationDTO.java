@@ -40,4 +40,8 @@ public class NotificationDTO {
     private BigDecimal price;
     private String quoteNotes;
     private List<RepairPartDTO> parts;
+    private String observationId;
+    private String observationNote;
+    private LocalDateTime observationObservedAt;
+    private LocalDateTime observationFollowUpAt;
 }

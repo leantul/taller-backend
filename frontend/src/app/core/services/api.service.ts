@@ -3,7 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { Client } from '../../shared/models/client.model';
 import { APP_CONFIG } from '../config/app-config';
-import { Device, DevicePasswordHistory } from '../../shared/models/device.model';
+import { Device, DeviceObservation, DevicePasswordHistory } from '../../shared/models/device.model';
 import { Repair, RepairCreateDTO, RepairUpdateDTO } from '../../shared/models/repair.model';
 import { FinanceSummary } from '../../shared/models/finance.model';
 import { DashboardOverview } from '../../shared/models/dashboard.model';
@@ -37,6 +37,18 @@ export class ApiService {
   }
   makeCurrentDevicePassword(deviceId: string, passwordId: string): Observable<Device> {
     return this.http.post<Device>(`${this.baseUrl}/device/${deviceId}/passwords/${passwordId}/make-current`, {});
+  }
+  addDeviceObservation(deviceId: string, payload: DeviceObservation): Observable<Device> {
+    return this.http.post<Device>(`${this.baseUrl}/device/${deviceId}/observations`, payload);
+  }
+  updateDeviceObservation(deviceId: string, observationId: string, payload: DeviceObservation): Observable<Device> {
+    return this.http.put<Device>(`${this.baseUrl}/device/${deviceId}/observations/${observationId}`, payload);
+  }
+  resolveDeviceObservation(deviceId: string, observationId: string): Observable<Device> {
+    return this.http.patch<Device>(`${this.baseUrl}/device/${deviceId}/observations/${observationId}/resolve`, {});
+  }
+  deleteDeviceObservation(deviceId: string, observationId: string): Observable<Device> {
+    return this.http.delete<Device>(`${this.baseUrl}/device/${deviceId}/observations/${observationId}`);
   }
 
   getRepairs(): Observable<Repair[]> { return this.http.get<Repair[]>(`${this.baseUrl}/repair`); }

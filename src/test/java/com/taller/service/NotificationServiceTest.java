@@ -1,13 +1,13 @@
 package com.taller.service;
 
 import com.taller.model.AppMetadata;
-import com.taller.model.Client;
-import com.taller.model.Device;
+import com.taller.model.DeviceObservation;
 import com.taller.model.Notification;
 import com.taller.model.Repair;
 import com.taller.model.enums.RepairStatusEnum;
 import com.taller.model.repository.AppMetadataRepository;
 import com.taller.model.repository.ClientRepository;
+import com.taller.model.repository.DeviceObservationRepository;
 import com.taller.model.repository.DeviceRepository;
 import com.taller.model.repository.NotificationRepository;
 import com.taller.model.repository.RepairPartRepository;
@@ -32,6 +32,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -51,6 +52,8 @@ class NotificationServiceTest {
     private DeviceRepository deviceRepository;
     @Mock
     private AppMetadataRepository appMetadataRepository;
+    @Mock
+    private DeviceObservationRepository deviceObservationRepository;
 
     private NotificationService notificationService;
 
@@ -62,13 +65,19 @@ class NotificationServiceTest {
                 repairPartRepository,
                 clientRepository,
                 deviceRepository,
-                appMetadataRepository
+                appMetadataRepository,
+                deviceObservationRepository
         );
 
-        when(repairPartRepository.findByRepairId(anyString())).thenReturn(List.of());
-        when(clientRepository.findAllById(anyList())).thenReturn(List.of());
-        when(deviceRepository.findAllById(anyList())).thenReturn(List.of());
-        when(notificationRepository.save(any(Notification.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        lenient().when(repairPartRepository.findByRepairIdIn(anyList())).thenReturn(List.of());
+        lenient().when(clientRepository.findBasicByIdIn(anyList())).thenReturn(List.of());
+        lenient().when(deviceRepository.findBasicByIdIn(anyList())).thenReturn(List.of());
+        lenient().when(deviceObservationRepository.findByResolvedAtIsNullAndFollowUpAtLessThanEqualOrderByFollowUpAtAsc(any(LocalDateTime.class))).thenReturn(List.of());
+        lenient().when(deviceObservationRepository.findByResolvedAtIsNullAndFollowUpAtBetweenOrderByFollowUpAtAsc(any(LocalDateTime.class), any(LocalDateTime.class))).thenReturn(List.of());
+        lenient().when(deviceObservationRepository.findAllById(any())).thenReturn(List.of());
+        lenient().when(notificationRepository.findByEntityIdInAndType(any(), anyString())).thenReturn(List.of());
+        lenient().when(notificationRepository.save(any(Notification.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        lenient().when(notificationRepository.saveAll(any())).thenAnswer(invocation -> invocation.getArgument(0));
     }
 
     @Test
@@ -81,8 +90,6 @@ class NotificationServiceTest {
         when(repairRepository.findByStatusAndReturnDateTimeIsNotNullOrderByReturnDateTimeDesc(RepairStatusEnum.RETIRADA))
                 .thenReturn(List.of(repair));
         when(notificationRepository.findByEntityIdAndTypeAndEventDate("device-1", "WARRANTY_6_MONTHS", today.atStartOfDay()))
-                .thenReturn(Optional.empty());
-        when(notificationRepository.findByEntityIdAndTypeAndEventDate("device-1", "WARRANTY_1_YEAR", today.plusYears(1).atStartOfDay()))
                 .thenReturn(Optional.empty());
         when(notificationRepository.findByReadedFalseOrderByEventDateDesc()).thenReturn(List.of());
 
@@ -114,12 +121,8 @@ class NotificationServiceTest {
                 .thenReturn(List.of(repair));
         when(notificationRepository.findByEntityIdAndTypeAndEventDate("device-2", "WARRANTY_6_MONTHS", dueDate.atStartOfDay()))
                 .thenReturn(Optional.empty());
-        when(notificationRepository.findByEntityIdAndTypeAndEventDate("device-2", "WARRANTY_1_YEAR", dueDate.plusYears(1).atStartOfDay()))
-                .thenReturn(Optional.empty());
         when(notificationRepository.findByReadedFalseOrderByEventDateDesc()).thenReturn(List.of(existingUnread));
-        when(repairRepository.findById("repair-2")).thenReturn(Optional.of(repair));
-        when(clientRepository.findAllById(anyList())).thenReturn(List.of(client("client-1")));
-        when(deviceRepository.findAllById(anyList())).thenReturn(List.of(device("device-2", "client-1")));
+        when(repairRepository.findAllById(any())).thenReturn(List.of(repair));
 
         List<NotificationDTO> notifications = notificationService.latest();
 
@@ -149,6 +152,34 @@ class NotificationServiceTest {
         verify(notificationRepository, never()).save(any(Notification.class));
     }
 
+    @Test
+    void latest_generatesObservationNotificationWhenThreeMonthFollowUpIsDue() {
+        LocalDate today = LocalDate.now();
+        DeviceObservation observation = new DeviceObservation();
+        observation.setId("observation-1");
+        observation.setDeviceId("device-1");
+        observation.setRepairId("repair-1");
+        observation.setNote("Batería para reemplazar");
+        observation.setObservedAt(today.minusMonths(3).atTime(10, 0));
+        observation.setFollowUpAt(today.atTime(10, 0));
+
+        when(appMetadataRepository.findById(anyString())).thenReturn(Optional.empty());
+        when(repairRepository.findByStatusAndReturnDateTimeIsNotNullOrderByReturnDateTimeDesc(RepairStatusEnum.RETIRADA))
+                .thenReturn(List.of());
+        when(deviceObservationRepository.findByResolvedAtIsNullAndFollowUpAtLessThanEqualOrderByFollowUpAtAsc(any(LocalDateTime.class)))
+                .thenReturn(List.of(observation));
+        when(notificationRepository.findByReadedFalseOrderByEventDateDesc()).thenReturn(List.of());
+
+        notificationService.latest();
+
+        ArgumentCaptor<Iterable> captor = ArgumentCaptor.forClass(Iterable.class);
+        verify(notificationRepository).saveAll(captor.capture());
+        Notification notification = (Notification) captor.getValue().iterator().next();
+        assertEquals("DEVICE_OBSERVATION_3_MONTHS", notification.getType());
+        assertEquals("observation-1", notification.getEntityId());
+        assertEquals("repair-1", notification.getRepairId());
+    }
+
     private Repair deliveredRepair(String repairId, String deviceId, LocalDateTime returnDateTime) {
         Repair repair = new Repair();
         repair.setId(repairId);
@@ -169,23 +200,4 @@ class NotificationServiceTest {
         return metadata;
     }
 
-    private Client client(String clientId) {
-        Client client = new Client();
-        client.setId(clientId);
-        client.setName("Ana");
-        client.setLastName("Gomez");
-        client.setPhone("3415551234");
-        client.setEmail("ana@test.com");
-        return client;
-    }
-
-    private Device device(String deviceId, String clientId) {
-        Device device = new Device();
-        device.setId(deviceId);
-        device.setClientId(clientId);
-        device.setBrand("Lenovo");
-        device.setModel("ThinkPad");
-        device.setSerialNumber("SN-1");
-        return device;
-    }
 }

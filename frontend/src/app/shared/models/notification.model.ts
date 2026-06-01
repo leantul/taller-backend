@@ -29,4 +29,8 @@ export interface NotificationItem {
   price?: number;
   quoteNotes?: string;
   parts?: RepairPart[];
+  observationId?: string;
+  observationNote?: string;
+  observationObservedAt?: string;
+  observationFollowUpAt?: string;
 }

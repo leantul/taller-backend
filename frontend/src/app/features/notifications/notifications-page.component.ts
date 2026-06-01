@@ -31,7 +31,7 @@ import { NotificationItem } from '../../shared/models/notification.model';
               </button>
               <div class="notification-card-head">
                 <div>
-                  <span class="notification-tag">{{ typeLabel(item.type) }}</span>
+                  <span class="notification-tag" [ngClass]="notificationTypeClass(item.type)">{{ typeLabel(item.type) }}</span>
                   <h2>{{ item.title }}</h2>
                 </div>
                 <time>{{ formatDate(item.eventDate) }}</time>
@@ -80,6 +80,12 @@ import { NotificationItem } from '../../shared/models/notification.model';
             <div class="detail-item"><label>Retiro</label><strong>{{ formatDateTime(selectedNotification.returnDateTime) }}</strong></div>
             <div class="detail-item"><label>Presupuesto</label><strong>{{ selectedNotification.quotedAmount || 0 | currency:'ARS':'symbol':'1.2-2':'es-AR' }}</strong></div>
             <div class="detail-item"><label>Monto final</label><strong>{{ selectedNotification.price || 0 | currency:'ARS':'symbol':'1.2-2':'es-AR' }}</strong></div>
+            @if (selectedNotification.observationNote) {
+              <div class="detail-item detail-wide detail-text-block">
+                <label>Observación</label>
+                <div class="detail-scrollable">{{ selectedNotification.observationNote }}</div>
+              </div>
+            }
             <div class="detail-item detail-wide detail-text-block">
               <label>Trabajo realizado</label>
               <div class="detail-scrollable">{{ selectedNotification.quoteNotes || selectedNotification.repairDescription || 'Sin detalle cargado' }}</div>
@@ -187,7 +193,17 @@ export class NotificationsPageComponent implements OnInit {
     switch (type) {
       case 'WARRANTY_6_MONTHS': return 'Garantía 6 meses';
       case 'WARRANTY_1_YEAR': return 'Seguimiento 1 año';
+      case 'DEVICE_OBSERVATION_3_MONTHS': return 'Observación 3 meses';
       default: return 'Aviso';
+    }
+  }
+
+  notificationTypeClass(type: string): string {
+    switch (type) {
+      case 'DEVICE_OBSERVATION_3_MONTHS': return 'is-observation';
+      case 'WARRANTY_6_MONTHS':
+      case 'WARRANTY_1_YEAR': return 'is-warranty';
+      default: return '';
     }
   }
 

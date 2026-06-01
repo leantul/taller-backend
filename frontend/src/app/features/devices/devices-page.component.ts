@@ -10,7 +10,7 @@ import { DialogModule } from 'primeng/dialog';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { ApiService } from '../../core/services/api.service';
-import { Device, DevicePasswordHistory } from '../../shared/models/device.model';
+import { Device, DeviceObservation, DevicePasswordHistory } from '../../shared/models/device.model';
 import { Client } from '../../shared/models/client.model';
 
 const ARGENTINA_TIME_ZONE = 'America/Argentina/Buenos_Aires';
@@ -83,7 +83,7 @@ const HISTORY_DATE_FORMATTER = new Intl.DateTimeFormat('es-AR', {
         </div>
         <div class="native-table-wrap">
           <table class="native-table">
-            <thead><tr><th>Tipo</th><th>Marca</th><th>Modelo</th><th>Serie</th><th>Cliente</th><th>Contraseña actual</th><th>Acciones</th></tr></thead>
+            <thead><tr><th>Tipo</th><th>Marca</th><th>Modelo</th><th>Serie</th><th>Cliente</th><th>Observaciones</th><th>Contraseña actual</th><th>Acciones</th></tr></thead>
             <tbody>
               @for (d of visibleDevices; track d.id || d.serialNumber) {
                 <tr>
@@ -92,6 +92,12 @@ const HISTORY_DATE_FORMATTER = new Intl.DateTimeFormat('es-AR', {
                   <td>{{ d.model }}</td>
                   <td>{{ d.serialNumber }}</td>
                   <td>{{ getClientName(d.clientId) }}</td>
+                  <td>
+                    <button class="observation-summary-button" type="button" (click)="openObservationManager(d)">
+                      <i class="pi pi-flag"></i>
+                      <span>{{ observationSummary(d) }}</span>
+                    </button>
+                  </td>
                   <td class="cell-actions">
                     <div class="inline-row">
                       <span>{{ formatPassword(d.currentPassword, isDevicePasswordVisible(d.id || d.serialNumber)) }}</span>
@@ -104,6 +110,7 @@ const HISTORY_DATE_FORMATTER = new Intl.DateTimeFormat('es-AR', {
                   </td>
                   <td>
                     <div class="action-buttons">
+                      <button class="icon-action" type="button" aria-label="Gestionar observaciones" (click)="openObservationManager(d)"><i class="pi pi-flag"></i></button>
                       <button class="icon-action" type="button" aria-label="Gestionar contraseñas" (click)="openPasswordManager(d)"><i class="pi pi-key"></i></button>
                       <button class="icon-action" type="button" aria-label="Editar dispositivo" (click)="openEdit(d)"><i class="pi pi-pencil"></i></button>
                       <button class="icon-action danger" type="button" aria-label="Eliminar dispositivo" (click)="confirmRemove(d)"><i class="pi pi-trash"></i></button>
@@ -111,7 +118,7 @@ const HISTORY_DATE_FORMATTER = new Intl.DateTimeFormat('es-AR', {
                   </td>
                 </tr>
               } @empty {
-                <tr><td class="empty-cell" colspan="7">No hay dispositivos para mostrar.</td></tr>
+                <tr><td class="empty-cell" colspan="8">No hay dispositivos para mostrar.</td></tr>
               }
             </tbody>
           </table>
@@ -222,6 +229,65 @@ const HISTORY_DATE_FORMATTER = new Intl.DateTimeFormat('es-AR', {
       }
     </p-dialog>
 
+    <p-dialog header="Observaciones del dispositivo" [(visible)]="observationVisible" [modal]="true" [style]="{width:'52rem'}">
+      @if (observationDevice) {
+        <div class="ops-summary-grid">
+          <div class="ops-item">
+            <span>Equipo</span>
+            <strong>{{ observationDevice.brand }} {{ observationDevice.model }}</strong>
+          </div>
+          <div class="ops-item">
+            <span>Pendientes</span>
+            <strong>{{ activeObservations(observationDevice).length }}</strong>
+          </div>
+        </div>
+
+        <div class="field" style="margin-top:1rem;">
+          <label>Agregar observación</label>
+          <div class="inline-row">
+            <input class="control" [(ngModel)]="newObservationNote" autocomplete="off" placeholder="Ej: batería para reemplazar" />
+            <button class="primary-button" type="button" (click)="addObservation()">Agregar</button>
+          </div>
+        </div>
+
+        <div class="native-table-wrap" style="margin-top:1rem;">
+          <table class="native-table">
+            <thead><tr><th>Observación</th><th>Observada</th><th>Seguimiento</th><th>Estado</th><th>Acciones</th></tr></thead>
+            <tbody>
+              @for (entry of observationDevice.observations || []; track entry.id || $index) {
+                <tr>
+                  <td>
+                    @if (editingObservationId === entry.id) {
+                      <input class="control" [(ngModel)]="editingObservationNote" autocomplete="off" />
+                    } @else {
+                      {{ entry.note }}
+                    }
+                  </td>
+                  <td>{{ formatHistoryDate(entry.observedAt) }}</td>
+                  <td>{{ formatHistoryDate(entry.followUpAt) }}</td>
+                  <td><span class="status-pill" [ngClass]="entry.resolvedAt ? 'is-success' : 'is-warning'">{{ entry.resolvedAt ? 'Resuelta' : 'Pendiente' }}</span></td>
+                  <td>
+                    <div class="action-buttons">
+                      @if (editingObservationId === entry.id) {
+                        <button class="icon-action" type="button" (click)="saveObservationEdit(entry)"><i class="pi pi-check"></i></button>
+                        <button class="icon-action danger" type="button" (click)="cancelObservationEdit()"><i class="pi pi-times"></i></button>
+                      } @else {
+                        <button class="icon-action" type="button" [disabled]="!!entry.resolvedAt" (click)="startObservationEdit(entry)"><i class="pi pi-pencil"></i></button>
+                        <button class="icon-action" type="button" [disabled]="!!entry.resolvedAt" (click)="resolveObservation(entry)"><i class="pi pi-check-circle"></i></button>
+                        <button class="icon-action danger" type="button" (click)="deleteObservation(entry)"><i class="pi pi-trash"></i></button>
+                      }
+                    </div>
+                  </td>
+                </tr>
+              } @empty {
+                <tr><td class="empty-cell" colspan="5">No hay observaciones cargadas para este dispositivo.</td></tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </p-dialog>
+
     <p-dialog header="Nuevo cliente" [(visible)]="showNewClientModal" [modal]="true" [style]="{width:'34rem'}">
       <div class="field"><label>Nombre</label><input pInputText [(ngModel)]="draftClient.name" autocomplete="off" /></div>
       <div class="field"><label>Apellido</label><input pInputText [(ngModel)]="draftClient.lastName" autocomplete="off" /></div>
@@ -241,6 +307,7 @@ export class DevicesPageComponent implements OnInit {
   draftClient: Client = { name: '', lastName: '', dni: '', email: '', phone: '' };
   editVisible = false;
   passwordVisible = false;
+  observationVisible = false;
   showNewClientModal = false;
   selectedClientTerm: string | { label: string; value: string } = '';
   selectedClientId: string | null = null;
@@ -252,9 +319,13 @@ export class DevicesPageComponent implements OnInit {
   showCurrentPassword = false;
   showNewPassword = false;
   passwordDevice: Device | null = null;
+  observationDevice: Device | null = null;
   newPasswordValue = '';
+  newObservationNote = '';
   editingPasswordId: string | null = null;
   editingPasswordValue = '';
+  editingObservationId: string | null = null;
+  editingObservationNote = '';
   visibleDevicePasswords = new Set<string>();
   visibleHistoryPasswords = new Set<string>();
   clientFilterSuggestions: { label: string; value: string }[] = [];
@@ -419,6 +490,62 @@ export class DevicesPageComponent implements OnInit {
     });
   }
 
+  openObservationManager(device: Device): void {
+    if (!device.id) return;
+    this.api.getDeviceById(device.id).subscribe((detail) => {
+      this.observationDevice = this.normalizeDevice(detail);
+      this.observationVisible = true;
+      this.newObservationNote = '';
+      this.editingObservationId = null;
+      this.editingObservationNote = '';
+      this.changeDetector.detectChanges();
+    });
+  }
+
+  addObservation(): void {
+    if (!this.observationDevice?.id || !this.newObservationNote.trim()) return;
+    this.api.addDeviceObservation(this.observationDevice.id, { note: this.newObservationNote.trim() }).subscribe((device) => {
+      this.applyObservationDevice(device);
+      this.newObservationNote = '';
+    });
+  }
+
+  startObservationEdit(entry: DeviceObservation): void {
+    this.editingObservationId = entry.id || null;
+    this.editingObservationNote = entry.note;
+  }
+
+  cancelObservationEdit(): void {
+    this.editingObservationId = null;
+    this.editingObservationNote = '';
+  }
+
+  saveObservationEdit(entry: DeviceObservation): void {
+    if (!this.observationDevice?.id || !entry.id || !this.editingObservationNote.trim()) return;
+    this.api.updateDeviceObservation(this.observationDevice.id, entry.id, { ...entry, note: this.editingObservationNote.trim() }).subscribe((device) => {
+      this.applyObservationDevice(device);
+      this.cancelObservationEdit();
+    });
+  }
+
+  resolveObservation(entry: DeviceObservation): void {
+    if (!this.observationDevice?.id || !entry.id) return;
+    this.api.resolveDeviceObservation(this.observationDevice.id, entry.id).subscribe((device) => this.applyObservationDevice(device));
+  }
+
+  deleteObservation(entry: DeviceObservation): void {
+    if (!this.observationDevice?.id || !entry.id) return;
+    this.confirmationService.confirm({
+      message: '¿Eliminar esta observación?',
+      header: 'Eliminar observación',
+      acceptLabel: 'Eliminar',
+      rejectLabel: 'Cancelar',
+      accept: () => {
+        this.api.deleteDeviceObservation(this.observationDevice!.id!, entry.id!).subscribe((device) => this.applyObservationDevice(device));
+      }
+    });
+  }
+
   confirmRemove(device: Device): void {
     this.confirmationService.confirm({
       message: `¿Eliminar dispositivo ${device.brand} ${device.model}?`,
@@ -443,7 +570,8 @@ export class DevicesPageComponent implements OnInit {
         const byClient = this.selectedClientId
           ? device.clientId === this.selectedClientId
           : (!clientTerm || (device.clientName || '').toLowerCase().includes(clientTerm));
-        const byTerm = !term || `${device.deviceType} ${device.brand} ${device.model} ${device.serialNumber} ${device.clientId} ${device.clientName} ${device.currentPassword || ''}`.toLowerCase().includes(term);
+        const observationText = (device.observations || []).map((observation) => observation.note).join(' ');
+        const byTerm = !term || `${device.deviceType} ${device.brand} ${device.model} ${device.serialNumber} ${device.clientId} ${device.clientName} ${device.currentPassword || ''} ${observationText}`.toLowerCase().includes(term);
         return byClient && byTerm;
       });
     this.currentPage = 1;
@@ -465,6 +593,17 @@ export class DevicesPageComponent implements OnInit {
 
     const parts = new Map(HISTORY_DATE_FORMATTER.formatToParts(date).map((part) => [part.type, part.value]));
     return `${parts.get('day')}/${parts.get('month')}/${parts.get('year')} ${parts.get('hour')}:${parts.get('minute')}`;
+  }
+
+  activeObservations(device: Device): DeviceObservation[] {
+    return (device.observations || []).filter((observation) => !observation.resolvedAt);
+  }
+
+  observationSummary(device: Device): string {
+    const observations = this.activeObservations(device);
+    if (!observations.length) return 'Sin pendientes';
+    const first = observations[0]?.note || 'Observación pendiente';
+    return observations.length === 1 ? first : `${observations.length} pendientes`;
   }
 
   isDevicePasswordVisible(key: string): boolean {
@@ -528,6 +667,9 @@ export class DevicesPageComponent implements OnInit {
     return {
       ...device,
       currentPassword: device.currentPassword || '',
+      observations: (device.observations || [])
+        .slice()
+        .sort((left, right) => this.historyTimestamp(right.observedAt) - this.historyTimestamp(left.observedAt)),
       passwordHistory: (device.passwordHistory || [])
         .slice()
         .sort((left, right) => this.historyTimestamp(right.createdAt) - this.historyTimestamp(left.createdAt))
@@ -563,6 +705,17 @@ export class DevicesPageComponent implements OnInit {
     this.syncDevice(normalized);
     if (this.editing.id && normalized.id === this.editing.id) {
       this.editing = { ...this.editing, currentPassword: normalized.currentPassword, passwordHistory: normalized.passwordHistory };
+    }
+    this.applyFilters();
+    this.changeDetector.detectChanges();
+  }
+
+  private applyObservationDevice(device: Device): void {
+    const normalized = this.normalizeDevice(device);
+    this.observationDevice = normalized;
+    this.syncDevice(normalized);
+    if (this.editing.id && normalized.id === this.editing.id) {
+      this.editing = { ...this.editing, observations: normalized.observations };
     }
     this.applyFilters();
     this.changeDetector.detectChanges();

@@ -31,6 +31,11 @@ public class NotificationController {
         return notificationService.save(dto);
     }
 
+    @GetMapping("/unread-count")
+    public long unreadCount() {
+        return notificationService.unreadCount();
+    }
+
     @PatchMapping("/{id}/read")
     public ResponseEntity<Void> markAsRead(@PathVariable String id) {
         notificationService.markAsRead(id);

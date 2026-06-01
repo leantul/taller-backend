@@ -19,4 +19,5 @@ public class DeviceDTO {
     private String aestheticCondition;
     private String clientId;
     private List<DevicePasswordHistoryDTO> passwordHistory;
+    private List<DeviceObservationDTO> observations;
 }

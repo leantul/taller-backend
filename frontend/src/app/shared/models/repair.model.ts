@@ -1,3 +1,5 @@
+import { DeviceObservation } from './device.model';
+
 export interface RepairPart {
   id?: string;
   repairId?: string;
@@ -22,6 +24,7 @@ export interface Repair {
   receiveDateTime?: string;
   returnDateTime?: string;
   parts?: RepairPart[];
+  observations?: DeviceObservation[];
 }
 
 

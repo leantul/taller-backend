@@ -1041,6 +1041,44 @@ textarea.p-inputtext {
   font-size: .84rem;
 }
 
+.observation-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .45rem;
+}
+
+.observation-chip,
+.observation-summary-button {
+  display: inline-flex;
+  align-items: center;
+  gap: .35rem;
+  min-height: 1.85rem;
+  max-width: 100%;
+  padding: 0 .6rem;
+  border: 1px solid color-mix(in srgb, var(--warning-500), transparent 66%);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--warning-500), transparent 90%);
+  color: var(--text);
+  font-size: .82rem;
+}
+
+.observation-chip.is-resolved {
+  border-color: color-mix(in srgb, var(--success-500), transparent 70%);
+  background: color-mix(in srgb, var(--success-500), transparent 92%);
+  color: var(--muted);
+}
+
+.observation-summary-button {
+  max-width: 12rem;
+  cursor: pointer;
+}
+
+.observation-summary-button span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .client-autocomplete,
 .client-autocomplete .p-autocomplete,
 .client-autocomplete .p-autocomplete-input,
@@ -1432,6 +1470,16 @@ textarea.p-inputtext {
   font-weight: 700;
   letter-spacing: .04em;
   text-transform: uppercase;
+}
+
+.notification-tag.is-warranty {
+  background: color-mix(in srgb, var(--info-500), transparent 86%);
+  color: var(--info-500);
+}
+
+.notification-tag.is-observation {
+  background: color-mix(in srgb, var(--warning-500), transparent 84%);
+  color: color-mix(in srgb, var(--warning-500), #000 18%);
 }
 
 .notification-meta {

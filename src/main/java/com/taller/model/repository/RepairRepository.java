@@ -1,6 +1,7 @@
 package com.taller.model.repository;
 
 import com.taller.model.Repair;
+import com.taller.model.enums.RepairStatusEnum;
 import com.taller.model.repository.projection.DeviceLastRepairView;
 import com.taller.model.repository.projection.MonthlyRevenueView;
 import com.taller.model.repository.projection.RepairListView;
@@ -153,6 +154,8 @@ public interface RepairRepository extends JpaRepository<Repair, String> {
     List<RepairListView> findFinanceRowsAll();
 
     List<Repair> findByReturnDateTimeBetween(LocalDateTime from, LocalDateTime to);
+
+    List<Repair> findByStatusAndReturnDateTimeIsNotNullOrderByReturnDateTimeDesc(RepairStatusEnum status);
 
     @Query("SELECT r FROM Repair r ORDER BY r.creationDateTime DESC")
     List<Repair> findLatest(Pageable pageable);

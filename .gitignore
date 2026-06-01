@@ -31,3 +31,9 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### Frontend generated ###
+frontend/.angular/
+frontend/out-tsc/
+frontend/dist/
+frontend/src/assets/version.json

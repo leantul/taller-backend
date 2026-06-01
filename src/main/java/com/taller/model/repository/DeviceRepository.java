@@ -45,6 +45,7 @@ public interface DeviceRepository extends JpaRepository<Device, String> {
             SELECT d.id AS id,
                    d.brand AS brand,
                    d.model AS model,
+                   d.serialNumber AS serialNumber,
                    d.deviceType AS deviceType,
                    d.clientId AS clientId
             FROM Device d
@@ -56,6 +57,7 @@ public interface DeviceRepository extends JpaRepository<Device, String> {
             SELECT d.id AS id,
                    d.brand AS brand,
                    d.model AS model,
+                   d.serialNumber AS serialNumber,
                    d.deviceType AS deviceType,
                    d.clientId AS clientId
             FROM Device d

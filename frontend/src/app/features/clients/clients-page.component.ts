@@ -124,6 +124,7 @@ export class ClientsPageComponent implements OnInit {
   pageSize = 10;
   repairsVisible = false;
   clientRepairs: Repair[] = [];
+  selectedRepairsClient: Client | null = null;
   selectedRepair: Repair | null = null;
 
   constructor(private readonly api: ApiService, private readonly messageService: MessageService, private readonly confirmationService: ConfirmationService, private readonly router: Router, private readonly changeDetector: ChangeDetectorRef) {}
@@ -148,6 +149,7 @@ export class ClientsPageComponent implements OnInit {
 
   openRepairs(client: Client): void {
     this.api.getRepairs().subscribe((repairs) => {
+      this.selectedRepairsClient = client;
       this.clientRepairs = repairs
         .filter((repair) => repair.idClient === client.id)
         .sort((a, b) => new Date(b.receiveDateTime || 0).getTime() - new Date(a.receiveDateTime || 0).getTime());
@@ -160,7 +162,9 @@ export class ClientsPageComponent implements OnInit {
   goToRepair(repair: Repair): void {
     this.selectedRepair = repair;
     this.repairsVisible = false;
-    const term = repair.orderNumber || repair.id || '';
+    const term = this.selectedRepairsClient
+      ? `${this.selectedRepairsClient.name || ''} ${this.selectedRepairsClient.lastName || ''}`.trim()
+      : '';
     this.router.navigate(['/reparaciones'], { queryParams: term ? { q: term } : undefined });
   }
   confirmDelete(client: Client): void {

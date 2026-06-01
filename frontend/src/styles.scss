@@ -877,6 +877,11 @@ textarea.p-inputtext {
   padding-left: 2.35rem !important;
 }
 
+.table-toolbar .filter-search input,
+.repairs-filters .filter-search input {
+  padding-left: 2.35rem !important;
+}
+
 .repairs-filters {
   display: flex;
   flex-wrap: wrap;

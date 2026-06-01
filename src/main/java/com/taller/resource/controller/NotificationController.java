@@ -2,6 +2,7 @@ package com.taller.resource.controller;
 
 import com.taller.resource.dto.NotificationDTO;
 import com.taller.service.NotificationService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -10,6 +11,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/notifications")
+@RequiredArgsConstructor
 public class NotificationController {
 
     private final NotificationService notificationService;
@@ -33,9 +35,5 @@ public class NotificationController {
     public ResponseEntity<Void> markAsRead(@PathVariable String id) {
         notificationService.markAsRead(id);
         return new ResponseEntity<>(HttpStatus.OK);
-    }
-
-    public NotificationController(NotificationService notificationService) {
-        this.notificationService = notificationService;
     }
 }

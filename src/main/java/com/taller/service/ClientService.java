@@ -3,11 +3,13 @@ package com.taller.service;
 import com.taller.model.Client;
 import com.taller.model.repository.ClientRepository;
 import com.taller.resource.dto.ClientDTO;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 
 @Service
+@RequiredArgsConstructor
 public class ClientService {
 
     private final ClientRepository clientRepository;
@@ -62,9 +64,5 @@ public class ClientService {
         dto.setPhones(client.getPhones());
         dto.setEmails(client.getEmails());
         return dto;
-    }
-
-    public ClientService(ClientRepository clientRepository) {
-        this.clientRepository = clientRepository;
     }
 }

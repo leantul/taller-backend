@@ -4,10 +4,14 @@ import jakarta.persistence.Id;
 import jakarta.persistence.MappedSuperclass;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
 
+@Getter
+@Setter
 @MappedSuperclass
 public class BasicEntity {
     @Id
@@ -39,29 +43,5 @@ public class BasicEntity {
     @PreUpdate
     private void onUpdate() {
         this.modificationDatetime = LocalDateTime.now();
-    }
-
-    public String getId() {
-        return this.id;
-    }
-
-    public LocalDateTime getCreationDateTime() {
-        return this.creationDateTime;
-    }
-
-    public LocalDateTime getModificationDatetime() {
-        return this.modificationDatetime;
-    }
-
-    public void setId(String id) {
-        this.id = id;
-    }
-
-    public void setCreationDateTime(LocalDateTime creationDateTime) {
-        this.creationDateTime = creationDateTime;
-    }
-
-    public void setModificationDatetime(LocalDateTime modificationDatetime) {
-        this.modificationDatetime = modificationDatetime;
     }
 }

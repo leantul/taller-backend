@@ -8,6 +8,7 @@ import com.taller.model.repository.projection.RepairListView;
 import com.taller.resource.dto.DashboardSeriesItemDTO;
 import com.taller.resource.dto.FinanceRowDTO;
 import com.taller.resource.dto.FinanceSummaryDTO;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -21,6 +22,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
+@RequiredArgsConstructor
 public class FinanceService {
 
     private final RepairRepository repairRepository;
@@ -168,10 +170,5 @@ public class FinanceService {
     private String formatMonth(YearMonth month) {
         String name = month.getMonth().name().substring(0, 1) + month.getMonth().name().substring(1).toLowerCase();
         return name + " " + month.getYear();
-    }
-
-    public FinanceService(RepairRepository repairRepository, RepairPartRepository repairPartRepository) {
-        this.repairRepository = repairRepository;
-        this.repairPartRepository = repairPartRepository;
     }
 }

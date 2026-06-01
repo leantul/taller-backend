@@ -5,6 +5,7 @@ import com.taller.resource.dto.auth.ChangePasswordRequestDTO;
 import com.taller.resource.dto.auth.LoginRequestDTO;
 import com.taller.resource.dto.auth.LoginResponseDTO;
 import com.taller.security.JwtService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -13,6 +14,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 @Service
+@RequiredArgsConstructor
 public class AuthService {
 
     private final AuthenticationManager authenticationManager;
@@ -45,12 +47,5 @@ public class AuthService {
 
         user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
         appUserRepository.save(user);
-    }
-
-    public AuthService(AuthenticationManager authenticationManager, AppUserRepository appUserRepository, JwtService jwtService, PasswordEncoder passwordEncoder) {
-        this.authenticationManager = authenticationManager;
-        this.appUserRepository = appUserRepository;
-        this.jwtService = jwtService;
-        this.passwordEncoder = passwordEncoder;
     }
 }

@@ -44,7 +44,7 @@ public class DevicePasswordHistory extends BasicEntity {
         return this.passwordValue;
     }
 
-    public Boolean getisCurrent() {
+    public Boolean getIsCurrent() {
         return this.isCurrent;
     }
 
@@ -60,7 +60,7 @@ public class DevicePasswordHistory extends BasicEntity {
         this.passwordValue = passwordValue;
     }
 
-    public void setisCurrent(Boolean isCurrent) {
+    public void setIsCurrent(Boolean isCurrent) {
         this.isCurrent = isCurrent;
     }
 

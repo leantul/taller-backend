@@ -18,7 +18,7 @@ public class DevicePasswordHistoryDTO {
         return this.value;
     }
 
-    public Boolean getisCurrent() {
+    public Boolean getIsCurrent() {
         return this.isCurrent;
     }
 
@@ -38,7 +38,7 @@ public class DevicePasswordHistoryDTO {
         this.value = value;
     }
 
-    public void setisCurrent(Boolean isCurrent) {
+    public void setIsCurrent(Boolean isCurrent) {
         this.isCurrent = isCurrent;
     }
 

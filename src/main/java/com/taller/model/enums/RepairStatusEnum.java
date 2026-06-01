@@ -2,9 +2,7 @@ package com.taller.model.enums;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
-import lombok.Getter;
 
-@Getter
 public enum RepairStatusEnum {
     POR_RECIBIR(1, "Por recibir"),
     RECIBIDA(2, "Recibida"),
@@ -60,5 +58,9 @@ public enum RepairStatusEnum {
 
     public String getLabel() {
         return status;
+    }
+
+    public int getCode() {
+        return this.code;
     }
 }

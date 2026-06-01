@@ -17,7 +17,6 @@ import com.taller.model.repository.projection.ClientBasicView;
 import com.taller.model.repository.projection.DeviceBasicView;
 import com.taller.resource.dto.NotificationDTO;
 import com.taller.resource.dto.RepairPartDTO;
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -32,7 +31,6 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
-@RequiredArgsConstructor
 public class NotificationService {
 
     private static final String TYPE_WARRANTY_6_MONTHS = "WARRANTY_6_MONTHS";
@@ -463,5 +461,15 @@ public class NotificationService {
         dto.setCost(part.getCost());
         dto.setSalePrice(part.getSalePrice());
         return dto;
+    }
+
+    public NotificationService(NotificationRepository notificationRepository, RepairRepository repairRepository, RepairPartRepository repairPartRepository, ClientRepository clientRepository, DeviceRepository deviceRepository, AppMetadataRepository appMetadataRepository, DeviceObservationRepository deviceObservationRepository) {
+        this.notificationRepository = notificationRepository;
+        this.repairRepository = repairRepository;
+        this.repairPartRepository = repairPartRepository;
+        this.clientRepository = clientRepository;
+        this.deviceRepository = deviceRepository;
+        this.appMetadataRepository = appMetadataRepository;
+        this.deviceObservationRepository = deviceObservationRepository;
     }
 }

@@ -2,7 +2,6 @@ package com.taller.resource.controller;
 
 import com.taller.resource.dto.RepairDTO;
 import com.taller.service.RepairService;
-import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -11,7 +10,6 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/repair")
-@RequiredArgsConstructor
 public class RepairController {
 
     private final RepairService repairService;
@@ -45,5 +43,9 @@ public class RepairController {
     public ResponseEntity<Void> deleteRepair(@PathVariable String id) {
         repairService.delete(id);
         return new ResponseEntity<>(HttpStatus.OK);
+    }
+
+    public RepairController(RepairService repairService) {
+        this.repairService = repairService;
     }
 }

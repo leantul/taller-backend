@@ -4,14 +4,12 @@ import com.taller.resource.dto.auth.ChangePasswordRequestDTO;
 import com.taller.resource.dto.auth.LoginRequestDTO;
 import com.taller.resource.dto.auth.LoginResponseDTO;
 import com.taller.service.auth.AuthService;
-import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/auth")
-@RequiredArgsConstructor
 public class AuthController {
 
     private final AuthService authService;
@@ -25,5 +23,9 @@ public class AuthController {
     public ResponseEntity<Void> changePassword(@RequestBody ChangePasswordRequestDTO request) {
         authService.changePassword(request);
         return new ResponseEntity<>(HttpStatus.OK);
+    }
+
+    public AuthController(AuthService authService) {
+        this.authService = authService;
     }
 }

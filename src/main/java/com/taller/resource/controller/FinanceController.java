@@ -2,7 +2,6 @@ package com.taller.resource.controller;
 
 import com.taller.resource.dto.FinanceSummaryDTO;
 import com.taller.service.FinanceService;
-import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -13,7 +12,6 @@ import java.time.LocalDate;
 
 @RestController
 @RequestMapping("/finance")
-@RequiredArgsConstructor
 public class FinanceController {
 
     private final FinanceService financeService;
@@ -24,5 +22,9 @@ public class FinanceController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to
     ) {
         return financeService.getSummary(from, to);
+    }
+
+    public FinanceController(FinanceService financeService) {
+        this.financeService = financeService;
     }
 }

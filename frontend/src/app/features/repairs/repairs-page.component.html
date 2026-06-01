@@ -39,6 +39,18 @@
         </div>
       }
       <div class="field"><label>Falla reportada</label><textarea class="p-inputtext" rows="5" [(ngModel)]="draft.description" name="description" required></textarea></div>
+      <div class="field">
+        <div class="inline-row" style="justify-content:space-between;align-items:center;">
+          <label>Observaciones del dispositivo</label>
+          <button pButton type="button" icon="pi pi-plus" class="p-button-sm" label="Agregar" (click)="addDraftObservationRow()"></button>
+        </div>
+        @for (observation of draft.observations || []; track $index) {
+          <div class="inline-row" style="gap:.5rem; margin-bottom:.5rem;">
+            <input pInputText [(ngModel)]="observation.note" [ngModelOptions]="{standalone:true}" placeholder="Ej: batería dañada, carcasa quebrada" />
+            <button pButton type="button" icon="pi pi-trash" class="p-button-danger p-button-text" (click)="removeDraftObservationRow($index)"></button>
+          </div>
+        }
+      </div>
       <div class="field"><label>Estado</label><p-select [options]="statusOptions" optionLabel="label" optionValue="value" [(ngModel)]="draft.status" name="status"></p-select></div>
       <div class="field"><label>Presupuesto enviado</label><p-inputNumber [(ngModel)]="draft.quotedAmount" name="quotedAmount" mode="currency" currency="ARS" locale="es-AR" [min]="0"></p-inputNumber></div>
       <div class="field"><label>Detalle del presupuesto</label><textarea class="p-inputtext" rows="5" [(ngModel)]="draft.quoteNotes" name="quoteNotes" placeholder="Detalle completo del trabajo"></textarea></div>
@@ -63,31 +75,38 @@
             <th>Dispositivo</th>
             <th>Estado</th>
             <th>Presupuesto</th>
-            <th>Monto</th>
             <th>Acción</th>
           </tr>
         </thead>
         <tbody>
           <ng-container *ngIf="visibleRepairRows.length; else emptyRepairRows">
-            <tr *ngFor="let row of visibleRepairRows; trackBy: repairTrackBy">
+            <tr *ngFor="let row of visibleRepairRows; trackBy: repairTrackBy" class="clickable-row" (click)="openDetailModal(row.repair)">
               <td><span class="order-chip">{{ row.orderLabel }}</span></td>
               <td>{{ row.clientLabel }}</td>
               <td>{{ row.deviceLabel }}</td>
               <td><span class="status-pill" [ngClass]="row.statusClass">{{ row.statusLabel }}</span></td>
               <td>{{ row.quotedAmountLabel }}</td>
-              <td>{{ row.priceLabel }}</td>
-              <td>
+              <td class="cell-actions">
                 <div class="action-buttons">
-                  <button class="icon-action" type="button" aria-label="Cambiar estado" (click)="openStatusModal(row.repair)"><i class="pi pi-sync"></i></button>
-                  <button class="icon-action" type="button" aria-label="Editar reparación" (click)="openEditModal(row.repair)"><i class="pi pi-pencil"></i></button>
-                  <button class="icon-action danger" type="button" aria-label="Eliminar reparación" [disabled]="isDeleting" (click)="confirmDeleteRepair(row.repair)"><i class="pi pi-trash"></i></button>
+                  <button
+                    class="icon-action whatsapp-action"
+                    type="button"
+                    [class.is-disabled]="!row.clientPhone"
+                    [disabled]="!row.clientPhone"
+                    [attr.aria-label]="row.clientPhone ? 'Enviar WhatsApp' : 'Cliente sin teléfono'"
+                    (click)="openWhatsApp($event, row.clientPhone)">
+                    <i class="pi pi-whatsapp"></i>
+                  </button>
+                  <button class="icon-action" type="button" aria-label="Cambiar estado" (click)="onRowActionClick($event); openStatusModal(row.repair)"><i class="pi pi-sync"></i></button>
+                  <button class="icon-action" type="button" aria-label="Editar reparación" (click)="onRowActionClick($event); openEditModal(row.repair)"><i class="pi pi-pencil"></i></button>
+                  <button class="icon-action danger" type="button" aria-label="Eliminar reparación" [disabled]="isDeleting" (click)="onRowActionClick($event); confirmDeleteRepair(row.repair)"><i class="pi pi-trash"></i></button>
                 </div>
               </td>
             </tr>
           </ng-container>
           <ng-template #emptyRepairRows>
             <tr>
-              <td class="empty-cell" colspan="7">No hay reparaciones para los filtros aplicados.</td>
+              <td class="empty-cell" colspan="6">No hay reparaciones para los filtros aplicados.</td>
             </tr>
           </ng-template>
         </tbody>
@@ -116,6 +135,72 @@
       </select>
     </div>
     <button pButton type="button" label="Guardar" icon="pi pi-check" [disabled]="isUpdating" [loading]="isUpdating" (click)="saveStatus()"></button>
+  }
+</p-dialog>
+
+<p-dialog
+  header="Detalle de reparación"
+  [(visible)]="showDetailModal"
+  [modal]="true"
+  [style]="{width:'70rem', maxWidth:'95vw'}"
+  [contentStyle]="{overflow:'hidden', padding:'0.35rem'}">
+  @if (detailRepair) {
+    <div class="detail-dialog-body">
+      <div class="detail-grid repair-detail-grid">
+        <div class="detail-item"><label>Orden</label><strong>#{{ detailRepair.orderNumber || '-' }}</strong></div>
+        <div class="detail-item"><label>Estado</label><span class="status-pill" [ngClass]="statusClass(detailRepair.status)">{{ statusLabel(detailRepair.status) }}</span></div>
+        <div class="detail-item"><label>Cliente</label><strong>{{ clientLabel(detailRepair) }}</strong></div>
+        <div class="detail-item"><label>Dispositivo</label><strong>{{ deviceLabel(detailRepair) }}</strong></div>
+        <div class="detail-item"><label>Ingreso</label><strong>{{ formatDateTime(detailRepair.receiveDateTime) }}</strong></div>
+        <div class="detail-item"><label>Retiro</label><strong>{{ formatDateTime(detailRepair.returnDateTime) }}</strong></div>
+        <div class="detail-item"><label>Presupuesto</label><strong>{{ detailRepair.quotedAmount || 0 | currency:'ARS':'symbol':'1.2-2':'es-AR' }}</strong></div>
+        <div class="detail-item"><label>Mano de obra</label><strong>{{ detailRepair.laborAmount || 0 | currency:'ARS':'symbol':'1.2-2':'es-AR' }}</strong></div>
+        <div class="detail-item detail-wide"><label>Monto final</label><strong>{{ detailRepair.price || 0 | currency:'ARS':'symbol':'1.2-2':'es-AR' }}</strong></div>
+        <div class="detail-item detail-wide detail-text-block">
+          <label>Falla reportada</label>
+          <div class="detail-scrollable">{{ detailRepair.description || 'Sin descripción' }}</div>
+        </div>
+        <div class="detail-item detail-wide detail-text-block">
+          <label>Detalle del presupuesto</label>
+          <div class="detail-scrollable">{{ detailRepair.quoteNotes || 'Sin detalle cargado' }}</div>
+        </div>
+        <div class="detail-item detail-wide">
+          <label>Observaciones del dispositivo</label>
+          @if (detailRepair.observations?.length) {
+            <div class="observation-list">
+              @for (observation of detailRepair.observations || []; track observation.id || $index) {
+                <span class="observation-chip" [class.is-resolved]="observation.resolvedAt">{{ observation.note }}</span>
+              }
+            </div>
+          } @else {
+            <strong>Sin observaciones cargadas</strong>
+          }
+        </div>
+        <div class="detail-item detail-wide">
+          <label>Repuestos cambiados</label>
+          @if (detailRepair.parts?.length) {
+            <div class="native-table-wrap compact-table-wrap">
+              <table class="native-table compact-native-table">
+                <thead><tr><th>Repuesto</th><th>Cant.</th><th>Proveedor</th><th>Costo</th><th>Venta</th></tr></thead>
+                <tbody>
+                  @for (part of detailRepair.parts || []; track part.id || $index) {
+                    <tr>
+                      <td>{{ part.name }}</td>
+                      <td>{{ part.quantity }}</td>
+                      <td>{{ part.provider || '-' }}</td>
+                      <td>{{ part.cost | currency:'ARS':'symbol':'1.2-2':'es-AR' }}</td>
+                      <td>{{ part.salePrice | currency:'ARS':'symbol':'1.2-2':'es-AR' }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          } @else {
+            <strong>Sin repuestos cargados</strong>
+          }
+        </div>
+      </div>
+    </div>
   }
 </p-dialog>
 
@@ -152,6 +237,18 @@
   </div>
   <div class="field"><label>Falla reportada</label><textarea class="p-inputtext" rows="4" [(ngModel)]="editingRepair.description"></textarea></div>
   <div class="field">
+    <div class="inline-row" style="justify-content:space-between;align-items:center;">
+      <label>Observaciones del dispositivo</label>
+      <button pButton type="button" icon="pi pi-plus" class="p-button-sm" label="Agregar" (click)="addObservationRow()"></button>
+    </div>
+    @for (observation of editingRepair.observations || []; track observation.id || $index) {
+      <div class="inline-row" style="gap:.5rem; margin-bottom:.5rem;">
+        <input pInputText [(ngModel)]="observation.note" [ngModelOptions]="{standalone:true}" placeholder="Observación" />
+        <button pButton type="button" icon="pi pi-trash" class="p-button-danger p-button-text" (click)="removeObservationRow($index)"></button>
+      </div>
+    }
+  </div>
+  <div class="field">
     <label>Estado</label>
     <select class="control" [(ngModel)]="editingRepair.status" (ngModelChange)="onEditStatusChange()">
       @for (option of statusOptions; track option.value) {
@@ -162,10 +259,10 @@
   @if (editingRepair.status === 'RETIRADA') {
     <div class="field"><label>Fecha y hora de retiro</label><input class="control" type="datetime-local" [(ngModel)]="editReturnDateTimeLocal" /></div>
   }
-  <div class="field"><label>Presupuesto enviado</label><input class="control" type="number" min="0" step="0.01" [(ngModel)]="editingRepair.quotedAmount" /></div>
+  <div class="field"><label>Presupuesto enviado</label><p-inputNumber [(ngModel)]="editingRepair.quotedAmount" mode="currency" currency="ARS" locale="es-AR" [min]="0"></p-inputNumber></div>
   <div class="field"><label>Detalle del presupuesto</label><textarea class="p-inputtext" rows="4" [(ngModel)]="editingRepair.quoteNotes"></textarea></div>
-  <div class="field"><label>Mano de obra</label><input class="control" type="number" min="0" step="0.01" [(ngModel)]="editingRepair.laborAmount" /></div>
-  <div class="field"><label>Monto final</label><input class="control" type="number" min="0" step="0.01" [(ngModel)]="editingRepair.price" /></div>
+  <div class="field"><label>Mano de obra</label><p-inputNumber [(ngModel)]="editingRepair.laborAmount" mode="currency" currency="ARS" locale="es-AR" [min]="0"></p-inputNumber></div>
+  <div class="field"><label>Monto final</label><p-inputNumber [(ngModel)]="editingRepair.price" mode="currency" currency="ARS" locale="es-AR" [min]="0"></p-inputNumber></div>
   <div class="field">
     <div class="inline-row" style="justify-content:space-between;align-items:center;">
       <label>Repuestos cambiados</label>
@@ -175,8 +272,8 @@
       <div class="inline-row" style="gap:.5rem; margin-bottom:.5rem;">
         <input pInputText [(ngModel)]="part.name" [ngModelOptions]="{standalone:true}" placeholder="Repuesto" />
         <input class="control" type="number" min="1" step="1" [(ngModel)]="part.quantity" [ngModelOptions]="{standalone:true}" placeholder="Cant." />
-        <input class="control" type="number" min="0" step="0.01" [(ngModel)]="part.cost" [ngModelOptions]="{standalone:true}" placeholder="Costo" />
-        <input class="control" type="number" min="0" step="0.01" [(ngModel)]="part.salePrice" [ngModelOptions]="{standalone:true}" placeholder="Venta" />
+        <p-inputNumber [(ngModel)]="part.cost" [ngModelOptions]="{standalone:true}" mode="currency" currency="ARS" locale="es-AR" [min]="0" placeholder="Costo"></p-inputNumber>
+        <p-inputNumber [(ngModel)]="part.salePrice" [ngModelOptions]="{standalone:true}" mode="currency" currency="ARS" locale="es-AR" [min]="0" placeholder="Venta"></p-inputNumber>
         <button pButton type="button" icon="pi pi-trash" class="p-button-danger p-button-text" (click)="removePartRow($index)"></button>
       </div>
     }
@@ -186,7 +283,7 @@
 }
 
 <p-dialog header="Seleccionar cliente" [(visible)]="showClientModal" [modal]="true" [style]="{width:'60rem'}">
-  <div class="field"><label>Buscar cliente</label><input pInputText [(ngModel)]="clientSearch" (ngModelChange)="updateFilteredClients()" placeholder="Nombre, apellido, teléfono o email" /></div>
+  <div class="field"><label>Buscar cliente</label><input pInputText [(ngModel)]="clientSearch" (ngModelChange)="updateFilteredClients()" autocomplete="off" placeholder="Nombre, apellido, teléfono o email" /></div>
   <div class="native-table-wrap">
     <table class="native-table">
       <thead><tr><th>Nombre</th><th>Apellido</th><th>Teléfono</th><th>Email</th><th></th></tr></thead>
@@ -209,13 +306,13 @@
 
 <p-dialog header="Nuevo dispositivo" [(visible)]="showDeviceModal" [modal]="true" [style]="{width:'36rem'}">
   <div class="field"><label>Tipo</label><p-select [options]="typeOptions" optionLabel="label" optionValue="value" [(ngModel)]="draftDevice.deviceType"></p-select></div>
-  <div class="field"><label>Marca</label><input pInputText [(ngModel)]="draftDevice.brand"/></div>
-  <div class="field"><label>Modelo</label><input pInputText [(ngModel)]="draftDevice.model"/></div>
-  <div class="field"><label>Serie</label><input pInputText [(ngModel)]="draftDevice.serialNumber"/></div>
+  <div class="field"><label>Marca</label><input pInputText [(ngModel)]="draftDevice.brand" autocomplete="off"/></div>
+  <div class="field"><label>Modelo</label><input pInputText [(ngModel)]="draftDevice.model" autocomplete="off"/></div>
+  <div class="field"><label>Serie</label><input pInputText [(ngModel)]="draftDevice.serialNumber" autocomplete="off"/></div>
   <div class="field">
     <label>Contraseña inicial</label>
     <div class="inline-row">
-      <input class="control" [type]="showDraftDevicePassword ? 'text' : 'password'" [(ngModel)]="draftDevice.currentPassword" />
+      <input class="control" [type]="showDraftDevicePassword ? 'text' : 'password'" [(ngModel)]="draftDevice.currentPassword" autocomplete="new-password" />
       <button class="icon-button" type="button" (click)="showDraftDevicePassword = !showDraftDevicePassword">
         <i [class]="showDraftDevicePassword ? 'pi pi-eye-slash' : 'pi pi-eye'"></i>
       </button>

@@ -31,4 +31,5 @@ public class RepairDTO {
     private LocalDateTime readyNotifiedAt;
     private List<RepairPartDTO> parts;
     private List<RepairPaymentDTO> payments;
+    private List<DeviceObservationDTO> observations;
 }

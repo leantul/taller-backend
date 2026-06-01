@@ -27,7 +27,7 @@ type RepairTableRow = {
   statusLabel: string;
   statusClass: string;
   quotedAmountLabel: string;
-  priceLabel: string;
+  clientPhone: string;
 };
 
 @Component({
@@ -73,12 +73,14 @@ export class RepairsPageComponent implements OnInit {
   showDeviceModal = false;
   showStatusModal = false;
   showEditModal = false;
+  showDetailModal = false;
   showNewClientModal = false;
   clientSearch = '';
   selectedClientName = '';
   clientSuggestions: { label: string; value: string }[] = [];
-  draft: Repair = { idDevice: '', idClient: '', orderNumber: '', description: '', status: 'POR_RECIBIR', price: 0, quotedAmount: 0, quoteNotes: '', parts: [] };
-  editingRepair: Repair = { idDevice: '', idClient: '', orderNumber: '', description: '', status: 'POR_RECIBIR', price: 0, quotedAmount: 0, quoteNotes: '', parts: [] };
+  draft: Repair = { idDevice: '', idClient: '', orderNumber: '', description: '', status: 'POR_RECIBIR', price: 0, quotedAmount: 0, quoteNotes: '', parts: [], observations: [] };
+  editingRepair: Repair = { idDevice: '', idClient: '', orderNumber: '', description: '', status: 'POR_RECIBIR', price: 0, quotedAmount: 0, quoteNotes: '', parts: [], observations: [] };
+  detailRepair: Repair | null = null;
   draftClient: Client = { name: '', lastName: '', dni: '', email: '', phone: '' };
   statusEditingRepair: Repair | null = null;
   searchTerm = '';
@@ -160,7 +162,7 @@ export class RepairsPageComponent implements OnInit {
       next: () => {
         this.isSaving = false;
         this.messageService.add({ severity: 'success', summary: 'Reparación guardada', detail: 'Alta creada correctamente.' });
-      this.draft = { idDevice: '', idClient: '', orderNumber: '', description: '', status: 'POR_RECIBIR', price: 0, quotedAmount: 0, quoteNotes: '', parts: [] };
+      this.draft = { idDevice: '', idClient: '', orderNumber: '', description: '', status: 'POR_RECIBIR', price: 0, quotedAmount: 0, quoteNotes: '', parts: [], observations: [] };
         this.selectedClientName='';
         this.clientDevices=[];
         this.rebuildClientDeviceOptions();
@@ -222,9 +224,52 @@ export class RepairsPageComponent implements OnInit {
     this.editingRepair.parts = (this.editingRepair.parts || []).filter((_, i) => i !== index);
   }
 
+  addDraftObservationRow(): void {
+    this.draft.observations = this.draft.observations || [];
+    this.draft.observations.push({ note: '' });
+  }
+
+  removeDraftObservationRow(index: number): void {
+    this.draft.observations = (this.draft.observations || []).filter((_, i) => i !== index);
+  }
+
+  addObservationRow(): void {
+    this.editingRepair.observations = this.editingRepair.observations || [];
+    this.editingRepair.observations.push({ note: '' });
+  }
+
+  removeObservationRow(index: number): void {
+    this.editingRepair.observations = (this.editingRepair.observations || []).filter((_, i) => i !== index);
+  }
+
   statusLabel(status: Repair['status']): string {
     return this.statusOptions.find((s) => s.value === status)?.label || status;
   }
+
+  formatDateTime(value?: string): string {
+    if (!value) return '-';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '-';
+    return new Intl.DateTimeFormat('es-AR', {
+      dateStyle: 'short',
+      timeStyle: 'short'
+    }).format(date);
+  }
+
+  onRowActionClick(event: Event): void {
+    event.stopPropagation();
+  }
+
+  openWhatsApp(event: Event, phone: string): void {
+    event.stopPropagation();
+    event.preventDefault();
+    const url = this.whatsAppLink(phone);
+    if (!url) {
+      return;
+    }
+    window.open(url, '_blank', 'noopener');
+  }
+
   openStatusModal(repair: Repair): void {
     this.statusEditingRepair = { ...repair };
     this.showStatusModal = true;
@@ -250,7 +295,8 @@ export class RepairsPageComponent implements OnInit {
         this.isUpdating = false;
         this.editingRepair = {
           ...detail,
-          parts: (detail.parts || []).map((part) => ({ ...part }))
+          parts: (detail.parts || []).map((part) => ({ ...part })),
+          observations: (detail.observations || []).map((observation) => ({ ...observation }))
         };
         this.editClientOptions = [...this.clientOptions];
         this.editDeviceOptions = [...this.deviceOptions];
@@ -261,6 +307,27 @@ export class RepairsPageComponent implements OnInit {
           this.showEditModal = true;
           this.changeDetector.detectChanges();
         });
+      },
+      error: (error) => {
+        this.isUpdating = false;
+        this.messageService.add({ severity: 'error', summary: 'Error', detail: this.errorDetail(error, 'No se pudo cargar el detalle de la reparación.') });
+      }
+    });
+  }
+
+  openDetailModal(repair: Repair): void {
+    if (!repair.id) return;
+    this.isUpdating = true;
+    this.api.getRepairById(repair.id).subscribe({
+      next: (detail) => {
+        this.isUpdating = false;
+        this.detailRepair = {
+          ...detail,
+          parts: (detail.parts || []).map((part) => ({ ...part })),
+          observations: (detail.observations || []).map((observation) => ({ ...observation }))
+        };
+        this.showDetailModal = true;
+        this.changeDetector.detectChanges();
       },
       error: (error) => {
         this.isUpdating = false;
@@ -339,6 +406,10 @@ export class RepairsPageComponent implements OnInit {
     return client ? `${client.name} ${client.lastName}`.trim() : repair.idClient;
   }
 
+  clientPhone(repair: Repair): string {
+    return this.clientsById.get(repair.idClient)?.phone || '';
+  }
+
   deviceLabel(repair: Repair): string {
     const device = this.devicesById.get(repair.idDevice);
     if (!device) return repair.idDevice || '-';
@@ -372,7 +443,7 @@ export class RepairsPageComponent implements OnInit {
 
   whatsAppLink(phone: string): string {
     const digits = (phone || "").replace(/\D/g, "");
-    return `https://wa.me/${digits}`;
+    return digits ? `https://wa.me/${digits}` : '';
   }
   filterClientSuggestions(query: string): void {
     const term = (query || '').trim().toLowerCase();
@@ -468,7 +539,7 @@ export class RepairsPageComponent implements OnInit {
       statusLabel: this.statusLabel(repair.status),
       statusClass: this.statusClass(repair.status),
       quotedAmountLabel: this.formatMoney(repair.quotedAmount),
-      priceLabel: this.formatMoney(repair.price)
+      clientPhone: this.clientPhone(repair)
     };
   }
 

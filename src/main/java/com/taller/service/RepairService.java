@@ -1,13 +1,16 @@
 package com.taller.service;
 
+import com.taller.model.DeviceObservation;
 import com.taller.model.Repair;
 import com.taller.model.RepairPart;
 import com.taller.model.RepairPayment;
 import com.taller.model.enums.RepairStatusEnum;
+import com.taller.model.repository.DeviceObservationRepository;
 import com.taller.model.repository.RepairPaymentRepository;
 import com.taller.model.repository.RepairPartRepository;
 import com.taller.model.repository.RepairRepository;
 import com.taller.model.repository.projection.RepairListView;
+import com.taller.resource.dto.DeviceObservationDTO;
 import com.taller.resource.dto.RepairDTO;
 import com.taller.resource.dto.RepairPartDTO;
 import com.taller.resource.dto.RepairPaymentDTO;
@@ -19,6 +22,7 @@ import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -28,6 +32,7 @@ public class RepairService {
     private final RepairRepository repairRepository;
     private final RepairPartRepository repairPartRepository;
     private final RepairPaymentRepository repairPaymentRepository;
+    private final DeviceObservationRepository deviceObservationRepository;
 
     public List<RepairDTO> getAllRepairs() {
       return repairRepository.findListRows().stream().map(this::toListDto).toList();
@@ -108,12 +113,17 @@ public class RepairService {
             repairPaymentRepository.saveAll(payments);
         }
 
+        if (repairDTO.getObservations() != null) {
+            syncObservations(saved, repairDTO.getObservations());
+        }
+
         return toDto(saved);
     }
 
     public void delete(String id) {
         repairPartRepository.deleteAll(repairPartRepository.findByRepairId(id));
         repairPaymentRepository.deleteAll(repairPaymentRepository.findByRepairId(id));
+        deviceObservationRepository.deleteAll(deviceObservationRepository.findByRepairId(id));
         repairRepository.deleteById(id);
     }
 
@@ -171,6 +181,7 @@ public class RepairService {
         dto.setReadyNotifiedAt(repair.getReadyNotifiedAt());
         dto.setParts(repairPartRepository.findByRepairId(repair.getId()).stream().map(this::toPartDto).toList());
         dto.setPayments(repairPaymentRepository.findByRepairId(repair.getId()).stream().map(this::toPaymentDto).toList());
+        dto.setObservations(deviceObservationRepository.findByRepairIdOrderByObservedAtDesc(repair.getId()).stream().map(this::toObservationDto).toList());
         return dto;
     }
 
@@ -215,6 +226,56 @@ public class RepairService {
         dto.setCurrency(payment.getCurrency());
         dto.setPaymentDate(payment.getPaymentDate());
         dto.setNotes(payment.getNotes());
+        return dto;
+    }
+
+    private void syncObservations(Repair repair, List<DeviceObservationDTO> observationDtos) {
+        Map<String, DeviceObservation> existingById = deviceObservationRepository.findByRepairId(repair.getId()).stream()
+                .filter(observation -> observation.getId() != null)
+                .collect(Collectors.toMap(DeviceObservation::getId, observation -> observation));
+
+        List<DeviceObservationDTO> validDtos = observationDtos.stream()
+                .filter(dto -> dto.getNote() != null && !dto.getNote().isBlank())
+                .toList();
+
+        Set<String> incomingIds = validDtos.stream()
+                .map(DeviceObservationDTO::getId)
+                .filter(id -> id != null && !id.isBlank())
+                .collect(Collectors.toSet());
+
+        List<DeviceObservation> toDelete = existingById.values().stream()
+                .filter(observation -> !incomingIds.contains(observation.getId()))
+                .toList();
+        deviceObservationRepository.deleteAll(toDelete);
+
+        List<DeviceObservation> observations = validDtos.stream()
+                .map(dto -> toObservation(repair, dto, existingById.getOrDefault(dto.getId(), new DeviceObservation())))
+                .toList();
+        deviceObservationRepository.saveAll(observations);
+    }
+
+    private DeviceObservation toObservation(Repair repair, DeviceObservationDTO dto, DeviceObservation observation) {
+        LocalDateTime observedAt = dto.getObservedAt() != null
+                ? dto.getObservedAt()
+                : (observation.getObservedAt() != null ? observation.getObservedAt() : LocalDateTime.now());
+        observation.setDeviceId(repair.getIdDevice());
+        observation.setRepairId(repair.getId());
+        observation.setNote(dto.getNote().trim());
+        observation.setObservedAt(observedAt);
+        observation.setFollowUpAt(dto.getFollowUpAt() != null ? dto.getFollowUpAt() : observedAt.plusMonths(3));
+        observation.setResolvedAt(dto.getResolvedAt());
+        return observation;
+    }
+
+    private DeviceObservationDTO toObservationDto(DeviceObservation observation) {
+        DeviceObservationDTO dto = new DeviceObservationDTO();
+        dto.setId(observation.getId());
+        dto.setDeviceId(observation.getDeviceId());
+        dto.setRepairId(observation.getRepairId());
+        dto.setNote(observation.getNote());
+        dto.setObservedAt(observation.getObservedAt());
+        dto.setFollowUpAt(observation.getFollowUpAt());
+        dto.setResolvedAt(observation.getResolvedAt());
         return dto;
     }
 

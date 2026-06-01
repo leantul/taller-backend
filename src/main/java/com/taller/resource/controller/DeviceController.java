@@ -1,6 +1,7 @@
 package com.taller.resource.controller;
 
 import com.taller.resource.dto.DeviceDTO;
+import com.taller.resource.dto.DeviceObservationDTO;
 import com.taller.resource.dto.DevicePasswordUpsertDTO;
 import com.taller.service.DeviceService;
 import lombok.RequiredArgsConstructor;
@@ -66,5 +67,25 @@ public class DeviceController {
     @PostMapping("/{id}/passwords/{passwordId}/make-current")
     public DeviceDTO makeCurrentPassword(@PathVariable String id, @PathVariable String passwordId) {
         return deviceService.makeCurrentPassword(id, passwordId);
+    }
+
+    @PostMapping("/{id}/observations")
+    public DeviceDTO addObservation(@PathVariable String id, @RequestBody DeviceObservationDTO request) {
+        return deviceService.addObservation(id, request);
+    }
+
+    @PutMapping("/{id}/observations/{observationId}")
+    public DeviceDTO updateObservation(@PathVariable String id, @PathVariable String observationId, @RequestBody DeviceObservationDTO request) {
+        return deviceService.updateObservation(id, observationId, request);
+    }
+
+    @PatchMapping("/{id}/observations/{observationId}/resolve")
+    public DeviceDTO resolveObservation(@PathVariable String id, @PathVariable String observationId) {
+        return deviceService.resolveObservation(id, observationId);
+    }
+
+    @DeleteMapping("/{id}/observations/{observationId}")
+    public DeviceDTO deleteObservation(@PathVariable String id, @PathVariable String observationId) {
+        return deviceService.deleteObservation(id, observationId);
     }
 }

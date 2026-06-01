@@ -5,11 +5,12 @@ import { CardModule } from 'primeng/card';
 import { InputTextModule } from 'primeng/inputtext';
 import { ButtonModule } from 'primeng/button';
 import { SelectModule } from 'primeng/select';
+import { AutoCompleteModule } from 'primeng/autocomplete';
 import { DialogModule } from 'primeng/dialog';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { ApiService } from '../../core/services/api.service';
-import { Device, DevicePasswordHistory } from '../../shared/models/device.model';
+import { Device, DeviceObservation, DevicePasswordHistory } from '../../shared/models/device.model';
 import { Client } from '../../shared/models/client.model';
 
 const ARGENTINA_TIME_ZONE = 'America/Argentina/Buenos_Aires';
@@ -27,7 +28,7 @@ const HISTORY_DATE_FORMATTER = new Intl.DateTimeFormat('es-AR', {
 @Component({
   selector: 'app-devices-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, CardModule, InputTextModule, ButtonModule, SelectModule, DialogModule, ConfirmDialogModule],
+  imports: [CommonModule, FormsModule, CardModule, InputTextModule, ButtonModule, SelectModule, AutoCompleteModule, DialogModule, ConfirmDialogModule],
   providers: [ConfirmationService, MessageService],
   template: `
     <p-confirmdialog></p-confirmdialog>
@@ -41,22 +42,22 @@ const HISTORY_DATE_FORMATTER = new Intl.DateTimeFormat('es-AR', {
 
     <div class="page-grid">
       <p-card header="Nuevo dispositivo">
-        <form class="p-fluid" (ngSubmit)="save()">
+        <form class="p-fluid" autocomplete="off" (ngSubmit)="save()">
           <div class="field">
             <label>Cliente</label>
             <div class="inline-row">
-              <p-select [options]="clientOptions" optionLabel="label" optionValue="value" [(ngModel)]="draft.clientId" name="clientId" [filter]="true" filterBy="label" required></p-select>
+              <p-select [options]="clientOptions" optionLabel="label" optionValue="value" [(ngModel)]="draft.clientId" name="deviceClientId" [filter]="true" filterBy="label" required></p-select>
               <button pButton type="button" size="small" class="p-button-sm" icon="pi pi-user-plus" [rounded]="true" [text]="true" (click)="openNewClientModal('draft')"></button>
             </div>
           </div>
-          <div class="field"><label>Marca</label><input pInputText [(ngModel)]="draft.brand" name="brand" required /></div>
-          <div class="field"><label>Modelo</label><input pInputText [(ngModel)]="draft.model" name="model" required /></div>
-          <div class="field"><label>Serie / IMEI</label><input pInputText [(ngModel)]="draft.serialNumber" name="serialNumber" required /></div>
+          <div class="field"><label>Marca</label><input pInputText [(ngModel)]="draft.brand" name="deviceBrand" autocomplete="off" required /></div>
+          <div class="field"><label>Modelo</label><input pInputText [(ngModel)]="draft.model" name="deviceModel" autocomplete="off" required /></div>
+          <div class="field"><label>Serie / IMEI</label><input pInputText [(ngModel)]="draft.serialNumber" name="deviceSerialNumber" autocomplete="off" required /></div>
           <div class="field"><label>Tipo</label><p-select [options]="typeOptions" optionLabel="label" optionValue="value" [(ngModel)]="draft.deviceType" name="deviceType"></p-select></div>
           <div class="field">
             <label>Contraseña inicial</label>
             <div class="inline-row">
-              <input class="control" [type]="showDraftPassword ? 'text' : 'password'" [(ngModel)]="draft.currentPassword" name="currentPassword" placeholder="Opcional" />
+              <input class="control" [type]="showDraftPassword ? 'text' : 'password'" [(ngModel)]="draft.currentPassword" name="deviceCurrentPassword" autocomplete="new-password" placeholder="Opcional" />
               <button class="icon-button" type="button" [attr.aria-label]="showDraftPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'" (click)="showDraftPassword = !showDraftPassword">
                 <i [class]="showDraftPassword ? 'pi pi-eye-slash' : 'pi pi-eye'"></i>
               </button>
@@ -69,11 +70,20 @@ const HISTORY_DATE_FORMATTER = new Intl.DateTimeFormat('es-AR', {
       <p-card header="Dispositivos">
         <div class="table-toolbar multi repairs-filters">
           <span class="p-input-icon-left filter-search"><i class="pi pi-search"></i><input pInputText [(ngModel)]="searchTerm" (ngModelChange)="applyFilters()" placeholder="Buscar por cualquier campo" /></span>
-          <p-select styleClass="compact-filter" [options]="clientOptions" optionLabel="label" optionValue="value" [(ngModel)]="selectedClientId" (ngModelChange)="applyFilters()" placeholder="Filtrar por cliente" [showClear]="true" appendTo="body"></p-select>
+          <p-autoComplete
+            [(ngModel)]="selectedClientTerm"
+            [suggestions]="clientFilterSuggestions"
+            (completeMethod)="filterClientOptions($event.query)"
+            (ngModelChange)="onClientFilterChange($event)"
+            (onSelect)="onClientFilterSelect($event.value)"
+            optionLabel="label"
+            placeholder="Filtrar por cliente"
+            styleClass="compact-filter client-filter-autocomplete"
+            appendTo="body"></p-autoComplete>
         </div>
         <div class="native-table-wrap">
           <table class="native-table">
-            <thead><tr><th>Tipo</th><th>Marca</th><th>Modelo</th><th>Serie</th><th>Cliente</th><th>Contraseña actual</th><th>Acciones</th></tr></thead>
+            <thead><tr><th>Tipo</th><th>Marca</th><th>Modelo</th><th>Serie</th><th>Cliente</th><th>Observaciones</th><th>Contraseña actual</th><th>Acciones</th></tr></thead>
             <tbody>
               @for (d of visibleDevices; track d.id || d.serialNumber) {
                 <tr>
@@ -83,6 +93,12 @@ const HISTORY_DATE_FORMATTER = new Intl.DateTimeFormat('es-AR', {
                   <td>{{ d.serialNumber }}</td>
                   <td>{{ getClientName(d.clientId) }}</td>
                   <td>
+                    <button class="observation-summary-button" type="button" (click)="openObservationManager(d)">
+                      <i class="pi pi-flag"></i>
+                      <span>{{ observationSummary(d) }}</span>
+                    </button>
+                  </td>
+                  <td class="cell-actions">
                     <div class="inline-row">
                       <span>{{ formatPassword(d.currentPassword, isDevicePasswordVisible(d.id || d.serialNumber)) }}</span>
                       @if (d.currentPassword) {
@@ -94,6 +110,7 @@ const HISTORY_DATE_FORMATTER = new Intl.DateTimeFormat('es-AR', {
                   </td>
                   <td>
                     <div class="action-buttons">
+                      <button class="icon-action" type="button" aria-label="Gestionar observaciones" (click)="openObservationManager(d)"><i class="pi pi-flag"></i></button>
                       <button class="icon-action" type="button" aria-label="Gestionar contraseñas" (click)="openPasswordManager(d)"><i class="pi pi-key"></i></button>
                       <button class="icon-action" type="button" aria-label="Editar dispositivo" (click)="openEdit(d)"><i class="pi pi-pencil"></i></button>
                       <button class="icon-action danger" type="button" aria-label="Eliminar dispositivo" (click)="confirmRemove(d)"><i class="pi pi-trash"></i></button>
@@ -101,7 +118,7 @@ const HISTORY_DATE_FORMATTER = new Intl.DateTimeFormat('es-AR', {
                   </td>
                 </tr>
               } @empty {
-                <tr><td class="empty-cell" colspan="7">No hay dispositivos para mostrar.</td></tr>
+                <tr><td class="empty-cell" colspan="8">No hay dispositivos para mostrar.</td></tr>
               }
             </tbody>
           </table>
@@ -125,9 +142,9 @@ const HISTORY_DATE_FORMATTER = new Intl.DateTimeFormat('es-AR', {
           <button pButton type="button" size="small" class="p-button-sm" icon="pi pi-user-plus" [rounded]="true" [text]="true" (click)="openNewClientModal('edit')"></button>
         </div>
       </div>
-      <div class="field"><label>Marca</label><input pInputText [(ngModel)]="editing.brand" /></div>
-      <div class="field"><label>Modelo</label><input pInputText [(ngModel)]="editing.model" /></div>
-      <div class="field"><label>Serie / IMEI</label><input pInputText [(ngModel)]="editing.serialNumber" /></div>
+      <div class="field"><label>Marca</label><input pInputText [(ngModel)]="editing.brand" autocomplete="off" /></div>
+      <div class="field"><label>Modelo</label><input pInputText [(ngModel)]="editing.model" autocomplete="off" /></div>
+      <div class="field"><label>Serie / IMEI</label><input pInputText [(ngModel)]="editing.serialNumber" autocomplete="off" /></div>
       <div class="field"><label>Tipo</label><p-select [options]="typeOptions" optionLabel="label" optionValue="value" [(ngModel)]="editing.deviceType"></p-select></div>
       <div class="field">
         <label>Contraseña actual</label>
@@ -159,7 +176,7 @@ const HISTORY_DATE_FORMATTER = new Intl.DateTimeFormat('es-AR', {
         <div class="field" style="margin-top:1rem;">
           <label>Agregar nueva contraseña</label>
           <div class="inline-row">
-            <input class="control" [type]="showNewPassword ? 'text' : 'password'" [(ngModel)]="newPasswordValue" placeholder="Nueva contraseña" />
+            <input class="control" [type]="showNewPassword ? 'text' : 'password'" [(ngModel)]="newPasswordValue" autocomplete="new-password" placeholder="Nueva contraseña" />
             <button class="icon-button" type="button" (click)="showNewPassword = !showNewPassword">
               <i [class]="showNewPassword ? 'pi pi-eye-slash' : 'pi pi-eye'"></i>
             </button>
@@ -176,7 +193,7 @@ const HISTORY_DATE_FORMATTER = new Intl.DateTimeFormat('es-AR', {
                   <td>
                     @if (editingPasswordId === entry.id) {
                       <div class="inline-row">
-                        <input class="control" [(ngModel)]="editingPasswordValue" />
+                        <input class="control" [(ngModel)]="editingPasswordValue" autocomplete="off" />
                       </div>
                     } @else {
                       <div class="inline-row">
@@ -212,12 +229,71 @@ const HISTORY_DATE_FORMATTER = new Intl.DateTimeFormat('es-AR', {
       }
     </p-dialog>
 
+    <p-dialog header="Observaciones del dispositivo" [(visible)]="observationVisible" [modal]="true" [style]="{width:'52rem'}">
+      @if (observationDevice) {
+        <div class="ops-summary-grid">
+          <div class="ops-item">
+            <span>Equipo</span>
+            <strong>{{ observationDevice.brand }} {{ observationDevice.model }}</strong>
+          </div>
+          <div class="ops-item">
+            <span>Pendientes</span>
+            <strong>{{ activeObservations(observationDevice).length }}</strong>
+          </div>
+        </div>
+
+        <div class="field" style="margin-top:1rem;">
+          <label>Agregar observación</label>
+          <div class="inline-row">
+            <input class="control" [(ngModel)]="newObservationNote" autocomplete="off" placeholder="Ej: batería para reemplazar" />
+            <button class="primary-button" type="button" (click)="addObservation()">Agregar</button>
+          </div>
+        </div>
+
+        <div class="native-table-wrap" style="margin-top:1rem;">
+          <table class="native-table">
+            <thead><tr><th>Observación</th><th>Observada</th><th>Seguimiento</th><th>Estado</th><th>Acciones</th></tr></thead>
+            <tbody>
+              @for (entry of observationDevice.observations || []; track entry.id || $index) {
+                <tr>
+                  <td>
+                    @if (editingObservationId === entry.id) {
+                      <input class="control" [(ngModel)]="editingObservationNote" autocomplete="off" />
+                    } @else {
+                      {{ entry.note }}
+                    }
+                  </td>
+                  <td>{{ formatHistoryDate(entry.observedAt) }}</td>
+                  <td>{{ formatHistoryDate(entry.followUpAt) }}</td>
+                  <td><span class="status-pill" [ngClass]="entry.resolvedAt ? 'is-success' : 'is-warning'">{{ entry.resolvedAt ? 'Resuelta' : 'Pendiente' }}</span></td>
+                  <td>
+                    <div class="action-buttons">
+                      @if (editingObservationId === entry.id) {
+                        <button class="icon-action" type="button" (click)="saveObservationEdit(entry)"><i class="pi pi-check"></i></button>
+                        <button class="icon-action danger" type="button" (click)="cancelObservationEdit()"><i class="pi pi-times"></i></button>
+                      } @else {
+                        <button class="icon-action" type="button" [disabled]="!!entry.resolvedAt" (click)="startObservationEdit(entry)"><i class="pi pi-pencil"></i></button>
+                        <button class="icon-action" type="button" [disabled]="!!entry.resolvedAt" (click)="resolveObservation(entry)"><i class="pi pi-check-circle"></i></button>
+                        <button class="icon-action danger" type="button" (click)="deleteObservation(entry)"><i class="pi pi-trash"></i></button>
+                      }
+                    </div>
+                  </td>
+                </tr>
+              } @empty {
+                <tr><td class="empty-cell" colspan="5">No hay observaciones cargadas para este dispositivo.</td></tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </p-dialog>
+
     <p-dialog header="Nuevo cliente" [(visible)]="showNewClientModal" [modal]="true" [style]="{width:'34rem'}">
-      <div class="field"><label>Nombre</label><input pInputText [(ngModel)]="draftClient.name" /></div>
-      <div class="field"><label>Apellido</label><input pInputText [(ngModel)]="draftClient.lastName" /></div>
-      <div class="field"><label>DNI</label><input pInputText [(ngModel)]="draftClient.dni" /></div>
-      <div class="field"><label>Email</label><input pInputText [(ngModel)]="draftClient.email" /></div>
-      <div class="field"><label>Celular</label><input pInputText [(ngModel)]="draftClient.phone" /></div>
+      <div class="field"><label>Nombre</label><input pInputText [(ngModel)]="draftClient.name" autocomplete="off" /></div>
+      <div class="field"><label>Apellido</label><input pInputText [(ngModel)]="draftClient.lastName" autocomplete="off" /></div>
+      <div class="field"><label>DNI</label><input pInputText [(ngModel)]="draftClient.dni" autocomplete="off" /></div>
+      <div class="field"><label>Email</label><input pInputText [(ngModel)]="draftClient.email" autocomplete="off" /></div>
+      <div class="field"><label>Celular</label><input pInputText [(ngModel)]="draftClient.phone" autocomplete="off" /></div>
       <button pButton type="button" label="Guardar cliente" icon="pi pi-check" (click)="createClientInline()"></button>
     </p-dialog>
   `
@@ -231,7 +307,9 @@ export class DevicesPageComponent implements OnInit {
   draftClient: Client = { name: '', lastName: '', dni: '', email: '', phone: '' };
   editVisible = false;
   passwordVisible = false;
+  observationVisible = false;
   showNewClientModal = false;
+  selectedClientTerm: string | { label: string; value: string } = '';
   selectedClientId: string | null = null;
   searchTerm = '';
   currentPage = 1;
@@ -241,11 +319,16 @@ export class DevicesPageComponent implements OnInit {
   showCurrentPassword = false;
   showNewPassword = false;
   passwordDevice: Device | null = null;
+  observationDevice: Device | null = null;
   newPasswordValue = '';
+  newObservationNote = '';
   editingPasswordId: string | null = null;
   editingPasswordValue = '';
+  editingObservationId: string | null = null;
+  editingObservationNote = '';
   visibleDevicePasswords = new Set<string>();
   visibleHistoryPasswords = new Set<string>();
+  clientFilterSuggestions: { label: string; value: string }[] = [];
   private newClientTarget: 'draft' | 'edit' = 'draft';
   typeOptions = [
     { label: 'Desktop', value: 'DESKTOP' }, { label: 'Notebook', value: 'NOTEBOOK' }, { label: 'Tablet', value: 'TABLET' }, { label: 'Celular', value: 'CELULAR' }, { label: 'Otros', value: 'OTROS' }
@@ -267,6 +350,27 @@ export class DevicesPageComponent implements OnInit {
 
   get clientOptions(): { label: string; value: string }[] {
     return this.clients.map((client) => ({ label: `${client.name} ${client.lastName}`.trim(), value: client.id! }));
+  }
+
+  filterClientOptions(query: string): void {
+    const term = (query || '').trim().toLowerCase();
+    this.clientFilterSuggestions = this.clientOptions
+      .filter((client) => !term || client.label.toLowerCase().includes(term))
+      .slice(0, 10);
+  }
+
+  onClientFilterChange(value: string | { label: string; value: string } | null): void {
+    this.selectedClientTerm = value || '';
+    if (!value || typeof value === 'string') {
+      this.selectedClientId = null;
+    }
+    this.applyFilters();
+  }
+
+  onClientFilterSelect(selection: { label: string; value: string }): void {
+    this.selectedClientTerm = selection;
+    this.selectedClientId = selection?.value || null;
+    this.applyFilters();
   }
 
   save(): void {
@@ -386,6 +490,62 @@ export class DevicesPageComponent implements OnInit {
     });
   }
 
+  openObservationManager(device: Device): void {
+    if (!device.id) return;
+    this.api.getDeviceById(device.id).subscribe((detail) => {
+      this.observationDevice = this.normalizeDevice(detail);
+      this.observationVisible = true;
+      this.newObservationNote = '';
+      this.editingObservationId = null;
+      this.editingObservationNote = '';
+      this.changeDetector.detectChanges();
+    });
+  }
+
+  addObservation(): void {
+    if (!this.observationDevice?.id || !this.newObservationNote.trim()) return;
+    this.api.addDeviceObservation(this.observationDevice.id, { note: this.newObservationNote.trim() }).subscribe((device) => {
+      this.applyObservationDevice(device);
+      this.newObservationNote = '';
+    });
+  }
+
+  startObservationEdit(entry: DeviceObservation): void {
+    this.editingObservationId = entry.id || null;
+    this.editingObservationNote = entry.note;
+  }
+
+  cancelObservationEdit(): void {
+    this.editingObservationId = null;
+    this.editingObservationNote = '';
+  }
+
+  saveObservationEdit(entry: DeviceObservation): void {
+    if (!this.observationDevice?.id || !entry.id || !this.editingObservationNote.trim()) return;
+    this.api.updateDeviceObservation(this.observationDevice.id, entry.id, { ...entry, note: this.editingObservationNote.trim() }).subscribe((device) => {
+      this.applyObservationDevice(device);
+      this.cancelObservationEdit();
+    });
+  }
+
+  resolveObservation(entry: DeviceObservation): void {
+    if (!this.observationDevice?.id || !entry.id) return;
+    this.api.resolveDeviceObservation(this.observationDevice.id, entry.id).subscribe((device) => this.applyObservationDevice(device));
+  }
+
+  deleteObservation(entry: DeviceObservation): void {
+    if (!this.observationDevice?.id || !entry.id) return;
+    this.confirmationService.confirm({
+      message: '¿Eliminar esta observación?',
+      header: 'Eliminar observación',
+      acceptLabel: 'Eliminar',
+      rejectLabel: 'Cancelar',
+      accept: () => {
+        this.api.deleteDeviceObservation(this.observationDevice!.id!, entry.id!).subscribe((device) => this.applyObservationDevice(device));
+      }
+    });
+  }
+
   confirmRemove(device: Device): void {
     this.confirmationService.confirm({
       message: `¿Eliminar dispositivo ${device.brand} ${device.model}?`,
@@ -403,11 +563,15 @@ export class DevicesPageComponent implements OnInit {
 
   applyFilters(): void {
     const term = this.searchTerm.trim().toLowerCase();
+    const clientTerm = this.selectedClientSearchText();
     this.filteredDevices = this.devices
       .map((device) => ({ ...device, clientName: this.getClientName(device.clientId) }))
       .filter((device) => {
-        const byClient = !this.selectedClientId || device.clientId === this.selectedClientId;
-        const byTerm = !term || `${device.deviceType} ${device.brand} ${device.model} ${device.serialNumber} ${device.clientId} ${device.clientName} ${device.currentPassword || ''}`.toLowerCase().includes(term);
+        const byClient = this.selectedClientId
+          ? device.clientId === this.selectedClientId
+          : (!clientTerm || (device.clientName || '').toLowerCase().includes(clientTerm));
+        const observationText = (device.observations || []).map((observation) => observation.note).join(' ');
+        const byTerm = !term || `${device.deviceType} ${device.brand} ${device.model} ${device.serialNumber} ${device.clientId} ${device.clientName} ${device.currentPassword || ''} ${observationText}`.toLowerCase().includes(term);
         return byClient && byTerm;
       });
     this.currentPage = 1;
@@ -429,6 +593,17 @@ export class DevicesPageComponent implements OnInit {
 
     const parts = new Map(HISTORY_DATE_FORMATTER.formatToParts(date).map((part) => [part.type, part.value]));
     return `${parts.get('day')}/${parts.get('month')}/${parts.get('year')} ${parts.get('hour')}:${parts.get('minute')}`;
+  }
+
+  activeObservations(device: Device): DeviceObservation[] {
+    return (device.observations || []).filter((observation) => !observation.resolvedAt);
+  }
+
+  observationSummary(device: Device): string {
+    const observations = this.activeObservations(device);
+    if (!observations.length) return 'Sin pendientes';
+    const first = observations[0]?.note || 'Observación pendiente';
+    return observations.length === 1 ? first : `${observations.length} pendientes`;
   }
 
   isDevicePasswordVisible(key: string): boolean {
@@ -492,6 +667,9 @@ export class DevicesPageComponent implements OnInit {
     return {
       ...device,
       currentPassword: device.currentPassword || '',
+      observations: (device.observations || [])
+        .slice()
+        .sort((left, right) => this.historyTimestamp(right.observedAt) - this.historyTimestamp(left.observedAt)),
       passwordHistory: (device.passwordHistory || [])
         .slice()
         .sort((left, right) => this.historyTimestamp(right.createdAt) - this.historyTimestamp(left.createdAt))
@@ -514,12 +692,30 @@ export class DevicesPageComponent implements OnInit {
     return Number.isNaN(date.getTime()) ? null : date;
   }
 
+  private selectedClientSearchText(): string {
+    const raw = typeof this.selectedClientTerm === 'string'
+      ? this.selectedClientTerm
+      : this.selectedClientTerm?.label || '';
+    return raw.trim().toLowerCase();
+  }
+
   private applyPasswordDevice(device: Device): void {
     const normalized = this.normalizeDevice(device);
     this.passwordDevice = normalized;
     this.syncDevice(normalized);
     if (this.editing.id && normalized.id === this.editing.id) {
       this.editing = { ...this.editing, currentPassword: normalized.currentPassword, passwordHistory: normalized.passwordHistory };
+    }
+    this.applyFilters();
+    this.changeDetector.detectChanges();
+  }
+
+  private applyObservationDevice(device: Device): void {
+    const normalized = this.normalizeDevice(device);
+    this.observationDevice = normalized;
+    this.syncDevice(normalized);
+    if (this.editing.id && normalized.id === this.editing.id) {
+      this.editing = { ...this.editing, observations: normalized.observations };
     }
     this.applyFilters();
     this.changeDetector.detectChanges();

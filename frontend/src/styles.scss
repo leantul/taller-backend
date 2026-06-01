@@ -74,7 +74,7 @@
 
 * { box-sizing: border-box; }
 
-html { font-size: 14px; }
+html { font-size: 15px; }
 
 body {
   min-height: 100vh;
@@ -144,6 +144,7 @@ a { color: inherit; }
   color: var(--muted);
   font-weight: 600;
   text-decoration: none;
+  position: relative;
 }
 
 .app-nav a:hover,
@@ -155,6 +156,22 @@ a { color: inherit; }
 .app-nav i {
   width: 1.1rem;
   color: var(--brand-500);
+}
+
+.nav-badge {
+  margin-left: auto;
+  min-width: 1.35rem;
+  height: 1.35rem;
+  padding: 0 .35rem;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--brand-500);
+  color: #fff;
+  font-size: .72rem;
+  font-weight: 700;
+  line-height: 1;
 }
 
 .sidebar-footer {
@@ -216,8 +233,9 @@ a { color: inherit; }
 
 .app-content {
   min-width: 0;
-  width: min(1240px, 100%);
-  padding: 1.1rem 1.35rem 2rem;
+  width: 100%;
+  max-width: none;
+  padding: 1.25rem 1.6rem 2rem;
 }
 
 .app-shell:not(.is-authenticated) .app-content {
@@ -271,8 +289,8 @@ a { color: inherit; }
 
 .page-grid {
   display: grid;
-  grid-template-columns: minmax(300px, 360px) minmax(0, 1fr);
-  gap: 1rem;
+  grid-template-columns: minmax(340px, 420px) minmax(0, 1fr);
+  gap: 1.15rem;
   align-items: start;
 }
 
@@ -836,14 +854,27 @@ textarea.p-inputtext {
 
 .table-toolbar .p-input-icon-left,
 .repairs-filters .p-input-icon-left {
+  position: relative;
   display: inline-flex;
   align-items: center;
   width: 100%;
 }
 
+.table-toolbar .p-input-icon-left > i,
+.repairs-filters .p-input-icon-left > i {
+  position: absolute;
+  top: 50%;
+  left: .82rem;
+  z-index: 1;
+  color: var(--muted);
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
 .table-toolbar .p-input-icon-left > .p-inputtext,
 .repairs-filters .p-input-icon-left > .p-inputtext {
   width: 100%;
+  padding-left: 2.35rem !important;
 }
 
 .repairs-filters {
@@ -858,8 +889,98 @@ textarea.p-inputtext {
 }
 
 .repairs-filters .compact-filter {
-  width: 10rem;
-  min-width: 10rem;
+  width: 14rem;
+  min-width: 14rem;
+}
+
+.repairs-heading {
+  margin-bottom: .8rem;
+}
+
+.repairs-heading h1 {
+  font-size: 1.52rem;
+}
+
+.repairs-heading p {
+  font-size: .88rem;
+}
+
+.repairs-heading + .page-grid.modern-grid {
+  grid-template-columns: minmax(300px, 370px) minmax(0, 1fr);
+  gap: .9rem;
+}
+
+.repairs-heading + .page-grid .p-card .p-card-body {
+  padding: .82rem !important;
+}
+
+.repairs-heading + .page-grid .p-card .p-card-title {
+  font-size: .94rem;
+}
+
+.repairs-heading + .page-grid .field {
+  gap: .24rem;
+  margin-bottom: .58rem;
+}
+
+.repairs-heading + .page-grid .field label,
+.repairs-heading + .page-grid .field > span {
+  font-size: .81rem;
+}
+
+.repairs-heading + .page-grid .control,
+.repairs-heading + .page-grid .p-inputtext,
+.repairs-heading + .page-grid .p-select,
+.repairs-heading + .page-grid .p-inputnumber,
+.repairs-heading + .page-grid .p-datepicker,
+.repairs-heading + .page-grid textarea.p-inputtext {
+  min-height: 2.05rem;
+  font-size: .86rem;
+}
+
+.repairs-heading + .page-grid .p-select-label,
+.repairs-heading + .page-grid .p-select-label-container,
+.repairs-heading + .page-grid .p-select-dropdown,
+.repairs-heading + .page-grid .p-select-clear-icon,
+.repairs-heading + .page-grid .p-select-dropdown-icon,
+.repairs-heading + .page-grid .p-inputnumber-input,
+.repairs-heading + .page-grid .p-inputnumber-button,
+.repairs-heading + .page-grid .p-datepicker-input,
+.repairs-heading + .page-grid .p-datepicker-dropdown,
+.repairs-heading + .page-grid .p-datepicker-dropdown-icon,
+.repairs-heading + .page-grid .p-autocomplete-input,
+.repairs-heading + .page-grid .p-autocomplete-dropdown,
+.repairs-heading + .page-grid .p-inputtext {
+  padding: .42rem .54rem !important;
+}
+
+.repairs-heading + .page-grid textarea.p-inputtext {
+  min-height: 5rem;
+}
+
+.repairs-heading + .page-grid .selection-summary {
+  gap: .35rem;
+  margin: -.1rem 0 .45rem;
+}
+
+.repairs-heading + .page-grid .summary-chip {
+  min-height: 1.72rem;
+  padding: 0 .52rem;
+  font-size: .79rem;
+}
+
+.repairs-heading + .page-grid .table-toolbar {
+  gap: .45rem;
+  margin-bottom: .6rem;
+}
+
+.repairs-heading + .page-grid .repairs-filters .filter-search {
+  width: min(24rem, 100%);
+}
+
+.repairs-heading + .page-grid .repairs-filters .compact-filter {
+  width: 12rem;
+  min-width: 12rem;
 }
 
 .selection-summary {
@@ -920,6 +1041,44 @@ textarea.p-inputtext {
   font-size: .84rem;
 }
 
+.observation-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .45rem;
+}
+
+.observation-chip,
+.observation-summary-button {
+  display: inline-flex;
+  align-items: center;
+  gap: .35rem;
+  min-height: 1.85rem;
+  max-width: 100%;
+  padding: 0 .6rem;
+  border: 1px solid color-mix(in srgb, var(--warning-500), transparent 66%);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--warning-500), transparent 90%);
+  color: var(--text);
+  font-size: .82rem;
+}
+
+.observation-chip.is-resolved {
+  border-color: color-mix(in srgb, var(--success-500), transparent 70%);
+  background: color-mix(in srgb, var(--success-500), transparent 92%);
+  color: var(--muted);
+}
+
+.observation-summary-button {
+  max-width: 12rem;
+  cursor: pointer;
+}
+
+.observation-summary-button span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .client-autocomplete,
 .client-autocomplete .p-autocomplete,
 .client-autocomplete .p-autocomplete-input,
@@ -942,8 +1101,9 @@ textarea.p-inputtext {
 
 .native-table {
   width: 100%;
-  min-width: 820px;
+  min-width: 100%;
   border-collapse: collapse;
+  table-layout: auto;
 }
 
 .dashboard-table {
@@ -957,6 +1117,22 @@ textarea.p-inputtext {
   text-align: left;
   vertical-align: middle;
   font-size: .9rem;
+  word-break: break-word;
+}
+
+.repairs-table {
+  min-width: 660px;
+}
+
+.repairs-table td {
+  padding: .5rem .58rem;
+  font-size: .88rem;
+  line-height: 1.26;
+}
+
+.repairs-table th {
+  padding: .5rem .58rem;
+  font-size: .68rem;
 }
 
 .native-table th {
@@ -979,24 +1155,57 @@ textarea.p-inputtext {
   background: color-mix(in srgb, var(--brand-500), transparent 94%);
 }
 
+.clickable-row {
+  cursor: pointer;
+}
+
+.cell-actions {
+  width: 1%;
+  white-space: nowrap;
+}
+
+.repair-detail-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.detail-text-block {
+  align-content: start;
+}
+
+.detail-scrollable {
+  max-height: 8.5rem;
+  overflow: auto;
+  white-space: pre-wrap;
+  line-height: 1.45;
+}
+
+.compact-table-wrap {
+  overflow: hidden;
+}
+
+.compact-native-table {
+  min-width: 100%;
+}
+
 .order-chip {
   display: inline-flex;
   min-width: 4.2rem;
   justify-content: center;
-  padding: .18rem .45rem;
+  padding: .14rem .38rem;
   border-radius: 999px;
   background: var(--surface-soft);
   font-weight: 700;
+  font-size: .82rem;
 }
 
 .status-pill {
   display: inline-flex;
   align-items: center;
-  min-height: 1.55rem;
-  padding: .18rem .55rem;
+  min-height: 1.38rem;
+  padding: .12rem .46rem;
   border-radius: 999px;
   border: 1px solid currentColor;
-  font-size: .76rem;
+  font-size: .71rem;
   font-weight: 750;
   white-space: nowrap;
 }
@@ -1017,13 +1226,27 @@ textarea.p-inputtext {
 .icon-action,
 .pager-button {
   display: inline-grid;
-  width: 2rem;
-  height: 2rem;
+  width: 1.8rem;
+  height: 1.8rem;
   place-items: center;
 }
 
 .icon-action.danger {
   color: var(--danger-500);
+}
+
+.icon-action.is-disabled {
+  opacity: .4;
+  pointer-events: none;
+}
+
+.whatsapp-action {
+  color: #18a957;
+  text-decoration: none;
+}
+
+.whatsapp-action:hover:not(:disabled) {
+  color: #128746;
 }
 
 .icon-action:disabled,
@@ -1056,7 +1279,7 @@ textarea.p-inputtext {
 
 .status-board {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: .85rem;
   align-items: start;
 }
@@ -1119,13 +1342,30 @@ textarea.p-inputtext {
   gap: .8rem;
 }
 
+.repair-detail-grid {
+  max-height: none;
+  overflow: visible;
+  padding-right: 0;
+}
+
+.detail-dialog-body {
+  max-height: min(78vh, 54rem);
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: .15rem;
+  scrollbar-gutter: stable;
+}
+
 .detail-item {
   display: grid;
   gap: .28rem;
+  min-width: 0;
   padding: .75rem;
   border: 1px solid var(--border);
   border-radius: 8px;
   background: color-mix(in srgb, var(--surface-soft), var(--surface) 40%);
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .detail-item label {
@@ -1140,6 +1380,36 @@ textarea.p-inputtext {
   grid-column: 1 / -1;
 }
 
+.detail-text-block {
+  min-width: 0;
+}
+
+.detail-scrollable {
+  max-height: 10rem;
+  overflow-y: auto;
+  overflow-x: hidden;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  padding-right: .2rem;
+}
+
+.repair-detail-grid .compact-table-wrap {
+  overflow-x: hidden;
+  overflow-y: hidden;
+}
+
+.repair-detail-grid .compact-native-table {
+  width: 100%;
+  table-layout: fixed;
+}
+
+.repair-detail-grid .compact-native-table th,
+.repair-detail-grid .compact-native-table td {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
 .placeholder-panel,
 .settings-form {
   max-width: 42rem;
@@ -1147,6 +1417,109 @@ textarea.p-inputtext {
   border-radius: 8px;
   background: var(--surface);
   box-shadow: 0 10px 28px var(--shadow);
+}
+
+.notifications-page {
+  display: grid;
+  gap: 1rem;
+}
+
+.notifications-list {
+  display: grid;
+  gap: .9rem;
+}
+
+.notification-card {
+  position: relative;
+  display: grid;
+  gap: .8rem;
+  padding: 1.05rem 1.1rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  box-shadow: 0 10px 28px var(--shadow);
+  cursor: pointer;
+}
+
+.notification-card-head {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.notification-card-head h2 {
+  margin: .25rem 0 0;
+  font-size: 1.02rem;
+}
+
+.notification-card-head time {
+  color: var(--muted);
+  font-size: .85rem;
+  white-space: nowrap;
+}
+
+.notification-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: .25rem .55rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--brand-500), transparent 86%);
+  color: var(--brand-500);
+  font-size: .72rem;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.notification-tag.is-warranty {
+  background: color-mix(in srgb, var(--info-500), transparent 86%);
+  color: var(--info-500);
+}
+
+.notification-tag.is-observation {
+  background: color-mix(in srgb, var(--warning-500), transparent 84%);
+  color: color-mix(in srgb, var(--warning-500), #000 18%);
+}
+
+.notification-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .8rem 1rem;
+  color: var(--muted);
+  font-size: .92rem;
+}
+
+.notification-meta span {
+  display: inline-flex;
+  gap: .38rem;
+  align-items: center;
+}
+
+.notification-dismiss {
+  position: absolute;
+  top: .8rem;
+  right: .8rem;
+  width: 2rem;
+  height: 2rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-soft);
+  color: var(--muted);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.notification-dismiss:hover {
+  color: var(--text);
+}
+
+.notification-detail-actions {
+  display: flex;
+  justify-content: flex-end;
+  padding: 1rem .15rem .25rem;
 }
 
 .placeholder-panel {
@@ -1329,6 +1702,10 @@ textarea.p-inputtext {
   }
 
   .detail-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .repair-detail-grid {
     grid-template-columns: 1fr;
   }
 

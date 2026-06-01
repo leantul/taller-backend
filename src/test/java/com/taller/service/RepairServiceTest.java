@@ -2,6 +2,7 @@ package com.taller.service;
 
 import com.taller.model.Repair;
 import com.taller.model.enums.RepairStatusEnum;
+import com.taller.model.repository.DeviceObservationRepository;
 import com.taller.model.repository.RepairPartRepository;
 import com.taller.model.repository.RepairPaymentRepository;
 import com.taller.model.repository.RepairRepository;
@@ -28,12 +29,14 @@ class RepairServiceTest {
     private RepairPartRepository repairPartRepository;
     @Mock
     private RepairPaymentRepository repairPaymentRepository;
+    @Mock
+    private DeviceObservationRepository deviceObservationRepository;
 
     private RepairService repairService;
 
     @BeforeEach
     void setUp() {
-        repairService = new RepairService(repairRepository, repairPartRepository, repairPaymentRepository);
+        repairService = new RepairService(repairRepository, repairPartRepository, repairPaymentRepository, deviceObservationRepository);
     }
 
     @Test
@@ -46,6 +49,7 @@ class RepairServiceTest {
         });
         when(repairPartRepository.findByRepairId(any())).thenReturn(List.of());
         when(repairPaymentRepository.findByRepairId(any())).thenReturn(List.of());
+        when(deviceObservationRepository.findByRepairIdOrderByObservedAtDesc(any())).thenReturn(List.of());
 
         RepairDTO dto = new RepairDTO();
         dto.setIdClient("c1");
@@ -69,6 +73,7 @@ class RepairServiceTest {
         });
         when(repairPartRepository.findByRepairId(any())).thenReturn(List.of());
         when(repairPaymentRepository.findByRepairId(any())).thenReturn(List.of());
+        when(deviceObservationRepository.findByRepairIdOrderByObservedAtDesc(any())).thenReturn(List.of());
 
         RepairDTO dto = new RepairDTO();
         dto.setIdClient("c1");

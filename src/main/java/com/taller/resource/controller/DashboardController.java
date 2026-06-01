@@ -6,6 +6,7 @@ import com.taller.resource.dto.DashboardOverviewDTO;
 import com.taller.resource.dto.DeviceDTO;
 import com.taller.resource.dto.RepairDTO;
 import com.taller.service.DashboardService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -13,6 +14,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/dashboard")
+@RequiredArgsConstructor
 public class DashboardController {
 
     private final DashboardService dashboardService;
@@ -39,8 +41,4 @@ public class DashboardController {
 
     @GetMapping("/latest-repairs")
     public List<RepairDTO> latestRepairs() { return dashboardService.latestRepairs(); }
-
-    public DashboardController(DashboardService dashboardService) {
-        this.dashboardService = dashboardService;
-    }
 }

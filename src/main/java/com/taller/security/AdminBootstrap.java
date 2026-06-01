@@ -2,12 +2,14 @@ package com.taller.security;
 
 import com.taller.model.AppUser;
 import com.taller.model.repository.AppUserRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 @Component
+@RequiredArgsConstructor
 public class AdminBootstrap implements CommandLineRunner {
 
     private final AppUserRepository appUserRepository;
@@ -37,10 +39,5 @@ public class AdminBootstrap implements CommandLineRunner {
                     .build();
             return appUserRepository.save(appUser);
         });
-    }
-
-    public AdminBootstrap(AppUserRepository appUserRepository, PasswordEncoder passwordEncoder) {
-        this.appUserRepository = appUserRepository;
-        this.passwordEncoder = passwordEncoder;
     }
 }

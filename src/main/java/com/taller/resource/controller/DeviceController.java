@@ -4,6 +4,7 @@ import com.taller.resource.dto.DeviceDTO;
 import com.taller.resource.dto.DeviceObservationDTO;
 import com.taller.resource.dto.DevicePasswordUpsertDTO;
 import com.taller.service.DeviceService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -12,6 +13,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/device")
+@RequiredArgsConstructor
 public class DeviceController {
 
     private final DeviceService deviceService;
@@ -85,9 +87,5 @@ public class DeviceController {
     @DeleteMapping("/{id}/observations/{observationId}")
     public DeviceDTO deleteObservation(@PathVariable String id, @PathVariable String observationId) {
         return deviceService.deleteObservation(id, observationId);
-    }
-
-    public DeviceController(DeviceService deviceService) {
-        this.deviceService = deviceService;
     }
 }

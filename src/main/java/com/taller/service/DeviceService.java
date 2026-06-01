@@ -11,6 +11,7 @@ import com.taller.resource.dto.DeviceDTO;
 import com.taller.resource.dto.DeviceObservationDTO;
 import com.taller.resource.dto.DevicePasswordHistoryDTO;
 import com.taller.resource.dto.DevicePasswordUpsertDTO;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -22,6 +23,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
+@RequiredArgsConstructor
 public class DeviceService {
 
     private final DeviceRepository deviceRepository;
@@ -290,11 +292,5 @@ public class DeviceService {
 
     private boolean hasText(String value) {
         return value != null && !value.isBlank();
-    }
-
-    public DeviceService(DeviceRepository deviceRepository, DevicePasswordHistoryRepository devicePasswordHistoryRepository, DeviceObservationRepository deviceObservationRepository) {
-        this.deviceRepository = deviceRepository;
-        this.devicePasswordHistoryRepository = devicePasswordHistoryRepository;
-        this.deviceObservationRepository = deviceObservationRepository;
     }
 }

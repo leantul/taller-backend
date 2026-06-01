@@ -22,6 +22,7 @@ import com.taller.resource.dto.DashboardRecentRepairDTO;
 import com.taller.resource.dto.DashboardSeriesItemDTO;
 import com.taller.resource.dto.DeviceDTO;
 import com.taller.resource.dto.RepairDTO;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
@@ -34,6 +35,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
+@RequiredArgsConstructor
 public class DashboardService {
 
     private final RepairService repairService;
@@ -204,13 +206,5 @@ public class DashboardService {
 
     private String nullSafe(String value) {
         return value != null ? value : "";
-    }
-
-    public DashboardService(RepairService repairService, RepairPartRepository repairPartRepository, ClientRepository clientRepository, DeviceRepository deviceRepository, RepairRepository repairRepository) {
-        this.repairService = repairService;
-        this.repairPartRepository = repairPartRepository;
-        this.clientRepository = clientRepository;
-        this.deviceRepository = deviceRepository;
-        this.repairRepository = repairRepository;
     }
 }

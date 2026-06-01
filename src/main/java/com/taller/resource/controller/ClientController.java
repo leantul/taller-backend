@@ -2,12 +2,14 @@ package com.taller.resource.controller;
 
 import com.taller.resource.dto.ClientDTO;
 import com.taller.service.ClientService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @RestController
 @RequestMapping("/client")
+@RequiredArgsConstructor
 public class ClientController {
 
     private final ClientService clientService;
@@ -35,9 +37,5 @@ public class ClientController {
     @DeleteMapping("/{id}")
     public void deleteClient(@PathVariable String id) {
         clientService.delete(id);
-    }
-
-    public ClientController(ClientService clientService) {
-        this.clientService = clientService;
     }
 }

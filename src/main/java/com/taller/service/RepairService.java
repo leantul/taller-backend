@@ -14,6 +14,7 @@ import com.taller.resource.dto.DeviceObservationDTO;
 import com.taller.resource.dto.RepairDTO;
 import com.taller.resource.dto.RepairPartDTO;
 import com.taller.resource.dto.RepairPaymentDTO;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -25,6 +26,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
+@RequiredArgsConstructor
 public class RepairService {
 
     private final RepairRepository repairRepository;
@@ -297,12 +299,5 @@ public class RepairService {
         }
         return repairPartRepository.findByRepairIdIn(repairIds).stream()
                 .collect(Collectors.groupingBy(RepairPart::getRepairId));
-    }
-
-    public RepairService(RepairRepository repairRepository, RepairPartRepository repairPartRepository, RepairPaymentRepository repairPaymentRepository, DeviceObservationRepository deviceObservationRepository) {
-        this.repairRepository = repairRepository;
-        this.repairPartRepository = repairPartRepository;
-        this.repairPaymentRepository = repairPaymentRepository;
-        this.deviceObservationRepository = deviceObservationRepository;
     }
 }

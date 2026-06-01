@@ -83,6 +83,14 @@ public class Client extends BasicEntity {
         return this.notes;
     }
 
+    public List<String> getPhones() {
+        return this.phones;
+    }
+
+    public List<String> getEmails() {
+        return this.emails;
+    }
+
     public List<Repair> getRepairs() {
         return this.repairs;
     }
@@ -121,6 +129,14 @@ public class Client extends BasicEntity {
 
     public void setNotes(String notes) {
         this.notes = notes;
+    }
+
+    public void setPhones(List<String> phones) {
+        this.phones = phones;
+    }
+
+    public void setEmails(List<String> emails) {
+        this.emails = emails;
     }
 
     public void setRepairs(List<Repair> repairs) {

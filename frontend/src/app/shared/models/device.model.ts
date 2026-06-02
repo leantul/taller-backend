@@ -25,6 +25,7 @@ export interface Device {
   serialNumber: string;
   deviceType: DeviceType;
   clientId: string;
+  technicalDetails?: string;
   currentPassword?: string;
   passwordHistory?: DevicePasswordHistory[];
   observations?: DeviceObservation[];

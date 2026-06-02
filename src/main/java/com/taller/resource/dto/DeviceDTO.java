@@ -15,8 +15,7 @@ public class DeviceDTO {
     private String serialNumber;
     private DeviceTypeEnum deviceType;
     private String currentPassword;
-    private String accessories;
-    private String aestheticCondition;
+    private String technicalDetails;
     private String clientId;
     private List<DevicePasswordHistoryDTO> passwordHistory;
     private List<DeviceObservationDTO> observations;

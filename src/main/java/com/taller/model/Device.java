@@ -29,11 +29,8 @@ public class Device extends BasicEntity {
     @Column(name = "password")
     private String password;
 
-    @Column(name = "accessories")
-    private String accessories;
-
-    @Column(name = "aesthetic_condition")
-    private String aestheticCondition;
+    @Column(name = "technical_details", columnDefinition = "TEXT")
+    private String technicalDetails;
 
     @Column(name = "client_id")
     private String clientId;

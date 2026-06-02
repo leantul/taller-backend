@@ -39,8 +39,7 @@ public class DeviceService {
         device.setSerialNumber(deviceDTO.getSerialNumber());
         device.setModel(deviceDTO.getModel());
         device.setDeviceType(deviceDTO.getDeviceType());
-        device.setAccessories(deviceDTO.getAccessories());
-        device.setAestheticCondition(deviceDTO.getAestheticCondition());
+        device.setTechnicalDetails(deviceDTO.getTechnicalDetails());
         device.setClientId(deviceDTO.getClientId());
         if (deviceDTO.getId() != null) device.setId(deviceDTO.getId());
 
@@ -166,8 +165,7 @@ public class DeviceService {
         dto.setModel(device.getModel());
         dto.setSerialNumber(device.getSerialNumber());
         dto.setDeviceType(device.getDeviceType());
-        dto.setAccessories(device.getAccessories());
-        dto.setAestheticCondition(device.getAestheticCondition());
+        dto.setTechnicalDetails(device.getTechnicalDetails());
         dto.setClientId(device.getClientId());
         dto.setCurrentPassword(resolveCurrentPassword(device, histories));
         if (includeHistory) {

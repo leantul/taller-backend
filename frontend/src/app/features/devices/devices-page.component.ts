@@ -54,6 +54,7 @@ const HISTORY_DATE_FORMATTER = new Intl.DateTimeFormat('es-AR', {
           <div class="field"><label>Modelo</label><input pInputText [(ngModel)]="draft.model" name="deviceModel" autocomplete="off" required /></div>
           <div class="field"><label>Serie / IMEI</label><input pInputText [(ngModel)]="draft.serialNumber" name="deviceSerialNumber" autocomplete="off" required /></div>
           <div class="field"><label>Tipo</label><p-select [options]="typeOptions" optionLabel="label" optionValue="value" [(ngModel)]="draft.deviceType" name="deviceType"></p-select></div>
+          <div class="field"><label>Características</label><textarea class="p-inputtext" rows="5" [(ngModel)]="draft.technicalDetails" name="deviceTechnicalDetails" placeholder="Memoria, disco, procesador, placa, detalles internos"></textarea></div>
           <div class="field">
             <label>Contraseña inicial</label>
             <div class="inline-row">
@@ -83,14 +84,13 @@ const HISTORY_DATE_FORMATTER = new Intl.DateTimeFormat('es-AR', {
         </div>
         <div class="native-table-wrap">
           <table class="native-table">
-            <thead><tr><th>Tipo</th><th>Marca</th><th>Modelo</th><th>Serie</th><th>Cliente</th><th>Observaciones</th><th>Contraseña actual</th><th>Acciones</th></tr></thead>
+            <thead><tr><th>Tipo</th><th>Marca</th><th>Modelo</th><th>Cliente</th><th>Observaciones</th><th>Contraseña actual</th><th>Acciones</th></tr></thead>
             <tbody>
               @for (d of visibleDevices; track d.id || d.serialNumber) {
                 <tr>
                   <td>{{ d.deviceType }}</td>
                   <td>{{ d.brand }}</td>
                   <td>{{ d.model }}</td>
-                  <td>{{ d.serialNumber }}</td>
                   <td>{{ getClientName(d.clientId) }}</td>
                   <td>
                     <button class="observation-summary-button" type="button" (click)="openObservationManager(d)">
@@ -118,7 +118,7 @@ const HISTORY_DATE_FORMATTER = new Intl.DateTimeFormat('es-AR', {
                   </td>
                 </tr>
               } @empty {
-                <tr><td class="empty-cell" colspan="8">No hay dispositivos para mostrar.</td></tr>
+                <tr><td class="empty-cell" colspan="7">No hay dispositivos para mostrar.</td></tr>
               }
             </tbody>
           </table>
@@ -146,6 +146,7 @@ const HISTORY_DATE_FORMATTER = new Intl.DateTimeFormat('es-AR', {
       <div class="field"><label>Modelo</label><input pInputText [(ngModel)]="editing.model" autocomplete="off" /></div>
       <div class="field"><label>Serie / IMEI</label><input pInputText [(ngModel)]="editing.serialNumber" autocomplete="off" /></div>
       <div class="field"><label>Tipo</label><p-select [options]="typeOptions" optionLabel="label" optionValue="value" [(ngModel)]="editing.deviceType"></p-select></div>
+      <div class="field"><label>Características</label><textarea class="p-inputtext" rows="6" [(ngModel)]="editing.technicalDetails" placeholder="Memoria, disco, procesador, placa, detalles internos"></textarea></div>
       <div class="field">
         <label>Contraseña actual</label>
         <div class="inline-row">
@@ -302,8 +303,8 @@ export class DevicesPageComponent implements OnInit {
   devices: Device[] = [];
   filteredDevices: (Device & { clientName?: string })[] = [];
   clients: Client[] = [];
-  draft: Device = { brand: '', model: '', serialNumber: '', clientId: '', deviceType: 'NOTEBOOK', currentPassword: '' };
-  editing: Device = { brand: '', model: '', serialNumber: '', clientId: '', deviceType: 'NOTEBOOK', currentPassword: '', passwordHistory: [] };
+  draft: Device = { brand: '', model: '', serialNumber: '', clientId: '', deviceType: 'NOTEBOOK', technicalDetails: '', currentPassword: '' };
+  editing: Device = { brand: '', model: '', serialNumber: '', clientId: '', deviceType: 'NOTEBOOK', technicalDetails: '', currentPassword: '', passwordHistory: [] };
   draftClient: Client = { name: '', lastName: '', dni: '', email: '', phone: '' };
   editVisible = false;
   passwordVisible = false;
@@ -375,7 +376,7 @@ export class DevicesPageComponent implements OnInit {
 
   save(): void {
     this.api.createDevice(this.draft).subscribe(() => {
-      this.draft = { brand: '', model: '', serialNumber: '', clientId: '', deviceType: 'NOTEBOOK', currentPassword: '' };
+      this.draft = { brand: '', model: '', serialNumber: '', clientId: '', deviceType: 'NOTEBOOK', technicalDetails: '', currentPassword: '' };
       this.showDraftPassword = false;
       this.reload();
     });
@@ -571,7 +572,7 @@ export class DevicesPageComponent implements OnInit {
           ? device.clientId === this.selectedClientId
           : (!clientTerm || (device.clientName || '').toLowerCase().includes(clientTerm));
         const observationText = (device.observations || []).map((observation) => observation.note).join(' ');
-        const byTerm = !term || `${device.deviceType} ${device.brand} ${device.model} ${device.serialNumber} ${device.clientId} ${device.clientName} ${device.currentPassword || ''} ${observationText}`.toLowerCase().includes(term);
+        const byTerm = !term || `${device.deviceType} ${device.brand} ${device.model} ${device.clientId} ${device.clientName} ${device.currentPassword || ''} ${observationText}`.toLowerCase().includes(term);
         return byClient && byTerm;
       });
     this.currentPage = 1;

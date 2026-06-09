@@ -6,6 +6,7 @@ import com.taller.model.DevicePasswordHistory;
 import com.taller.model.repository.DeviceObservationRepository;
 import com.taller.model.repository.DevicePasswordHistoryRepository;
 import com.taller.model.repository.DeviceRepository;
+import com.taller.model.repository.DeviceTypeRepository;
 import com.taller.model.repository.projection.DeviceListView;
 import com.taller.resource.dto.DeviceDTO;
 import com.taller.resource.dto.DeviceObservationDTO;
@@ -27,6 +28,7 @@ import java.util.stream.Collectors;
 public class DeviceService {
 
     private final DeviceRepository deviceRepository;
+    private final DeviceTypeRepository deviceTypeRepository;
     private final DevicePasswordHistoryRepository devicePasswordHistoryRepository;
     private final DeviceObservationRepository deviceObservationRepository;
 
@@ -38,7 +40,9 @@ public class DeviceService {
         device.setBrand(deviceDTO.getBrand());
         device.setSerialNumber(deviceDTO.getSerialNumber());
         device.setModel(deviceDTO.getModel());
-        device.setDeviceType(deviceDTO.getDeviceType());
+        var deviceType = deviceTypeRepository.findById(deviceDTO.getDeviceTypeId()).orElseThrow();
+        device.setDeviceTypeId(deviceType.getId());
+        device.setDeviceType(deviceType);
         device.setTechnicalDetails(deviceDTO.getTechnicalDetails());
         device.setClientId(deviceDTO.getClientId());
         if (deviceDTO.getId() != null) device.setId(deviceDTO.getId());
@@ -164,7 +168,8 @@ public class DeviceService {
         dto.setBrand(device.getBrand());
         dto.setModel(device.getModel());
         dto.setSerialNumber(device.getSerialNumber());
-        dto.setDeviceType(device.getDeviceType());
+        dto.setDeviceTypeId(device.getDeviceTypeId());
+        dto.setDeviceTypeName(device.getDeviceType() != null ? device.getDeviceType().getName() : null);
         dto.setTechnicalDetails(device.getTechnicalDetails());
         dto.setClientId(device.getClientId());
         dto.setCurrentPassword(resolveCurrentPassword(device, histories));
@@ -183,7 +188,8 @@ public class DeviceService {
         dto.setBrand(device.getBrand());
         dto.setModel(device.getModel());
         dto.setSerialNumber(device.getSerialNumber());
-        dto.setDeviceType(device.getDeviceType());
+        dto.setDeviceTypeId(device.getDeviceTypeId());
+        dto.setDeviceTypeName(device.getDeviceTypeName());
         dto.setClientId(device.getClientId());
         dto.setCurrentPassword(device.getCurrentPassword());
         dto.setObservations(observations.stream().map(this::toObservationDto).toList());

@@ -1,6 +1,5 @@
 package com.taller.resource.dto;
 
-import com.taller.model.enums.DeviceTypeEnum;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -13,7 +12,8 @@ public class DeviceDTO {
     private String brand;
     private String model;
     private String serialNumber;
-    private DeviceTypeEnum deviceType;
+    private String deviceTypeId;
+    private String deviceTypeName;
     private String currentPassword;
     private String technicalDetails;
     private String clientId;

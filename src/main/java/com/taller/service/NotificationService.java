@@ -409,7 +409,7 @@ public class NotificationService {
 
         DeviceBasicView device = devicesById.get(repair.getIdDevice());
         if (device != null) {
-            dto.setDeviceType(device.getDeviceType());
+            dto.setDeviceTypeName(device.getDeviceTypeName());
             dto.setDeviceBrand(device.getBrand());
             dto.setDeviceModel(device.getModel());
             dto.setDeviceSerialNumber(device.getSerialNumber());
@@ -437,7 +437,7 @@ public class NotificationService {
 
         DeviceBasicView device = devicesById.get(observation.getDeviceId());
         if (device != null) {
-            dto.setDeviceType(device.getDeviceType());
+            dto.setDeviceTypeName(device.getDeviceTypeName());
             dto.setDeviceBrand(device.getBrand());
             dto.setDeviceModel(device.getModel());
             dto.setDeviceSerialNumber(device.getSerialNumber());

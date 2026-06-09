@@ -16,7 +16,7 @@ import { ConfirmationService } from 'primeng/api';
 import { ApiService } from '../../core/services/api.service';
 import { Repair } from '../../shared/models/repair.model';
 import { Client } from '../../shared/models/client.model';
-import { Device } from '../../shared/models/device.model';
+import { Device, DeviceType } from '../../shared/models/device.model';
 import { MessageService } from 'primeng/api';
 
 type RepairTableRow = {
@@ -68,7 +68,7 @@ export class RepairsPageComponent implements OnInit {
   showDraftDevicePassword = false;
   editClientOptions: { label: string; value: string }[] = [];
   editDeviceOptions: { label: string; value: string }[] = [];
-  draftDevice: Device = { brand: '', model: '', serialNumber: '', clientId: '', deviceType: 'NOTEBOOK', currentPassword: '' };
+  draftDevice: Device = { brand: '', model: '', serialNumber: '', clientId: '', deviceTypeId: '', currentPassword: '' };
   showClientModal = false;
   showDeviceModal = false;
   showStatusModal = false;
@@ -96,18 +96,18 @@ export class RepairsPageComponent implements OnInit {
   statusOptions = [
     { label: 'Por recibir', value: 'POR_RECIBIR' }, { label: 'Recibida', value: 'RECIBIDA' }, { label: 'Presupuestada', value: 'PRESUPUESTADA_ESPERANDO_RESPUESTA' }, { label: 'Haciendo', value: 'HACIENDO' }, { label: 'Esperando retiro', value: 'ESPERANDO_RETIRO' }, { label: 'Retirada', value: 'RETIRADA' }
   ];
-  typeOptions = [
-    { label: 'Desktop', value: 'DESKTOP' }, { label: 'Notebook', value: 'NOTEBOOK' }, { label: 'Tablet', value: 'TABLET' }, { label: 'Celular', value: 'CELULAR' }, { label: 'Otros', value: 'OTROS' }
-  ];
+  typeOptions: DeviceType[] = [];
 
   constructor(private readonly api: ApiService, private readonly messageService: MessageService, private readonly route: ActivatedRoute, private readonly confirmationService: ConfirmationService, private readonly changeDetector: ChangeDetectorRef) {}
   ngOnInit(): void {
-    forkJoin({ repairs: this.api.getRepairs(), clients: this.api.getClients(), devices: this.api.getDevices() }).subscribe(({ repairs, clients, devices }) => {
+    forkJoin({ repairs: this.api.getRepairs(), clients: this.api.getClients(), devices: this.api.getDevices(), deviceTypes: this.api.getDeviceTypes() }).subscribe(({ repairs, clients, devices, deviceTypes }) => {
       this.repairs = repairs.slice().reverse();
       this.clients = clients;
       this.clientsById = new Map(clients.filter(item => !!item.id).map(item => [item.id!, item]));
       this.devicesById = new Map(devices.filter(item => !!item.id).map(item => [item.id!, item]));
       this.allDevices = devices;
+      this.typeOptions = deviceTypes;
+      this.draftDevice.deviceTypeId = this.defaultDeviceTypeId();
       this.rebuildStaticOptions();
       this.updateFilteredClients();
       this.refreshSelectionSummaries();
@@ -143,7 +143,7 @@ export class RepairsPageComponent implements OnInit {
       this.rebuildStaticOptions();
       this.rebuildClientDeviceOptions();
       this.draft.idDevice = device.id || '';
-      this.draftDevice = { brand: '', model: '', serialNumber: '', clientId: this.draft.idClient, deviceType: 'NOTEBOOK', currentPassword: '' };
+      this.draftDevice = { brand: '', model: '', serialNumber: '', clientId: this.draft.idClient, deviceTypeId: this.defaultDeviceTypeId(), currentPassword: '' };
       this.showDeviceModal = false;
       this.showDraftDevicePassword = false;
       this.refreshSelectionSummaries();
@@ -582,11 +582,17 @@ export class RepairsPageComponent implements OnInit {
       .filter((d) => !!d.value);
   }
 
+  private defaultDeviceTypeId(): string {
+    return this.typeOptions.find((type) => type.name.toLowerCase() === 'notebook')?.id
+      || this.typeOptions[0]?.id
+      || '';
+  }
+
   private refreshSelectionSummaries(): void {
     const client = this.clientsById.get(this.draft.idClient);
     this.selectedClientSummary = client ? `${client.name} ${client.lastName}`.trim() : '';
     const device = this.clientDevices.find((item) => item.id === this.draft.idDevice) || this.devicesById.get(this.draft.idDevice);
-    this.selectedDeviceSummary = device ? `${device.deviceType} · ${device.brand} ${device.model}`.replace(/\s+/g, ' ').trim() : '';
+    this.selectedDeviceSummary = device ? `${device.deviceTypeName || '-'} · ${device.brand} ${device.model}`.replace(/\s+/g, ' ').trim() : '';
     this.selectedDevicePassword = device?.currentPassword || '';
   }
 

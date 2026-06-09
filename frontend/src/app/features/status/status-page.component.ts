@@ -88,7 +88,7 @@ export class StatusPageComponent implements OnInit {
 
   deviceLabel(item: Repair): string {
     const device = this.devicesById.get(item.idDevice);
-    return device ? `${device.deviceType} ${device.brand} ${device.model}`.trim() : item.idDevice;
+    return device ? `${device.deviceTypeName || '-'} ${device.brand} ${device.model}`.trim() : item.idDevice;
   }
 
   statusLabel(status: Repair['status']): string {

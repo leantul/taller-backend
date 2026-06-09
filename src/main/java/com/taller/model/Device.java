@@ -1,6 +1,5 @@
 package com.taller.model;
 
-import com.taller.model.enums.DeviceTypeEnum;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -22,9 +21,12 @@ public class Device extends BasicEntity {
     @Column(name = "serial_number")
     private String serialNumber;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "device_type")
-    private DeviceTypeEnum deviceType;
+    @Column(name = "device_type_id")
+    private String deviceTypeId;
+
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "device_type_id", insertable = false, updatable = false)
+    private DeviceType deviceType;
 
     @Column(name = "password")
     private String password;

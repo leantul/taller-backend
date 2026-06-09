@@ -310,7 +310,7 @@
 </p-dialog>
 
 <p-dialog header="Nuevo dispositivo" [(visible)]="showDeviceModal" [modal]="true" [style]="{width:'36rem'}">
-  <div class="field"><label>Tipo</label><p-select [options]="typeOptions" optionLabel="label" optionValue="value" [(ngModel)]="draftDevice.deviceType"></p-select></div>
+  <div class="field"><label>Tipo</label><p-select [options]="typeOptions" optionLabel="name" optionValue="id" [(ngModel)]="draftDevice.deviceTypeId"></p-select></div>
   <div class="field"><label>Marca</label><input pInputText [(ngModel)]="draftDevice.brand" autocomplete="off"/></div>
   <div class="field"><label>Modelo</label><input pInputText [(ngModel)]="draftDevice.model" autocomplete="off"/></div>
   <div class="field"><label>Serie</label><input pInputText [(ngModel)]="draftDevice.serialNumber" autocomplete="off"/></div>

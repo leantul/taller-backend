@@ -164,6 +164,10 @@
           <label>Detalle del presupuesto</label>
           <div class="detail-scrollable">{{ detailRepair.quoteNotes || 'Sin detalle cargado' }}</div>
         </div>
+        <div class="detail-item detail-wide detail-text-block">
+          <label>Observaciones de la reparación</label>
+          <div class="detail-scrollable">{{ detailRepair.repairNotes || 'Sin observaciones cargadas' }}</div>
+        </div>
         <div class="detail-item detail-wide">
           <label>Observaciones del dispositivo</label>
           @if (detailRepair.observations?.length) {
@@ -261,6 +265,7 @@
   }
   <div class="field"><label>Presupuesto enviado</label><p-inputNumber [(ngModel)]="editingRepair.quotedAmount" mode="currency" currency="ARS" locale="es-AR" [min]="0"></p-inputNumber></div>
   <div class="field"><label>Detalle del presupuesto</label><textarea class="p-inputtext" rows="4" [(ngModel)]="editingRepair.quoteNotes"></textarea></div>
+  <div class="field"><label>Observaciones de la reparación</label><textarea class="p-inputtext" rows="6" [(ngModel)]="editingRepair.repairNotes" placeholder="Observaciones propias de esta reparación"></textarea></div>
   <div class="field"><label>Mano de obra</label><p-inputNumber [(ngModel)]="editingRepair.laborAmount" mode="currency" currency="ARS" locale="es-AR" [min]="0"></p-inputNumber></div>
   <div class="field"><label>Monto final</label><p-inputNumber [(ngModel)]="editingRepair.price" mode="currency" currency="ARS" locale="es-AR" [min]="0"></p-inputNumber></div>
   <div class="field">

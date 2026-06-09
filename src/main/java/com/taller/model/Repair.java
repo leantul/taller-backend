@@ -65,6 +65,9 @@ public class Repair extends BasicEntity {
     @Column(name = "quote_notes", columnDefinition = "TEXT")
     private String quoteNotes;
 
+    @Column(name = "repair_notes", columnDefinition = "TEXT")
+    private String repairNotes;
+
     @Column(name = "approved")
     private Boolean approved;
 

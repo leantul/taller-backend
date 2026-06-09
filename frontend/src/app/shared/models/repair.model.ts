@@ -21,6 +21,7 @@ export interface Repair {
   laborAmount?: number;
   quotedAmount?: number;
   quoteNotes?: string;
+  repairNotes?: string;
   receiveDateTime?: string;
   returnDateTime?: string;
   parts?: RepairPart[];
@@ -28,5 +29,5 @@ export interface Repair {
 }
 
 
-export type RepairCreateDTO = Omit<Repair, "id" | "receiveDateTime" | "returnDateTime"> & { orderNumber?: string };
+export type RepairCreateDTO = Omit<Repair, "id" | "receiveDateTime" | "returnDateTime" | "repairNotes"> & { orderNumber?: string };
 export type RepairUpdateDTO = Partial<Repair> & Pick<Repair, "id">;

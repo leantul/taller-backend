@@ -1,5 +1,6 @@
 package com.taller.resource.dto;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.taller.model.enums.RepairStatusEnum;
 import lombok.Getter;
 import lombok.Setter;
@@ -26,6 +27,8 @@ public class RepairDTO {
     private BigDecimal extraAmount;
     private BigDecimal quotedAmount;
     private String quoteNotes;
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    private String repairNotes;
     private Boolean approved;
     private Boolean rejected;
     private LocalDateTime readyNotifiedAt;

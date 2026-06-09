@@ -78,6 +78,9 @@ public class RepairService {
         repair.setExtraAmount(repairDTO.getExtraAmount());
         repair.setQuotedAmount(repairDTO.getQuotedAmount());
         repair.setQuoteNotes(repairDTO.getQuoteNotes());
+        if (!isNew && repairDTO.getRepairNotes() != null) {
+            repair.setRepairNotes(normalizeOptionalText(repairDTO.getRepairNotes()));
+        }
         repair.setApproved(repairDTO.getApproved());
         repair.setRejected(repairDTO.getRejected());
         repair.setReadyNotifiedAt(repairDTO.getReadyNotifiedAt());
@@ -176,6 +179,7 @@ public class RepairService {
         dto.setExtraAmount(repair.getExtraAmount());
         dto.setQuotedAmount(repair.getQuotedAmount());
         dto.setQuoteNotes(repair.getQuoteNotes());
+        dto.setRepairNotes(repair.getRepairNotes());
         dto.setApproved(repair.getApproved());
         dto.setRejected(repair.getRejected());
         dto.setReadyNotifiedAt(repair.getReadyNotifiedAt());
@@ -291,6 +295,11 @@ public class RepairService {
             return repairDTO.getIdClient();
         }
         return repairDTO.getClient() != null ? repairDTO.getClient().getId() : null;
+    }
+
+    private String normalizeOptionalText(String value) {
+        String normalized = value.trim();
+        return normalized.isEmpty() ? null : normalized;
     }
 
     private Map<String, List<RepairPart>> partsByRepairId(Collection<String> repairIds) {

@@ -107,7 +107,7 @@ import { DashboardOverview } from '../../shared/models/dashboard.model';
             <thead><tr><th>Tipo</th><th>Marca</th><th>Modelo</th></tr></thead>
             <tbody>
               <tr *ngFor="let item of overview.recentDevices; trackBy: recentDeviceTrack">
-                <td>{{ item.deviceType }}</td>
+                <td>{{ item.deviceTypeName }}</td>
                 <td>{{ item.brand }}</td>
                 <td>{{ item.model }}</td>
               </tr>

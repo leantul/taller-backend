@@ -9,8 +9,9 @@ import { AutoCompleteModule } from 'primeng/autocomplete';
 import { DialogModule } from 'primeng/dialog';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { ConfirmationService, MessageService } from 'primeng/api';
+import { forkJoin } from 'rxjs';
 import { ApiService } from '../../core/services/api.service';
-import { Device, DeviceObservation, DevicePasswordHistory } from '../../shared/models/device.model';
+import { Device, DeviceObservation, DevicePasswordHistory, DeviceType } from '../../shared/models/device.model';
 import { Client } from '../../shared/models/client.model';
 
 const ARGENTINA_TIME_ZONE = 'America/Argentina/Buenos_Aires';
@@ -53,7 +54,7 @@ const HISTORY_DATE_FORMATTER = new Intl.DateTimeFormat('es-AR', {
           <div class="field"><label>Marca</label><input pInputText [(ngModel)]="draft.brand" name="deviceBrand" autocomplete="off" required /></div>
           <div class="field"><label>Modelo</label><input pInputText [(ngModel)]="draft.model" name="deviceModel" autocomplete="off" required /></div>
           <div class="field"><label>Serie / IMEI</label><input pInputText [(ngModel)]="draft.serialNumber" name="deviceSerialNumber" autocomplete="off" required /></div>
-          <div class="field"><label>Tipo</label><p-select [options]="typeOptions" optionLabel="label" optionValue="value" [(ngModel)]="draft.deviceType" name="deviceType"></p-select></div>
+          <div class="field"><label>Tipo</label><p-select [options]="typeOptions" optionLabel="name" optionValue="id" [(ngModel)]="draft.deviceTypeId" name="deviceTypeId"></p-select></div>
           <div class="field"><label>Características</label><textarea class="p-inputtext" rows="5" [(ngModel)]="draft.technicalDetails" name="deviceTechnicalDetails" placeholder="Memoria, disco, procesador, placa, detalles internos"></textarea></div>
           <div class="field">
             <label>Contraseña inicial</label>
@@ -88,7 +89,7 @@ const HISTORY_DATE_FORMATTER = new Intl.DateTimeFormat('es-AR', {
             <tbody>
               @for (d of visibleDevices; track d.id || d.serialNumber) {
                 <tr>
-                  <td>{{ d.deviceType }}</td>
+                  <td>{{ d.deviceTypeName || '-' }}</td>
                   <td>{{ d.brand }}</td>
                   <td>{{ d.model }}</td>
                   <td>{{ getClientName(d.clientId) }}</td>
@@ -145,7 +146,7 @@ const HISTORY_DATE_FORMATTER = new Intl.DateTimeFormat('es-AR', {
       <div class="field"><label>Marca</label><input pInputText [(ngModel)]="editing.brand" autocomplete="off" /></div>
       <div class="field"><label>Modelo</label><input pInputText [(ngModel)]="editing.model" autocomplete="off" /></div>
       <div class="field"><label>Serie / IMEI</label><input pInputText [(ngModel)]="editing.serialNumber" autocomplete="off" /></div>
-      <div class="field"><label>Tipo</label><p-select [options]="typeOptions" optionLabel="label" optionValue="value" [(ngModel)]="editing.deviceType"></p-select></div>
+      <div class="field"><label>Tipo</label><p-select [options]="typeOptions" optionLabel="name" optionValue="id" [(ngModel)]="editing.deviceTypeId"></p-select></div>
       <div class="field"><label>Características</label><textarea class="p-inputtext" rows="6" [(ngModel)]="editing.technicalDetails" placeholder="Memoria, disco, procesador, placa, detalles internos"></textarea></div>
       <div class="field">
         <label>Contraseña actual</label>
@@ -303,8 +304,8 @@ export class DevicesPageComponent implements OnInit {
   devices: Device[] = [];
   filteredDevices: (Device & { clientName?: string })[] = [];
   clients: Client[] = [];
-  draft: Device = { brand: '', model: '', serialNumber: '', clientId: '', deviceType: 'NOTEBOOK', technicalDetails: '', currentPassword: '' };
-  editing: Device = { brand: '', model: '', serialNumber: '', clientId: '', deviceType: 'NOTEBOOK', technicalDetails: '', currentPassword: '', passwordHistory: [] };
+  draft: Device = { brand: '', model: '', serialNumber: '', clientId: '', deviceTypeId: '', technicalDetails: '', currentPassword: '' };
+  editing: Device = { brand: '', model: '', serialNumber: '', clientId: '', deviceTypeId: '', technicalDetails: '', currentPassword: '', passwordHistory: [] };
   draftClient: Client = { name: '', lastName: '', dni: '', email: '', phone: '' };
   editVisible = false;
   passwordVisible = false;
@@ -331,9 +332,7 @@ export class DevicesPageComponent implements OnInit {
   visibleHistoryPasswords = new Set<string>();
   clientFilterSuggestions: { label: string; value: string }[] = [];
   private newClientTarget: 'draft' | 'edit' = 'draft';
-  typeOptions = [
-    { label: 'Desktop', value: 'DESKTOP' }, { label: 'Notebook', value: 'NOTEBOOK' }, { label: 'Tablet', value: 'TABLET' }, { label: 'Celular', value: 'CELULAR' }, { label: 'Otros', value: 'OTROS' }
-  ];
+  typeOptions: DeviceType[] = [];
 
   constructor(
     private readonly api: ApiService,
@@ -343,14 +342,22 @@ export class DevicesPageComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    this.api.getClients().subscribe((clients) => {
+    forkJoin({ clients: this.api.getClients(), deviceTypes: this.api.getDeviceTypes() }).subscribe(({ clients, deviceTypes }) => {
       this.clients = clients;
+      this.typeOptions = deviceTypes;
+      this.draft.deviceTypeId = this.defaultDeviceTypeId();
       this.reload();
     });
   }
 
   get clientOptions(): { label: string; value: string }[] {
     return this.clients.map((client) => ({ label: `${client.name} ${client.lastName}`.trim(), value: client.id! }));
+  }
+
+  private defaultDeviceTypeId(): string {
+    return this.typeOptions.find((type) => type.name.toLowerCase() === 'notebook')?.id
+      || this.typeOptions[0]?.id
+      || '';
   }
 
   filterClientOptions(query: string): void {
@@ -376,7 +383,7 @@ export class DevicesPageComponent implements OnInit {
 
   save(): void {
     this.api.createDevice(this.draft).subscribe(() => {
-      this.draft = { brand: '', model: '', serialNumber: '', clientId: '', deviceType: 'NOTEBOOK', technicalDetails: '', currentPassword: '' };
+      this.draft = { brand: '', model: '', serialNumber: '', clientId: '', deviceTypeId: this.defaultDeviceTypeId(), technicalDetails: '', currentPassword: '' };
       this.showDraftPassword = false;
       this.reload();
     });
@@ -572,7 +579,7 @@ export class DevicesPageComponent implements OnInit {
           ? device.clientId === this.selectedClientId
           : (!clientTerm || (device.clientName || '').toLowerCase().includes(clientTerm));
         const observationText = (device.observations || []).map((observation) => observation.note).join(' ');
-        const byTerm = !term || `${device.deviceType} ${device.brand} ${device.model} ${device.clientId} ${device.clientName} ${device.currentPassword || ''} ${observationText}`.toLowerCase().includes(term);
+        const byTerm = !term || `${device.deviceTypeName || ''} ${device.brand} ${device.model} ${device.clientId} ${device.clientName} ${device.currentPassword || ''} ${observationText}`.toLowerCase().includes(term);
         return byClient && byTerm;
       });
     this.currentPage = 1;

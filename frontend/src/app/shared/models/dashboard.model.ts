@@ -13,7 +13,7 @@ export interface DashboardRecentClient {
 
 export interface DashboardRecentDevice {
   id: string;
-  deviceType: Device['deviceType'];
+  deviceTypeName: string;
   brand: string;
   model: string;
 }

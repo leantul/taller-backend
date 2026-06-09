@@ -3,7 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { Client } from '../../shared/models/client.model';
 import { APP_CONFIG } from '../config/app-config';
-import { Device, DeviceObservation, DevicePasswordHistory } from '../../shared/models/device.model';
+import { Device, DeviceObservation, DevicePasswordHistory, DeviceType } from '../../shared/models/device.model';
 import { Repair, RepairCreateDTO, RepairUpdateDTO } from '../../shared/models/repair.model';
 import { FinanceSummary } from '../../shared/models/finance.model';
 import { DashboardOverview } from '../../shared/models/dashboard.model';
@@ -21,6 +21,7 @@ export class ApiService {
   deleteClient(id: string): Observable<void> { return this.http.delete<void>(`${this.baseUrl}/client/${id}`); }
 
   getDevices(): Observable<Device[]> { return this.http.get<Device[]>(`${this.baseUrl}/device`); }
+  getDeviceTypes(): Observable<DeviceType[]> { return this.http.get<DeviceType[]>(`${this.baseUrl}/device-type`); }
   getDeviceById(id: string): Observable<Device> { return this.http.get<Device>(`${this.baseUrl}/device/${id}`); }
   searchDevices(term: string): Observable<Device[]> { return this.http.get<Device[]>(`${this.baseUrl}/device/search?term=${encodeURIComponent(term)}`); }
   createDevice(payload: Device): Observable<Device> { return this.http.post<Device>(`${this.baseUrl}/device`, payload); }

@@ -176,7 +176,7 @@ export class NotificationsPageComponent implements OnInit {
   }
 
   deviceLabel(item: NotificationItem): string {
-    return [item.deviceType, item.deviceBrand, item.deviceModel].filter(Boolean).join(' ') || '-';
+    return [item.deviceTypeName, item.deviceBrand, item.deviceModel].filter(Boolean).join(' ') || '-';
   }
 
   formatDate(value?: string): string {

@@ -1,4 +1,3 @@
-import { DeviceType } from './device.model';
 import { Repair, RepairPart } from './repair.model';
 
 export interface NotificationItem {
@@ -16,7 +15,7 @@ export interface NotificationItem {
   clientLastName?: string;
   clientPhone?: string;
   clientEmail?: string;
-  deviceType?: DeviceType;
+  deviceTypeName?: string;
   deviceBrand?: string;
   deviceModel?: string;
   deviceSerialNumber?: string;

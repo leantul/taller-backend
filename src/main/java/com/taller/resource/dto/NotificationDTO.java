@@ -3,7 +3,6 @@ package com.taller.resource.dto;
 import lombok.Getter;
 import lombok.Setter;
 
-import com.taller.model.enums.DeviceTypeEnum;
 import com.taller.model.enums.RepairStatusEnum;
 
 import java.math.BigDecimal;
@@ -27,7 +26,7 @@ public class NotificationDTO {
     private String clientLastName;
     private String clientPhone;
     private String clientEmail;
-    private DeviceTypeEnum deviceType;
+    private String deviceTypeName;
     private String deviceBrand;
     private String deviceModel;
     private String deviceSerialNumber;

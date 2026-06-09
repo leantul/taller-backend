@@ -16,7 +16,8 @@ public interface DeviceRepository extends JpaRepository<Device, String> {
                    d.brand AS brand,
                    d.model AS model,
                    d.serialNumber AS serialNumber,
-                   d.deviceType AS deviceType,
+                   d.deviceTypeId AS deviceTypeId,
+                   d.deviceType.name AS deviceTypeName,
                    d.clientId AS clientId,
                    (SELECT h.passwordValue FROM DevicePasswordHistory h WHERE h.deviceId = d.id AND h.isCurrent = true) AS currentPassword
             FROM Device d
@@ -29,7 +30,8 @@ public interface DeviceRepository extends JpaRepository<Device, String> {
                    d.brand AS brand,
                    d.model AS model,
                    d.serialNumber AS serialNumber,
-                   d.deviceType AS deviceType,
+                   d.deviceTypeId AS deviceTypeId,
+                   d.deviceType.name AS deviceTypeName,
                    d.clientId AS clientId,
                    (SELECT h.passwordValue FROM DevicePasswordHistory h WHERE h.deviceId = d.id AND h.isCurrent = true) AS currentPassword
             FROM Device d
@@ -37,6 +39,7 @@ public interface DeviceRepository extends JpaRepository<Device, String> {
                OR lower(d.model) LIKE lower(concat('%', ?1, '%'))
                OR lower(d.serialNumber) LIKE lower(concat('%', ?1, '%'))
                OR lower(d.clientId) LIKE lower(concat('%', ?1, '%'))
+               OR lower(d.deviceType.name) LIKE lower(concat('%', ?1, '%'))
             ORDER BY d.creationDateTime DESC
             """)
     List<DeviceListView> searchListRows(String term);
@@ -46,7 +49,8 @@ public interface DeviceRepository extends JpaRepository<Device, String> {
                    d.brand AS brand,
                    d.model AS model,
                    d.serialNumber AS serialNumber,
-                   d.deviceType AS deviceType,
+                   d.deviceTypeId AS deviceTypeId,
+                   d.deviceType.name AS deviceTypeName,
                    d.clientId AS clientId
             FROM Device d
             ORDER BY d.creationDateTime DESC
@@ -58,7 +62,8 @@ public interface DeviceRepository extends JpaRepository<Device, String> {
                    d.brand AS brand,
                    d.model AS model,
                    d.serialNumber AS serialNumber,
-                   d.deviceType AS deviceType,
+                   d.deviceTypeId AS deviceTypeId,
+                   d.deviceType.name AS deviceTypeName,
                    d.clientId AS clientId
             FROM Device d
             WHERE d.id IN ?1
@@ -66,9 +71,9 @@ public interface DeviceRepository extends JpaRepository<Device, String> {
     List<DeviceBasicView> findBasicByIdIn(Collection<String> ids);
 
     @Query("""
-            SELECT d.deviceType AS deviceType, COUNT(d) AS total
+            SELECT d.deviceType.name AS deviceTypeName, COUNT(d) AS total
             FROM Device d
-            GROUP BY d.deviceType
+            GROUP BY d.deviceType.name
             """)
     List<com.taller.model.repository.projection.DeviceTypeCountView> countByDeviceType();
 }

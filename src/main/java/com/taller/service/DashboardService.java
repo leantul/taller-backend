@@ -1,6 +1,5 @@
 package com.taller.service;
 
-import com.taller.model.enums.DeviceTypeEnum;
 import com.taller.model.enums.RepairStatusEnum;
 import com.taller.model.repository.ClientRepository;
 import com.taller.model.repository.DeviceRepository;
@@ -72,7 +71,7 @@ public class DashboardService {
     public List<DeviceDTO> latestDevices() {
         return deviceRepository.findAll(PageRequest.of(0, 5)).stream().map(d -> {
             DeviceDTO dto = new DeviceDTO();
-            dto.setId(d.getId()); dto.setClientId(d.getClientId()); dto.setBrand(d.getBrand()); dto.setModel(d.getModel()); dto.setSerialNumber(d.getSerialNumber()); dto.setDeviceType(d.getDeviceType());
+            dto.setId(d.getId()); dto.setClientId(d.getClientId()); dto.setBrand(d.getBrand()); dto.setModel(d.getModel()); dto.setSerialNumber(d.getSerialNumber()); dto.setDeviceTypeId(d.getDeviceTypeId()); dto.setDeviceTypeName(d.getDeviceType() != null ? d.getDeviceType().getName() : null);
             return dto;
         }).toList();
     }
@@ -108,7 +107,7 @@ public class DashboardService {
 
         List<DeviceTypeCountView> deviceTypeCounts = deviceRepository.countByDeviceType();
         dto.setDeviceTypes(deviceTypeCounts.stream()
-                .map(entry -> new DashboardSeriesItemDTO(deviceTypeLabel(entry.getDeviceType()), entry.getTotal()))
+                .map(entry -> new DashboardSeriesItemDTO(entry.getDeviceTypeName(), entry.getTotal()))
                 .toList());
 
         List<DashboardRecentClientDTO> latestClients = clientRepository.findTop5WithDevicesBasic(PageRequest.of(0, 5)).stream()
@@ -124,7 +123,7 @@ public class DashboardService {
         List<DeviceBasicView> latestDevices = deviceRepository.findBasicLatest(PageRequest.of(0, 5));
         Map<String, String> firstDeviceTypeByClient = new LinkedHashMap<>();
         for (DeviceBasicView device : latestDevices) {
-            firstDeviceTypeByClient.putIfAbsent(device.getClientId(), deviceTypeLabel(device.getDeviceType()));
+            firstDeviceTypeByClient.putIfAbsent(device.getClientId(), device.getDeviceTypeName());
         }
         dto.setRecentClients(latestClients.stream()
                 .peek(client -> client.setDeviceType(firstDeviceTypeByClient.getOrDefault(client.getId(), "-")))
@@ -133,7 +132,7 @@ public class DashboardService {
         dto.setRecentDevices(latestDevices.stream().map(device -> {
             DashboardRecentDeviceDTO deviceDto = new DashboardRecentDeviceDTO();
             deviceDto.setId(device.getId());
-            deviceDto.setDeviceType(device.getDeviceType());
+            deviceDto.setDeviceTypeName(device.getDeviceTypeName());
             deviceDto.setBrand(device.getBrand());
             deviceDto.setModel(device.getModel());
             return deviceDto;
@@ -172,7 +171,7 @@ public class DashboardService {
             ClientBasicView client = device != null ? inactiveClientsById.get(device.getClientId()) : null;
             DashboardInactiveDeviceDTO item = new DashboardInactiveDeviceDTO();
             String deviceLabel = device != null
-                    ? (deviceTypeLabel(device.getDeviceType()) + " " + nullSafe(device.getBrand()) + " " + nullSafe(device.getModel())).replaceAll("\\s+", " ").trim()
+                    ? (nullSafe(device.getDeviceTypeName()) + " " + nullSafe(device.getBrand()) + " " + nullSafe(device.getModel())).replaceAll("\\s+", " ").trim()
                     : view.getDeviceId();
             String ownerLabel = client != null ? (client.getName() + " " + client.getLastName()).trim() : "Cliente sin datos";
             item.setName(deviceLabel + " · " + ownerLabel);
@@ -185,19 +184,6 @@ public class DashboardService {
 
     private String statusLabel(RepairStatusEnum status) {
         return status != null ? status.getLabel() : "-";
-    }
-
-    private String deviceTypeLabel(DeviceTypeEnum deviceType) {
-        if (deviceType == null) {
-            return "-";
-        }
-        return switch (deviceType) {
-            case DESKTOP -> "Desktop";
-            case NOTEBOOK -> "Notebook";
-            case TABLET -> "Tablet";
-            case CELULAR -> "Celular";
-            case OTROS -> "Otros";
-        };
     }
 
     private BigDecimal safeMoney(BigDecimal value) {

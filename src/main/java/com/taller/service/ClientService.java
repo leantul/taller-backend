@@ -2,8 +2,19 @@ package com.taller.service;
 
 import com.taller.model.Client;
 import com.taller.model.repository.ClientRepository;
+import com.taller.model.repository.RepairRepository;
+import com.taller.model.repository.projection.ClientDetailView;
+import com.taller.model.repository.projection.ClientListView;
+import com.taller.model.repository.projection.ClientRepairHistoryView;
+import com.taller.resource.dto.ClientDetailDTO;
 import com.taller.resource.dto.ClientDTO;
+import com.taller.resource.dto.ClientHistoryDTO;
+import com.taller.resource.dto.ClientListItemDTO;
+import com.taller.resource.dto.ClientRepairHistoryItemDTO;
+import com.taller.resource.dto.PageDTO;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -13,6 +24,21 @@ import java.util.List;
 public class ClientService {
 
     private final ClientRepository clientRepository;
+    private final RepairRepository repairRepository;
+
+    public PageDTO<ClientListItemDTO> findPage(int page, int size, String term) {
+        Page<ClientListView> result = clientRepository.findPage(normalizeTerm(term), pageRequest(page, size, 100));
+        return toPage(result, result.getContent().stream().map(this::toListItemDto).toList());
+    }
+
+    public ClientHistoryDTO findHistory(String id, int page, int size, boolean includeClient) {
+        ClientDetailDTO client = includeClient ? findDetail(id) : null;
+        Page<ClientRepairHistoryView> result = repairRepository.findClientHistory(id, pageRequest(page, size, 50));
+        return new ClientHistoryDTO(
+                client,
+                toPage(result, result.getContent().stream().map(this::toHistoryItemDto).toList())
+        );
+    }
 
     public List<ClientDTO> findAll() {
         return clientRepository.findAll().stream().map(this::toDto).toList();
@@ -46,6 +72,20 @@ public class ClientService {
         return clientRepository.findById(id).map(this::toDto).orElse(null);
     }
 
+    private ClientDetailDTO findDetail(String id) {
+        ClientDetailView client = clientRepository.findDetailById(id).orElse(null);
+        if (client == null) {
+            return null;
+        }
+        return new ClientDetailDTO(
+                client.getId(), client.getName(), client.getLastName(), client.getDni(), client.getEmail(),
+                client.getAddress(), client.getPhone(), client.getNotes(),
+                List.copyOf(clientRepository.findAdditionalPhonesById(id)),
+                List.copyOf(clientRepository.findAdditionalEmailsById(id)),
+                client.getBirthDate()
+        );
+    }
+
     public List<ClientDTO> search(String term) {
         return clientRepository.search(term).stream().map(this::toDto).toList();
     }
@@ -64,5 +104,28 @@ public class ClientService {
         dto.setPhones(client.getPhones());
         dto.setEmails(client.getEmails());
         return dto;
+    }
+
+    private ClientListItemDTO toListItemDto(ClientListView client) {
+        return new ClientListItemDTO(client.getId(), client.getName(), client.getLastName(), client.getEmail(), client.getPhone(), client.getDeviceCount());
+    }
+
+    private ClientRepairHistoryItemDTO toHistoryItemDto(ClientRepairHistoryView repair) {
+        return new ClientRepairHistoryItemDTO(
+                repair.getId(), repair.getOrderNumber(), repair.getStatus(), repair.getDeviceBrand(), repair.getDeviceModel(),
+                repair.getReceiveDateTime(), repair.getReturnDateTime()
+        );
+    }
+
+    private <T> PageDTO<T> toPage(Page<?> page, List<T> content) {
+        return new PageDTO<>(content, page.getNumber(), page.getSize(), page.getTotalElements(), page.getTotalPages());
+    }
+
+    private String normalizeTerm(String term) {
+        return term == null ? "" : term.trim();
+    }
+
+    private PageRequest pageRequest(int page, int size, int maximumSize) {
+        return PageRequest.of(Math.max(0, page), Math.min(Math.max(1, size), maximumSize));
     }
 }

@@ -1,5 +1,3 @@
-import { Device } from './device.model';
-
 export interface DashboardSeriesItem {
   label: string;
   value: number | string;

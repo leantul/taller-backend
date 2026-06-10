@@ -16,6 +16,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -26,11 +27,13 @@ public class ClientService {
     private final ClientRepository clientRepository;
     private final RepairRepository repairRepository;
 
+    @Transactional(readOnly = true)
     public PageDTO<ClientListItemDTO> findPage(int page, int size, String term) {
         Page<ClientListView> result = clientRepository.findPage(normalizeTerm(term), pageRequest(page, size, 100));
         return toPage(result, result.getContent().stream().map(this::toListItemDto).toList());
     }
 
+    @Transactional(readOnly = true)
     public ClientHistoryDTO findHistory(String id, int page, int size, boolean includeClient) {
         ClientDetailDTO client = includeClient ? findDetail(id) : null;
         Page<ClientRepairHistoryView> result = repairRepository.findClientHistory(id, pageRequest(page, size, 50));
@@ -40,10 +43,12 @@ public class ClientService {
         );
     }
 
+    @Transactional(readOnly = true)
     public List<ClientDTO> findAll() {
         return clientRepository.findAll().stream().map(this::toDto).toList();
     }
 
+    @Transactional
     public ClientDTO save(ClientDTO clientDTO) {
         Client client = new Client();
         client.setName(clientDTO.getName());
@@ -64,10 +69,12 @@ public class ClientService {
         return toDto(clientRepository.save(client));
     }
 
+    @Transactional
     public void delete(String id) {
         clientRepository.deleteById(id);
     }
 
+    @Transactional(readOnly = true)
     public ClientDTO findById(String id) {
         return clientRepository.findById(id).map(this::toDto).orElse(null);
     }
@@ -86,6 +93,7 @@ public class ClientService {
         );
     }
 
+    @Transactional(readOnly = true)
     public List<ClientDTO> search(String term) {
         return clientRepository.search(term).stream().map(this::toDto).toList();
     }

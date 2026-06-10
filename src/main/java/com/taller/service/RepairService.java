@@ -10,12 +10,15 @@ import com.taller.model.repository.RepairPaymentRepository;
 import com.taller.model.repository.RepairPartRepository;
 import com.taller.model.repository.RepairRepository;
 import com.taller.model.repository.projection.RepairListView;
+import com.taller.model.repository.projection.StatusBoardRepairView;
 import com.taller.resource.dto.DeviceObservationDTO;
 import com.taller.resource.dto.RepairDTO;
 import com.taller.resource.dto.RepairPartDTO;
 import com.taller.resource.dto.RepairPaymentDTO;
+import com.taller.resource.dto.StatusBoardRepairDTO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -34,14 +37,22 @@ public class RepairService {
     private final RepairPaymentRepository repairPaymentRepository;
     private final DeviceObservationRepository deviceObservationRepository;
 
+    @Transactional(readOnly = true)
     public List<RepairDTO> getAllRepairs() {
       return repairRepository.findListRows().stream().map(this::toListDto).toList();
     }
 
+    @Transactional(readOnly = true)
+    public List<StatusBoardRepairDTO> getStatusBoard() {
+        return repairRepository.findStatusBoardRows().stream().map(this::toStatusBoardDto).toList();
+    }
+
+    @Transactional(readOnly = true)
     public RepairDTO getRepairById(String id) {
         return repairRepository.findById(id).map(this::toDto).orElse(null);
     }
 
+    @Transactional
     public RepairDTO save(RepairDTO repairDTO) {
         Repair repair = repairDTO.getId() != null
                 ? repairRepository.findById(repairDTO.getId()).orElseGet(Repair::new)
@@ -123,6 +134,7 @@ public class RepairService {
         return toDto(saved);
     }
 
+    @Transactional
     public void delete(String id) {
         repairPartRepository.deleteAll(repairPartRepository.findByRepairId(id));
         repairPaymentRepository.deleteAll(repairPaymentRepository.findByRepairId(id));
@@ -130,10 +142,12 @@ public class RepairService {
         repairRepository.deleteById(id);
     }
 
+    @Transactional(readOnly = true)
     public List<RepairDTO> search(String term) {
         return repairRepository.searchListRows(term).stream().map(this::toListDto).toList();
     }
 
+    @Transactional(readOnly = true)
     public BigDecimal totalIncome(LocalDateTime from, LocalDateTime to) {
         List<RepairListView> repairs = repairRepository.findFinanceRowsBetween(from, to);
         Map<String, List<RepairPart>> partsByRepairId = partsByRepairId(repairs.stream().map(RepairListView::getId).toList());
@@ -208,6 +222,22 @@ public class RepairService {
         dto.setRejected(repair.getRejected());
         dto.setReadyNotifiedAt(repair.getReadyNotifiedAt());
         return dto;
+    }
+
+    private StatusBoardRepairDTO toStatusBoardDto(StatusBoardRepairView repair) {
+        String clientName = joinLabel(repair.getClientName(), repair.getClientLastName());
+        String deviceLabel = joinLabel(repair.getDeviceTypeName(), repair.getDeviceBrand(), repair.getDeviceModel());
+        return new StatusBoardRepairDTO(
+                repair.getId(), repair.getIdDevice(), repair.getIdClient(), repair.getOrderNumber(), repair.getDescription(),
+                repair.getStatus(), repair.getReceiveDateTime(), repair.getReturnDateTime(), repair.getPrice(),
+                repair.getQuotedAmount(), clientName, deviceLabel
+        );
+    }
+
+    private String joinLabel(String... values) {
+        return java.util.Arrays.stream(values)
+                .filter(value -> value != null && !value.isBlank())
+                .collect(Collectors.joining(" "));
     }
 
     private RepairPartDTO toPartDto(RepairPart part) {

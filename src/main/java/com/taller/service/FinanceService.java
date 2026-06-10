@@ -10,6 +10,7 @@ import com.taller.resource.dto.FinanceRowDTO;
 import com.taller.resource.dto.FinanceSummaryDTO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -28,6 +29,7 @@ public class FinanceService {
     private final RepairRepository repairRepository;
     private final RepairPartRepository repairPartRepository;
 
+    @Transactional(readOnly = true)
     public FinanceSummaryDTO getSummary(LocalDate from, LocalDate to) {
         LocalDateTime fromDateTime = from != null ? from.atStartOfDay() : null;
         LocalDateTime toDateTime = to != null ? to.plusDays(1).atStartOfDay().minusNanos(1) : null;
@@ -71,10 +73,7 @@ public class FinanceService {
         summary.setTotalLabor(totalLabor);
         summary.setTotalQuoted(totalQuoted);
         summary.setNetIncome(netIncome);
-        BigDecimal currentAverageNet = rows.stream()
-                .map(FinanceRowDTO::getNet)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-        summary.setAverageNet(rows.isEmpty() ? BigDecimal.ZERO : currentAverageNet.divide(BigDecimal.valueOf(rows.size()), 2, java.math.RoundingMode.HALF_UP));
+        summary.setAverageNet(rows.isEmpty() ? BigDecimal.ZERO : netIncome.divide(BigDecimal.valueOf(rows.size()), 2, java.math.RoundingMode.HALF_UP));
         summary.setDeliveredCount(rows.size());
         summary.setMonthlyNet(buildMonthlyNetSeries());
         summary.setRows(rows);

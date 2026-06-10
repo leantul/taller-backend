@@ -239,7 +239,6 @@ export class DashboardPageComponent implements OnInit, OnDestroy {
 
   private refreshCharts(remount: boolean): void {
     const textColor = this.themeMode === 'dark' ? '#eef2f3' : '#1d2529';
-    const mutedColor = this.themeMode === 'dark' ? '#a6b0b4' : '#667176';
     const borderColor = this.themeMode === 'dark' ? '#303940' : '#d7d2c8';
     const brandColor = '#0c8a9f';
     const accentColor = '#d79324';

@@ -24,6 +24,7 @@ import com.taller.resource.dto.RepairDTO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -43,6 +44,7 @@ public class DashboardService {
     private final DeviceRepository deviceRepository;
     private final RepairRepository repairRepository;
 
+    @Transactional(readOnly = true)
     public DashboardDTO monthSummary(int year, int month) {
         LocalDateTime from = LocalDateTime.of(year, month, 1, 0, 0);
         LocalDateTime to = from.plusMonths(1).minusSeconds(1);
@@ -60,30 +62,34 @@ public class DashboardService {
                 .build();
     }
 
+    @Transactional(readOnly = true)
     public List<ClientDTO> latestClientsWithDevices() {
-        return clientRepository.findTop5WithDevices(PageRequest.of(0, 5)).stream().map(c -> {
+        return clientRepository.findTop5WithDevicesBasic(PageRequest.of(0, 5)).stream().map(c -> {
             ClientDTO dto = new ClientDTO();
             dto.setId(c.getId()); dto.setName(c.getName()); dto.setLastName(c.getLastName()); dto.setDni(c.getDni()); dto.setEmail(c.getEmail()); dto.setPhone(c.getPhone());
             return dto;
         }).toList();
     }
 
+    @Transactional(readOnly = true)
     public List<DeviceDTO> latestDevices() {
-        return deviceRepository.findAll(PageRequest.of(0, 5)).stream().map(d -> {
+        return deviceRepository.findBasicLatest(PageRequest.of(0, 5)).stream().map(d -> {
             DeviceDTO dto = new DeviceDTO();
-            dto.setId(d.getId()); dto.setClientId(d.getClientId()); dto.setBrand(d.getBrand()); dto.setModel(d.getModel()); dto.setSerialNumber(d.getSerialNumber()); dto.setDeviceTypeId(d.getDeviceTypeId()); dto.setDeviceTypeName(d.getDeviceType() != null ? d.getDeviceType().getName() : null);
+            dto.setId(d.getId()); dto.setClientId(d.getClientId()); dto.setBrand(d.getBrand()); dto.setModel(d.getModel()); dto.setSerialNumber(d.getSerialNumber()); dto.setDeviceTypeId(d.getDeviceTypeId()); dto.setDeviceTypeName(d.getDeviceTypeName());
             return dto;
         }).toList();
     }
 
+    @Transactional(readOnly = true)
     public List<RepairDTO> latestRepairs() {
-        return repairRepository.findLatest(PageRequest.of(0, 5)).stream().map(r -> {
+        return repairRepository.findLatestRows(PageRequest.of(0, 5)).stream().map(r -> {
             RepairDTO dto = new RepairDTO();
             dto.setId(r.getId()); dto.setIdClient(r.getIdClient()); dto.setOrderNumber(r.getOrderNumber()); dto.setStatus(r.getStatus()); dto.setPrice(r.getPrice()); dto.setReceiveDateTime(r.getReceiveDateTime());
             return dto;
         }).toList();
     }
 
+    @Transactional(readOnly = true)
     public DashboardOverviewDTO overview() {
         DashboardOverviewDTO dto = new DashboardOverviewDTO();
         dto.setClientCount(clientRepository.count());

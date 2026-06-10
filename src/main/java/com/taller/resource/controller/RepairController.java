@@ -1,6 +1,7 @@
 package com.taller.resource.controller;
 
 import com.taller.resource.dto.RepairDTO;
+import com.taller.resource.dto.StatusBoardRepairDTO;
 import com.taller.service.RepairService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -19,6 +20,11 @@ public class RepairController {
     @GetMapping
     public List<RepairDTO> getRepair() {
         return repairService.getAllRepairs();
+    }
+
+    @GetMapping("/status-board")
+    public List<StatusBoardRepairDTO> getStatusBoard() {
+        return repairService.getStatusBoard();
     }
 
     @GetMapping("/{id}")

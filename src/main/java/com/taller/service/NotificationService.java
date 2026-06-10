@@ -19,6 +19,7 @@ import com.taller.resource.dto.NotificationDTO;
 import com.taller.resource.dto.RepairPartDTO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -40,6 +41,7 @@ public class NotificationService {
     private static final String TYPE_DEVICE_OBSERVATION_3_MONTHS = "DEVICE_OBSERVATION_3_MONTHS";
     private static final String LAST_GENERATED_DATE_KEY = "notifications_warranty_last_generated_date";
     private static final String LAST_OBSERVATIONS_GENERATED_DATE_KEY = "notifications_observations_last_generated_date";
+    private static final Set<String> WARRANTY_TYPES = Set.of(TYPE_WARRANTY_6_MONTHS, TYPE_WARRANTY_1_YEAR);
 
     private final NotificationRepository notificationRepository;
     private final RepairRepository repairRepository;
@@ -49,18 +51,23 @@ public class NotificationService {
     private final AppMetadataRepository appMetadataRepository;
     private final DeviceObservationRepository deviceObservationRepository;
 
+    @Transactional(readOnly = true)
     public List<NotificationDTO> latest() {
-        synchronizeWarrantyNotifications();
-        synchronizeObservationNotifications();
         return toDtos(notificationRepository.findByReadedFalseOrderByEventDateDesc());
     }
 
+    @Transactional(readOnly = true)
     public long unreadCount() {
-        synchronizeWarrantyNotifications();
-        synchronizeObservationNotifications();
         return notificationRepository.countByReadedFalse();
     }
 
+    @Transactional
+    public void synchronize() {
+        synchronizeWarrantyNotifications();
+        synchronizeObservationNotifications();
+    }
+
+    @Transactional
     public NotificationDTO save(NotificationDTO dto) {
         Notification notification = Notification.builder()
                 .title(dto.getTitle())
@@ -80,6 +87,7 @@ public class NotificationService {
         return toDtos(List.of(notificationRepository.save(notification))).stream().findFirst().orElseGet(NotificationDTO::new);
     }
 
+    @Transactional
     public void markAsRead(String id) {
         notificationRepository.findById(id).ifPresent(notification -> {
             notification.setReaded(Boolean.TRUE);
@@ -96,14 +104,25 @@ public class NotificationService {
             return;
         }
 
-        List<Repair> latestRepairsByDevice = findLatestDeliveredRepairByDevice();
-        for (Repair repair : latestRepairsByDevice) {
-            LocalDate returnDate = toLocalDate(repair.getReturnDateTime());
-            if (returnDate == null) {
-                continue;
+        List<WarrantyCandidate> candidates = findLatestDeliveredRepairByDevice().stream()
+                .flatMap(repair -> warrantyCandidates(repair, startDate, today).stream())
+                .toList();
+        if (!candidates.isEmpty()) {
+            Set<NotificationKey> existingKeys = notificationRepository.findByEntityIdInAndTypeInAndEventDateBetween(
+                            candidates.stream().map(candidate -> candidate.repair().getIdDevice()).collect(Collectors.toSet()),
+                            WARRANTY_TYPES,
+                            candidates.stream().map(WarrantyCandidate::eventDate).min(LocalDateTime::compareTo).orElseThrow(),
+                            candidates.stream().map(WarrantyCandidate::eventDate).max(LocalDateTime::compareTo).orElseThrow())
+                    .stream()
+                    .map(notification -> new NotificationKey(notification.getEntityId(), notification.getType(), notification.getEventDate()))
+                    .collect(Collectors.toSet());
+            List<Notification> notifications = candidates.stream()
+                    .filter(candidate -> !existingKeys.contains(candidate.key()))
+                    .map(this::toNotification)
+                    .toList();
+            if (!notifications.isEmpty()) {
+                notificationRepository.saveAll(notifications);
             }
-            createWarrantyNotificationIfDue(repair, TYPE_WARRANTY_6_MONTHS, returnDate.plusMonths(6), startDate, today);
-            createWarrantyNotificationIfDue(repair, TYPE_WARRANTY_1_YEAR, returnDate.plusYears(1), startDate, today);
         }
 
         saveLastGeneratedDate(today);
@@ -145,32 +164,30 @@ public class NotificationService {
         saveLastGeneratedDate(LAST_OBSERVATIONS_GENERATED_DATE_KEY, today);
     }
 
-    private void createWarrantyNotificationIfDue(Repair repair, String type, LocalDate dueDate, LocalDate startDate, LocalDate endDate) {
-        if (dueDate.isAfter(endDate)) {
-            return;
+    private List<WarrantyCandidate> warrantyCandidates(Repair repair, LocalDate startDate, LocalDate endDate) {
+        LocalDate returnDate = toLocalDate(repair.getReturnDateTime());
+        if (returnDate == null || repair.getIdDevice() == null) {
+            return List.of();
         }
-        if (startDate != null && dueDate.isBefore(startDate)) {
-            return;
-        }
-        if (repair.getIdDevice() == null) {
-            return;
-        }
+        return List.of(
+                        new WarrantyCandidate(repair, TYPE_WARRANTY_6_MONTHS, returnDate.plusMonths(6).atStartOfDay()),
+                        new WarrantyCandidate(repair, TYPE_WARRANTY_1_YEAR, returnDate.plusYears(1).atStartOfDay()))
+                .stream()
+                .filter(candidate -> !candidate.eventDate().toLocalDate().isAfter(endDate))
+                .filter(candidate -> startDate == null || !candidate.eventDate().toLocalDate().isBefore(startDate))
+                .toList();
+    }
 
-        LocalDateTime eventDate = dueDate.atStartOfDay();
-        boolean exists = notificationRepository.findByEntityIdAndTypeAndEventDate(repair.getIdDevice(), type, eventDate).isPresent();
-        if (exists) {
-            return;
-        }
-
-        notificationRepository.save(Notification.builder()
-                .title(titleFor(type))
-                .message(messageFor(type, repair.getOrderNumber()))
+    private Notification toNotification(WarrantyCandidate candidate) {
+        return Notification.builder()
+                .title(titleFor(candidate.type()))
+                .message(messageFor(candidate.type(), candidate.repair().getOrderNumber()))
                 .readed(Boolean.FALSE)
-                .eventDate(eventDate)
-                .type(type)
-                .entityId(repair.getIdDevice())
-                .repairId(repair.getId())
-                .build());
+                .eventDate(candidate.eventDate())
+                .type(candidate.type())
+                .entityId(candidate.repair().getIdDevice())
+                .repairId(candidate.repair().getId())
+                .build();
     }
 
     private Optional<Notification> buildObservationNotificationIfDue(DeviceObservation observation, LocalDate startDate, LocalDate endDate) {
@@ -463,5 +480,14 @@ public class NotificationService {
         dto.setCost(part.getCost());
         dto.setSalePrice(part.getSalePrice());
         return dto;
+    }
+
+    private record WarrantyCandidate(Repair repair, String type, LocalDateTime eventDate) {
+        private NotificationKey key() {
+            return new NotificationKey(repair.getIdDevice(), type, eventDate);
+        }
+    }
+
+    private record NotificationKey(String entityId, String type, LocalDateTime eventDate) {
     }
 }

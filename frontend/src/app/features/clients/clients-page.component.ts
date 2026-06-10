@@ -12,6 +12,7 @@ import { ApiService } from '../../core/services/api.service';
 import { Client, ClientListItem, ClientRepairHistoryItem } from '../../shared/models/client.model';
 import { Repair } from '../../shared/models/repair.model';
 import { RepairDetailDialogComponent } from '../../shared/components/repair-detail-dialog.component';
+import { repairStatusClass, repairStatusLabel } from '../../shared/utils/repair-status.util';
 
 @Component({
   selector: 'app-clients-page',
@@ -196,8 +197,8 @@ export class ClientsPageComponent implements OnInit, OnDestroy {
   stop(event: Event): void { event.stopPropagation(); }
   whatsAppLink(phone: string): string { return `https://wa.me/${(phone || '').replace(/\D/g, '')}`; }
   deviceLabel(repair: ClientRepairHistoryItem): string { return [repair.deviceBrand, repair.deviceModel].filter(Boolean).join(' ') || '-'; }
-  statusLabel(status: Repair['status']): string { return { POR_RECIBIR: 'Por recibir', RECIBIDA: 'Recibida', PRESUPUESTADA_ESPERANDO_RESPUESTA: 'Presupuestada', HACIENDO: 'Haciendo', ESPERANDO_RETIRO: 'Esperando retiro', RETIRADA: 'Retirada' }[status]; }
-  statusClass(status: Repair['status']): string { return { POR_RECIBIR: 'is-muted', RECIBIDA: 'is-info', PRESUPUESTADA_ESPERANDO_RESPUESTA: 'is-warning', HACIENDO: 'is-active', ESPERANDO_RETIRO: 'is-success', RETIRADA: 'is-closed' }[status]; }
+  statusLabel(status: Repair['status']): string { return repairStatusLabel(status); }
+  statusClass(status: Repair['status']): string { return repairStatusClass(status); }
   get fullName(): string { return this.selectedClient ? `${this.selectedClient.name || ''} ${this.selectedClient.lastName || ''}`.trim() : ''; }
   get displayTotalPages(): number { return Math.max(1, this.totalPages); }
   get displayHistoryTotalPages(): number { return Math.max(1, this.historyTotalPages); }

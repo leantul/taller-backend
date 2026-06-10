@@ -19,6 +19,7 @@ import { Client } from '../../shared/models/client.model';
 import { Device, DeviceType } from '../../shared/models/device.model';
 import { MessageService } from 'primeng/api';
 import { RepairDetailDialogComponent } from '../../shared/components/repair-detail-dialog.component';
+import { fromDateTimeLocal, REPAIR_STATUS_OPTIONS, repairStatusClass, repairStatusLabel, toDateTimeLocal } from '../../shared/utils/repair-status.util';
 
 type RepairTableRow = {
   repair: Repair;
@@ -93,9 +94,7 @@ export class RepairsPageComponent implements OnInit {
   isDeleting = false;
   fromDate: Date | null = null;
   toDate: Date | null = null;
-  statusOptions = [
-    { label: 'Por recibir', value: 'POR_RECIBIR' }, { label: 'Recibida', value: 'RECIBIDA' }, { label: 'Presupuestada', value: 'PRESUPUESTADA_ESPERANDO_RESPUESTA' }, { label: 'Haciendo', value: 'HACIENDO' }, { label: 'Esperando retiro', value: 'ESPERANDO_RETIRO' }, { label: 'Retirada', value: 'RETIRADA' }
-  ];
+  statusOptions = [...REPAIR_STATUS_OPTIONS];
   typeOptions: DeviceType[] = [];
 
   constructor(private readonly api: ApiService, private readonly messageService: MessageService, private readonly route: ActivatedRoute, private readonly confirmationService: ConfirmationService, private readonly changeDetector: ChangeDetectorRef) {}
@@ -243,11 +242,19 @@ export class RepairsPageComponent implements OnInit {
   }
 
   statusLabel(status: Repair['status']): string {
-    return this.statusOptions.find((s) => s.value === status)?.label || status;
+    return repairStatusLabel(status);
   }
 
   onRowActionClick(event: Event): void {
     event.stopPropagation();
+  }
+
+  onDraftStatusChange(): void {
+    if (this.draft.status === 'RECIBIDA' && !this.draft.receiveDateTime) {
+      this.draft.receiveDateTime = new Date().toISOString();
+      return;
+    }
+    if (this.draft.status !== 'RECIBIDA') this.draft.receiveDateTime = undefined;
   }
 
   openWhatsApp(event: Event, phone: string): void {
@@ -391,15 +398,7 @@ export class RepairsPageComponent implements OnInit {
   }
 
   statusClass(status: Repair['status']): string {
-    switch (status) {
-      case 'POR_RECIBIR': return 'is-muted';
-      case 'RECIBIDA': return 'is-info';
-      case 'PRESUPUESTADA_ESPERANDO_RESPUESTA': return 'is-warning';
-      case 'HACIENDO': return 'is-active';
-      case 'ESPERANDO_RETIRO': return 'is-success';
-      case 'RETIRADA': return 'is-closed';
-      default: return 'is-muted';
-    }
+    return repairStatusClass(status);
   }
 
   repairTrackBy: TrackByFunction<RepairTableRow> = (index, row) =>
@@ -438,29 +437,20 @@ export class RepairsPageComponent implements OnInit {
     if (client) this.selectClient(client);
   }
 
-  get editReturnDate(): Date | null {
-    return this.editingRepair.returnDateTime ? new Date(this.editingRepair.returnDateTime) : null;
+  get draftReceiveDateTimeLocal(): string {
+    return toDateTimeLocal(this.draft.receiveDateTime);
   }
 
-  set editReturnDate(value: Date | null) {
-    this.editingRepair.returnDateTime = value ? value.toISOString() : undefined;
+  set draftReceiveDateTimeLocal(value: string) {
+    this.draft.receiveDateTime = fromDateTimeLocal(value);
   }
 
   get editReturnDateTimeLocal(): string {
-    if (!this.editingRepair.returnDateTime) {
-      return '';
-    }
-    const date = new Date(this.editingRepair.returnDateTime);
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    const hours = String(date.getHours()).padStart(2, '0');
-    const minutes = String(date.getMinutes()).padStart(2, '0');
-    return `${year}-${month}-${day}T${hours}:${minutes}`;
+    return this.editingRepair.returnDateTime ? toDateTimeLocal(this.editingRepair.returnDateTime) : '';
   }
 
   set editReturnDateTimeLocal(value: string) {
-    this.editingRepair.returnDateTime = value ? new Date(value).toISOString() : undefined;
+    this.editingRepair.returnDateTime = fromDateTimeLocal(value);
   }
 
   get filteredClients(): Client[] {

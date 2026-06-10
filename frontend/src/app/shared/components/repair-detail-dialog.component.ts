@@ -4,6 +4,7 @@ import { DialogModule } from 'primeng/dialog';
 import { MessageService } from 'primeng/api';
 import { ApiService } from '../../core/services/api.service';
 import { Repair } from '../models/repair.model';
+import { repairStatusClass, repairStatusLabel } from '../utils/repair-status.util';
 
 @Component({
   selector: 'app-repair-detail-dialog',
@@ -84,17 +85,11 @@ export class RepairDetailDialogComponent {
   }
 
   statusLabel(status: Repair['status']): string {
-    return {
-      POR_RECIBIR: 'Por recibir', RECIBIDA: 'Recibida', PRESUPUESTADA_ESPERANDO_RESPUESTA: 'Presupuestada',
-      HACIENDO: 'Haciendo', ESPERANDO_RETIRO: 'Esperando retiro', RETIRADA: 'Retirada'
-    }[status] || status;
+    return repairStatusLabel(status);
   }
 
   statusClass(status: Repair['status']): string {
-    return {
-      POR_RECIBIR: 'is-muted', RECIBIDA: 'is-info', PRESUPUESTADA_ESPERANDO_RESPUESTA: 'is-warning',
-      HACIENDO: 'is-active', ESPERANDO_RETIRO: 'is-success', RETIRADA: 'is-closed'
-    }[status] || 'is-muted';
+    return repairStatusClass(status);
   }
 
   formatDateTime(value?: string): string {

@@ -51,7 +51,10 @@
           </div>
         }
       </div>
-      <div class="field"><label>Estado</label><p-select [options]="statusOptions" optionLabel="label" optionValue="value" [(ngModel)]="draft.status" name="status"></p-select></div>
+      <div class="field"><label>Estado</label><p-select [options]="statusOptions" optionLabel="label" optionValue="value" [(ngModel)]="draft.status" name="status" (ngModelChange)="onDraftStatusChange()"></p-select></div>
+      @if (draft.status === 'RECIBIDA') {
+        <div class="field"><label>Fecha y hora de ingreso</label><input class="control" type="datetime-local" [(ngModel)]="draftReceiveDateTimeLocal" name="receiveDateTime" /></div>
+      }
       <div class="field"><label>Presupuesto enviado</label><p-inputNumber [(ngModel)]="draft.quotedAmount" name="quotedAmount" mode="currency" currency="ARS" locale="es-AR" [min]="0"></p-inputNumber></div>
       <div class="field"><label>Detalle del presupuesto</label><textarea class="p-inputtext" rows="5" [(ngModel)]="draft.quoteNotes" name="quoteNotes" placeholder="Detalle completo del trabajo"></textarea></div>
       <div class="field"><label>Monto final</label><p-inputNumber [(ngModel)]="draft.price" name="price" mode="currency" currency="ARS" locale="es-AR" [min]="0"></p-inputNumber></div>

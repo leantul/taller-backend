@@ -135,6 +135,16 @@ public class RepairService {
     }
 
     @Transactional
+    public void updateStatus(String id, RepairStatusEnum status) {
+        Repair repair = repairRepository.findById(id).orElseThrow();
+        repair.setStatus(status);
+        if (status == RepairStatusEnum.RETIRADA && repair.getReturnDateTime() == null) {
+            repair.setReturnDateTime(LocalDateTime.now());
+        }
+        repairRepository.save(repair);
+    }
+
+    @Transactional
     public void delete(String id) {
         repairPartRepository.deleteAll(repairPartRepository.findByRepairId(id));
         repairPaymentRepository.deleteAll(repairPaymentRepository.findByRepairId(id));

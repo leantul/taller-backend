@@ -49,8 +49,13 @@ export class StatusPageComponent implements OnInit {
     transferArrayItem(event.previousContainer.data, event.container.data, event.previousIndex, event.currentIndex);
     event.container.data[event.currentIndex] = updated;
 
-    this.api.updateRepair(this.toRepairPayload(updated)).subscribe({
-      next: () => this.messageService.add({ severity: 'success', summary: 'Estado actualizado', detail: `Orden ${updated.orderNumber}` }),
+    this.updateStatus(updated);
+  }
+
+  private updateStatus(repair: Repair): void {
+    if (!repair.id) return;
+    this.api.updateRepairStatus(repair.id, repair.status).subscribe({
+      next: () => this.messageService.add({ severity: 'success', summary: 'Estado actualizado', detail: `Orden ${repair.orderNumber}` }),
       error: () => { this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudo actualizar el estado.' }); this.reload(); }
     });
   }
@@ -63,7 +68,11 @@ export class StatusPageComponent implements OnInit {
   saveDetailStatus(): void {
     if (!this.selectedRepair) return;
     this.isSavingStatus = true;
-    this.api.updateRepair(this.toRepairPayload(this.selectedRepair)).subscribe({
+    if (!this.selectedRepair.id) {
+      this.isSavingStatus = false;
+      return;
+    }
+    this.api.updateRepairStatus(this.selectedRepair.id, this.selectedRepair.status).subscribe({
       next: () => {
         this.isSavingStatus = false;
         this.showDetailModal = false;
@@ -119,8 +128,4 @@ export class StatusPageComponent implements OnInit {
     });
   }
 
-  private toRepairPayload(repair: Repair): Repair {
-    const { clientName: _clientName, deviceLabel: _deviceLabel, ...payload } = repair as StatusBoardRepair;
-    return payload;
-  }
 }

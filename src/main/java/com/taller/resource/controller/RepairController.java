@@ -1,6 +1,7 @@
 package com.taller.resource.controller;
 
 import com.taller.resource.dto.RepairDTO;
+import com.taller.resource.dto.RepairStatusUpdateDTO;
 import com.taller.resource.dto.StatusBoardRepairDTO;
 import com.taller.service.RepairService;
 import lombok.RequiredArgsConstructor;
@@ -45,6 +46,12 @@ public class RepairController {
     @PutMapping
     public ResponseEntity<RepairDTO> updateRepair(@RequestBody RepairDTO repairDTO) {
         return new ResponseEntity<>(repairService.save(repairDTO), HttpStatus.OK);
+    }
+
+    @PatchMapping("/{id}/status")
+    public ResponseEntity<Void> updateStatus(@PathVariable String id, @RequestBody RepairStatusUpdateDTO request) {
+        repairService.updateStatus(id, request.status());
+        return ResponseEntity.ok().build();
     }
 
     @DeleteMapping("/{id}")

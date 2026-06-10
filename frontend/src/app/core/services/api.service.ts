@@ -45,6 +45,7 @@ export class ApiService {
   searchRepairs = this.repairs.search.bind(this.repairs);
   createRepair = this.repairs.create.bind(this.repairs);
   updateRepair = this.repairs.update.bind(this.repairs);
+  updateRepairStatus = this.repairs.updateStatus.bind(this.repairs);
   deleteRepair = this.repairs.delete.bind(this.repairs);
 
   getNotifications = this.notifications.getAll.bind(this.notifications);

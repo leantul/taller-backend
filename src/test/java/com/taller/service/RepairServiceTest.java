@@ -27,6 +27,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -210,6 +211,24 @@ class RepairServiceTest {
 
         assertEquals("Ada Lovelace", result.clientName());
         assertEquals("Notebook Lenovo T14", result.deviceLabel());
+    }
+
+    @Test
+    void updateStatus_preservesFieldsNotOwnedByStatusBoard() {
+        Repair existing = existingRepair("Trabajo realizado");
+        existing.setLaborAmount(new java.math.BigDecimal("12000"));
+        existing.setQuoteNotes("Presupuesto aprobado");
+        existing.setApproved(true);
+        when(repairRepository.findById("id-1")).thenReturn(Optional.of(existing));
+        when(repairRepository.save(existing)).thenReturn(existing);
+
+        repairService.updateStatus("id-1", RepairStatusEnum.HACIENDO);
+
+        assertEquals(RepairStatusEnum.HACIENDO, existing.getStatus());
+        assertEquals(new java.math.BigDecimal("12000"), existing.getLaborAmount());
+        assertEquals("Presupuesto aprobado", existing.getQuoteNotes());
+        assertEquals(true, existing.getApproved());
+        verify(repairRepository).save(existing);
     }
 
     private RepairDTO updateDto(String repairNotes) {

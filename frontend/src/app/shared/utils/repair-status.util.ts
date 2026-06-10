@@ -37,5 +37,5 @@ export function toDateTimeLocal(value?: string): string {
 }
 
 export function fromDateTimeLocal(value: string): string | undefined {
-  return value ? new Date(value).toISOString() : undefined;
+  return value || undefined;
 }

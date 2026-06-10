@@ -251,7 +251,7 @@ export class RepairsPageComponent implements OnInit {
 
   onDraftStatusChange(): void {
     if (this.draft.status === 'RECIBIDA' && !this.draft.receiveDateTime) {
-      this.draft.receiveDateTime = new Date().toISOString();
+      this.draft.receiveDateTime = fromDateTimeLocal(toDateTimeLocal());
       return;
     }
     if (this.draft.status !== 'RECIBIDA') this.draft.receiveDateTime = undefined;
@@ -319,7 +319,7 @@ export class RepairsPageComponent implements OnInit {
 
   onEditStatusChange(): void {
     if (this.editingRepair.status === 'RETIRADA' && !this.editingRepair.returnDateTime) {
-      this.editingRepair.returnDateTime = new Date().toISOString();
+      this.editingRepair.returnDateTime = fromDateTimeLocal(toDateTimeLocal());
     }
     if (this.editingRepair.status !== 'RETIRADA') {
       this.editingRepair.returnDateTime = undefined;

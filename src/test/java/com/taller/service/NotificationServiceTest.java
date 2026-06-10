@@ -141,6 +141,27 @@ class NotificationServiceTest {
     }
 
     @Test
+    void synchronize_doesNotDuplicateExistingWarrantyNotifications() {
+        LocalDate today = LocalDate.now();
+        Repair repair = deliveredRepair("repair-3", "device-3", today.minusYears(1).atTime(18, 0));
+        Notification existing = Notification.builder()
+                .type("WARRANTY_1_YEAR")
+                .entityId("device-3")
+                .eventDate(today.atStartOfDay())
+                .build();
+
+        when(appMetadataRepository.findById(anyString())).thenReturn(Optional.of(metadata(today.minusDays(1))));
+        when(repairRepository.findByStatusAndReturnDateTimeIsNotNullOrderByReturnDateTimeDesc(RepairStatusEnum.RETIRADA))
+                .thenReturn(List.of(repair));
+        when(notificationRepository.findByEntityIdInAndTypeInAndEventDateBetween(any(), any(), any(), any()))
+                .thenReturn(List.of(existing));
+
+        notificationService.synchronize();
+
+        verify(notificationRepository, never()).saveAll(any());
+    }
+
+    @Test
     void latest_generatesObservationNotificationWhenThreeMonthFollowUpIsDue() {
         LocalDate today = LocalDate.now();
         DeviceObservation observation = new DeviceObservation();

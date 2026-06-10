@@ -236,7 +236,7 @@ public class RepairService {
 
     private StatusBoardRepairDTO toStatusBoardDto(StatusBoardRepairView repair) {
         String clientName = joinLabel(repair.getClientName(), repair.getClientLastName());
-        String deviceLabel = joinLabel(repair.getDeviceTypeName(), repair.getDeviceBrand(), repair.getDeviceModel());
+        String deviceLabel = joinLabel(defaultLabel(repair.getDeviceTypeName()), repair.getDeviceBrand(), repair.getDeviceModel());
         return new StatusBoardRepairDTO(
                 repair.getId(), repair.getIdDevice(), repair.getIdClient(), repair.getOrderNumber(), repair.getDescription(),
                 repair.getStatus(), repair.getReceiveDateTime(), repair.getReturnDateTime(), repair.getPrice(),
@@ -248,6 +248,10 @@ public class RepairService {
         return java.util.Arrays.stream(values)
                 .filter(value -> value != null && !value.isBlank())
                 .collect(Collectors.joining(" "));
+    }
+
+    private String defaultLabel(String value) {
+        return value != null && !value.isBlank() ? value : "-";
     }
 
     private RepairPartDTO toPartDto(RepairPart part) {

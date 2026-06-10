@@ -214,6 +214,18 @@ class RepairServiceTest {
     }
 
     @Test
+    void statusBoard_preservesMissingDeviceTypePlaceholder() {
+        StatusBoardRepairView row = mock(StatusBoardRepairView.class);
+        when(row.getDeviceBrand()).thenReturn("Lenovo");
+        when(row.getDeviceModel()).thenReturn("T14");
+        when(repairRepository.findStatusBoardRows()).thenReturn(List.of(row));
+
+        var result = repairService.getStatusBoard().getFirst();
+
+        assertEquals("- Lenovo T14", result.deviceLabel());
+    }
+
+    @Test
     void updateStatus_preservesFieldsNotOwnedByStatusBoard() {
         Repair existing = existingRepair("Trabajo realizado");
         existing.setLaborAmount(new java.math.BigDecimal("12000"));
@@ -229,6 +241,18 @@ class RepairServiceTest {
         assertEquals("Presupuesto aprobado", existing.getQuoteNotes());
         assertEquals(true, existing.getApproved());
         verify(repairRepository).save(existing);
+    }
+
+    @Test
+    void updateStatus_toRetiradaAssignsReturnDateWhenMissing() {
+        Repair existing = existingRepair(null);
+        when(repairRepository.findById("id-1")).thenReturn(Optional.of(existing));
+        when(repairRepository.save(existing)).thenReturn(existing);
+
+        repairService.updateStatus("id-1", RepairStatusEnum.RETIRADA);
+
+        assertEquals(RepairStatusEnum.RETIRADA, existing.getStatus());
+        assertNotNull(existing.getReturnDateTime());
     }
 
     private RepairDTO updateDto(String repairNotes) {

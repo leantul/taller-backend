@@ -273,9 +273,9 @@ export class RepairsPageComponent implements OnInit {
   }
 
   saveStatus(): void {
-    if (!this.statusEditingRepair) return;
+    if (!this.statusEditingRepair?.id) return;
     this.isUpdating = true;
-    this.api.updateRepair(this.statusEditingRepair).subscribe({
+    this.api.updateRepairStatus(this.statusEditingRepair.id, this.statusEditingRepair.status).subscribe({
       next: () => {
         this.isUpdating = false; this.messageService.add({ severity: 'success', summary: 'Estado actualizado', detail: 'Se actualizó el estado.' }); this.showStatusModal = false; this.statusEditingRepair = null; this.reload(); },
       error: (error) => { this.isUpdating = false; this.messageService.add({ severity: 'error', summary: 'Error', detail: this.errorDetail(error, 'No se pudo actualizar el estado.') }); }

@@ -3,6 +3,7 @@ package com.taller.model.repository;
 import com.taller.model.Repair;
 import com.taller.model.enums.RepairStatusEnum;
 import com.taller.model.repository.projection.DeviceLastRepairView;
+import com.taller.model.repository.projection.ClientRepairHistoryView;
 import com.taller.model.repository.projection.MonthlyRevenueView;
 import com.taller.model.repository.projection.RepairListView;
 import com.taller.model.repository.projection.RepairStatusCountView;
@@ -12,9 +13,28 @@ import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
 public interface RepairRepository extends JpaRepository<Repair, String> {
+    @Query(value = """
+            SELECT r.id AS id,
+                   r.orderNumber AS orderNumber,
+                   r.status AS status,
+                   d.brand AS deviceBrand,
+                   d.model AS deviceModel,
+                   r.receiveDateTime AS receiveDateTime,
+                   r.returnDateTime AS returnDateTime
+            FROM Repair r
+            LEFT JOIN r.device d
+            WHERE r.idClient = :clientId
+            ORDER BY CASE WHEN r.receiveDateTime IS NULL THEN 1 ELSE 0 END,
+                     r.receiveDateTime DESC,
+                     r.orderNumber DESC
+            """,
+            countQuery = "SELECT COUNT(r) FROM Repair r WHERE r.idClient = :clientId")
+    Page<ClientRepairHistoryView> findClientHistory(@Param("clientId") String clientId, Pageable pageable);
+
     @Query("""
             SELECT r.id AS id,
                    r.idDevice AS idDevice,

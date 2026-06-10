@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { Client } from '../../shared/models/client.model';
+import { Client, ClientHistory, ClientListItem, PageResponse } from '../../shared/models/client.model';
 import { APP_CONFIG } from '../config/app-config';
 import { Device, DeviceObservation, DevicePasswordHistory, DeviceType } from '../../shared/models/device.model';
 import { Repair, RepairCreateDTO, RepairUpdateDTO } from '../../shared/models/repair.model';
@@ -16,6 +16,13 @@ export class ApiService {
   constructor(private readonly http: HttpClient) {}
 
   getClients(): Observable<Client[]> { return this.http.get<Client[]>(`${this.baseUrl}/client`); }
+  getClientById(id: string): Observable<Client> { return this.http.get<Client>(`${this.baseUrl}/client/${id}`); }
+  getClientPage(page: number, size: number, term = ''): Observable<PageResponse<ClientListItem>> {
+    return this.http.get<PageResponse<ClientListItem>>(`${this.baseUrl}/client/page?page=${page}&size=${size}&term=${encodeURIComponent(term)}`);
+  }
+  getClientHistory(id: string, page: number, size: number, includeClient: boolean): Observable<ClientHistory> {
+    return this.http.get<ClientHistory>(`${this.baseUrl}/client/${id}/history?page=${page}&size=${size}&includeClient=${includeClient}`);
+  }
   searchClients(term: string): Observable<Client[]> { return this.http.get<Client[]>(`${this.baseUrl}/client/search?term=${encodeURIComponent(term)}`); }
   createClient(payload: Client): Observable<Client> { return this.http.post<Client>(`${this.baseUrl}/client`, payload); }
   deleteClient(id: string): Observable<void> { return this.http.delete<void>(`${this.baseUrl}/client/${id}`); }

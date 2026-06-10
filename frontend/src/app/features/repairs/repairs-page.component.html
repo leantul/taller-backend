@@ -138,75 +138,7 @@
   }
 </p-dialog>
 
-<p-dialog
-  header="Detalle de reparación"
-  [(visible)]="showDetailModal"
-  [modal]="true"
-  [style]="{width:'70rem', maxWidth:'95vw'}"
-  [contentStyle]="{overflow:'hidden', padding:'0.35rem'}">
-  @if (detailRepair) {
-    <div class="detail-dialog-body">
-      <div class="detail-grid repair-detail-grid">
-        <div class="detail-item"><label>Orden</label><strong>#{{ detailRepair.orderNumber || '-' }}</strong></div>
-        <div class="detail-item"><label>Estado</label><span class="status-pill" [ngClass]="statusClass(detailRepair.status)">{{ statusLabel(detailRepair.status) }}</span></div>
-        <div class="detail-item"><label>Cliente</label><strong>{{ clientLabel(detailRepair) }}</strong></div>
-        <div class="detail-item"><label>Dispositivo</label><strong>{{ deviceLabel(detailRepair) }}</strong></div>
-        <div class="detail-item"><label>Ingreso</label><strong>{{ formatDateTime(detailRepair.receiveDateTime) }}</strong></div>
-        <div class="detail-item"><label>Retiro</label><strong>{{ formatDateTime(detailRepair.returnDateTime) }}</strong></div>
-        <div class="detail-item"><label>Presupuesto</label><strong>{{ detailRepair.quotedAmount || 0 | currency:'ARS':'symbol':'1.2-2':'es-AR' }}</strong></div>
-        <div class="detail-item"><label>Mano de obra</label><strong>{{ detailRepair.laborAmount || 0 | currency:'ARS':'symbol':'1.2-2':'es-AR' }}</strong></div>
-        <div class="detail-item detail-wide"><label>Monto final</label><strong>{{ detailRepair.price || 0 | currency:'ARS':'symbol':'1.2-2':'es-AR' }}</strong></div>
-        <div class="detail-item detail-wide detail-text-block">
-          <label>Falla reportada</label>
-          <div class="detail-scrollable">{{ detailRepair.description || 'Sin descripción' }}</div>
-        </div>
-        <div class="detail-item detail-wide detail-text-block">
-          <label>Detalle del presupuesto</label>
-          <div class="detail-scrollable">{{ detailRepair.quoteNotes || 'Sin detalle cargado' }}</div>
-        </div>
-        <div class="detail-item detail-wide detail-text-block">
-          <label>Observaciones de la reparación</label>
-          <div class="detail-scrollable">{{ detailRepair.repairNotes || 'Sin observaciones cargadas' }}</div>
-        </div>
-        <div class="detail-item detail-wide">
-          <label>Observaciones del dispositivo</label>
-          @if (detailRepair.observations?.length) {
-            <div class="observation-list">
-              @for (observation of detailRepair.observations || []; track observation.id || $index) {
-                <span class="observation-chip" [class.is-resolved]="observation.resolvedAt">{{ observation.note }}</span>
-              }
-            </div>
-          } @else {
-            <strong>Sin observaciones cargadas</strong>
-          }
-        </div>
-        <div class="detail-item detail-wide">
-          <label>Repuestos cambiados</label>
-          @if (detailRepair.parts?.length) {
-            <div class="native-table-wrap compact-table-wrap">
-              <table class="native-table compact-native-table">
-                <thead><tr><th>Repuesto</th><th>Cant.</th><th>Proveedor</th><th>Costo</th><th>Venta</th></tr></thead>
-                <tbody>
-                  @for (part of detailRepair.parts || []; track part.id || $index) {
-                    <tr>
-                      <td>{{ part.name }}</td>
-                      <td>{{ part.quantity }}</td>
-                      <td>{{ part.provider || '-' }}</td>
-                      <td>{{ part.cost | currency:'ARS':'symbol':'1.2-2':'es-AR' }}</td>
-                      <td>{{ part.salePrice | currency:'ARS':'symbol':'1.2-2':'es-AR' }}</td>
-                    </tr>
-                  }
-                </tbody>
-              </table>
-            </div>
-          } @else {
-            <strong>Sin repuestos cargados</strong>
-          }
-        </div>
-      </div>
-    </div>
-  }
-</p-dialog>
+<app-repair-detail-dialog></app-repair-detail-dialog>
 
 @if (showEditModal) {
 <p-dialog header="Editar reparación" [(visible)]="showEditModal" [modal]="true" [style]="{width:'36rem'}">

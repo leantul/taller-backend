@@ -1,4 +1,4 @@
-import { ChangeDetectorRef, Component, OnInit, TrackByFunction } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit, TrackByFunction, ViewChild } from '@angular/core';
 import { forkJoin } from 'rxjs';
 import { ActivatedRoute } from '@angular/router';
 import { CommonModule } from '@angular/common';
@@ -18,6 +18,7 @@ import { Repair } from '../../shared/models/repair.model';
 import { Client } from '../../shared/models/client.model';
 import { Device, DeviceType } from '../../shared/models/device.model';
 import { MessageService } from 'primeng/api';
+import { RepairDetailDialogComponent } from '../../shared/components/repair-detail-dialog.component';
 
 type RepairTableRow = {
   repair: Repair;
@@ -33,11 +34,12 @@ type RepairTableRow = {
 @Component({
   selector: 'app-repairs-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, CardModule, InputTextModule, ButtonModule, SelectModule, AutoCompleteModule, InputNumberModule, DatePickerModule, DialogModule, ConfirmDialogModule],
+  imports: [CommonModule, FormsModule, CardModule, InputTextModule, ButtonModule, SelectModule, AutoCompleteModule, InputNumberModule, DatePickerModule, DialogModule, ConfirmDialogModule, RepairDetailDialogComponent],
   providers: [ConfirmationService],
   templateUrl: './repairs-page.component.html'
 })
 export class RepairsPageComponent implements OnInit {
+  @ViewChild(RepairDetailDialogComponent) private repairDetailDialog?: RepairDetailDialogComponent;
   private readonly statusOrder: Record<Repair['status'], number> = {
     POR_RECIBIR: 0,
     RECIBIDA: 1,
@@ -73,14 +75,12 @@ export class RepairsPageComponent implements OnInit {
   showDeviceModal = false;
   showStatusModal = false;
   showEditModal = false;
-  showDetailModal = false;
   showNewClientModal = false;
   clientSearch = '';
   selectedClientName = '';
   clientSuggestions: { label: string; value: string }[] = [];
   draft: Repair = { idDevice: '', idClient: '', orderNumber: '', description: '', status: 'POR_RECIBIR', price: 0, quotedAmount: 0, quoteNotes: '', parts: [], observations: [] };
   editingRepair: Repair = { idDevice: '', idClient: '', orderNumber: '', description: '', status: 'POR_RECIBIR', price: 0, quotedAmount: 0, quoteNotes: '', parts: [], observations: [] };
-  detailRepair: Repair | null = null;
   draftClient: Client = { name: '', lastName: '', dni: '', email: '', phone: '' };
   statusEditingRepair: Repair | null = null;
   searchTerm = '';
@@ -246,16 +246,6 @@ export class RepairsPageComponent implements OnInit {
     return this.statusOptions.find((s) => s.value === status)?.label || status;
   }
 
-  formatDateTime(value?: string): string {
-    if (!value) return '-';
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return '-';
-    return new Intl.DateTimeFormat('es-AR', {
-      dateStyle: 'short',
-      timeStyle: 'short'
-    }).format(date);
-  }
-
   onRowActionClick(event: Event): void {
     event.stopPropagation();
   }
@@ -317,23 +307,7 @@ export class RepairsPageComponent implements OnInit {
 
   openDetailModal(repair: Repair): void {
     if (!repair.id) return;
-    this.isUpdating = true;
-    this.api.getRepairById(repair.id).subscribe({
-      next: (detail) => {
-        this.isUpdating = false;
-        this.detailRepair = {
-          ...detail,
-          parts: (detail.parts || []).map((part) => ({ ...part })),
-          observations: (detail.observations || []).map((observation) => ({ ...observation }))
-        };
-        this.showDetailModal = true;
-        this.changeDetector.detectChanges();
-      },
-      error: (error) => {
-        this.isUpdating = false;
-        this.messageService.add({ severity: 'error', summary: 'Error', detail: this.errorDetail(error, 'No se pudo cargar el detalle de la reparación.') });
-      }
-    });
+    this.repairDetailDialog?.open(repair.id, this.clientLabel(repair), this.deviceLabel(repair));
   }
 
   onEditStatusChange(): void {

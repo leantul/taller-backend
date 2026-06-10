@@ -1,6 +1,9 @@
 package com.taller.resource.controller;
 
 import com.taller.resource.dto.ClientDTO;
+import com.taller.resource.dto.ClientHistoryDTO;
+import com.taller.resource.dto.ClientListItemDTO;
+import com.taller.resource.dto.PageDTO;
 import com.taller.service.ClientService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -17,6 +20,23 @@ public class ClientController {
     @GetMapping
     public List<ClientDTO> getClients() {
         return clientService.findAll();
+    }
+
+    @GetMapping("/page")
+    public PageDTO<ClientListItemDTO> getPage(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "") String term) {
+        return clientService.findPage(page, size, term);
+    }
+
+    @GetMapping("/{id}/history")
+    public ClientHistoryDTO getHistory(
+            @PathVariable String id,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "5") int size,
+            @RequestParam(defaultValue = "true") boolean includeClient) {
+        return clientService.findHistory(id, page, size, includeClient);
     }
 
     @GetMapping("/{id}")

@@ -1,30 +1,28 @@
-import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
-import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
+import { ChangeDetectorRef, Component, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { CardModule } from 'primeng/card';
-import { InputTextModule } from 'primeng/inputtext';
+import { Subject, debounceTime, distinctUntilChanged, takeUntil } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
-import { DialogModule } from 'primeng/dialog';
+import { CardModule } from 'primeng/card';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
+import { DialogModule } from 'primeng/dialog';
+import { InputTextModule } from 'primeng/inputtext';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { ApiService } from '../../core/services/api.service';
-import { Client } from '../../shared/models/client.model';
+import { Client, ClientListItem, ClientRepairHistoryItem } from '../../shared/models/client.model';
 import { Repair } from '../../shared/models/repair.model';
+import { RepairDetailDialogComponent } from '../../shared/components/repair-detail-dialog.component';
 
 @Component({
   selector: 'app-clients-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, CardModule, InputTextModule, ButtonModule, DialogModule, ConfirmDialogModule],
+  imports: [CommonModule, FormsModule, CardModule, InputTextModule, ButtonModule, DialogModule, ConfirmDialogModule, RepairDetailDialogComponent],
   providers: [ConfirmationService],
   template: `
     <p-confirmdialog></p-confirmdialog>
     <section class="page-heading">
-      <div>
-        <span class="eyebrow">Personas</span>
-        <h1>Clientes</h1>
-      </div>
-      <p>Alta, edicion y consulta del historial de reparaciones de cada cliente.</p>
+      <div><span class="eyebrow">Personas</span><h1>Clientes</h1></div>
+      <p>Alta, edición y consulta del historial de reparaciones de cada cliente.</p>
     </section>
 
     <div class="page-grid">
@@ -41,38 +39,36 @@ import { Repair } from '../../shared/models/repair.model';
 
       <p-card header="Clientes">
         <div class="table-toolbar">
-          <span class="p-input-icon-left filter-search"><i class="pi pi-search"></i><input pInputText [(ngModel)]="searchTerm" (ngModelChange)="onSearch()" placeholder="Buscar por nombre, DNI o email" /></span>
+          <span class="p-input-icon-left filter-search"><i class="pi pi-search"></i><input pInputText [(ngModel)]="searchTerm" (ngModelChange)="onSearch($event)" placeholder="Buscar por nombre, DNI, teléfono o email" /></span>
         </div>
         <div class="native-table-wrap">
           <table class="native-table">
-            <thead><tr><th>Nombre</th><th>DNI</th><th>Email</th><th>Teléfono</th><th>Acciones</th></tr></thead>
+            <thead><tr><th>Nombre</th><th>Cantidad de dispositivos</th><th>Email</th><th>Teléfono</th><th>Acciones</th></tr></thead>
             <tbody>
-              @for (c of visibleClients; track c.id || (c.dni + c.email)) {
-                <tr>
-                  <td>{{ c.name }} {{ c.lastName }}</td>
-                  <td>{{ c.dni }}</td>
-                  <td>{{ c.email }}</td>
-                  <td>{{ c.phone }} <a [href]="whatsAppLink(c.phone)" target="_blank" rel="noopener" class="wa-link"><i class="pi pi-whatsapp"></i></a></td>
+              @for (client of clients; track client.id) {
+                <tr class="clickable-row" (click)="openClientDialog(client, true)">
+                  <td>{{ client.name }} {{ client.lastName }}</td>
+                  <td>{{ client.deviceCount }}</td>
+                  <td>{{ client.email || '-' }}</td>
+                  <td>{{ client.phone || '-' }} @if (client.phone) { <a [href]="whatsAppLink(client.phone)" target="_blank" rel="noopener" class="wa-link" (click)="$event.stopPropagation()"><i class="pi pi-whatsapp"></i></a> }</td>
                   <td>
                     <div class="action-buttons">
-                      <button class="icon-action" type="button" aria-label="Editar cliente" (click)="openEdit(c)"><i class="pi pi-pencil"></i></button>
-                      <button class="icon-action" type="button" aria-label="Ver reparaciones del cliente" (click)="openRepairs(c)"><i class="pi pi-history"></i></button>
-                      <button class="icon-action danger" type="button" aria-label="Eliminar cliente" (click)="confirmDelete(c)"><i class="pi pi-trash"></i></button>
+                      <button class="icon-action" type="button" aria-label="Editar cliente" (click)="stop($event); openEdit(client)"><i class="pi pi-pencil"></i></button>
+                      <button class="icon-action" type="button" aria-label="Ver reparaciones del cliente" (click)="stop($event); openClientDialog(client, false)"><i class="pi pi-history"></i></button>
+                      <button class="icon-action danger" type="button" aria-label="Eliminar cliente" (click)="stop($event); confirmDelete(client)"><i class="pi pi-trash"></i></button>
                     </div>
                   </td>
                 </tr>
-              } @empty {
-                <tr><td class="empty-cell" colspan="5">No hay clientes para mostrar.</td></tr>
-              }
+              } @empty { <tr><td class="empty-cell" colspan="5">No hay clientes para mostrar.</td></tr> }
             </tbody>
           </table>
         </div>
         <div class="table-pager" aria-label="Paginación de clientes">
           <span>{{ paginationLabel }}</span>
           <div class="pager-actions">
-            <button class="pager-button" type="button" [disabled]="currentPage === 1" (click)="previousPage()"><i class="pi pi-chevron-left"></i></button>
-            <span>Página {{ currentPage }} de {{ totalPages }}</span>
-            <button class="pager-button" type="button" [disabled]="currentPage === totalPages" (click)="nextPage()"><i class="pi pi-chevron-right"></i></button>
+            <button class="pager-button" type="button" [disabled]="currentPage === 0" (click)="previousPage()"><i class="pi pi-chevron-left"></i></button>
+            <span>Página {{ currentPage + 1 }} de {{ displayTotalPages }}</span>
+            <button class="pager-button" type="button" [disabled]="currentPage + 1 >= displayTotalPages" (click)="nextPage()"><i class="pi pi-chevron-right"></i></button>
           </div>
         </div>
       </p-card>
@@ -87,114 +83,142 @@ import { Repair } from '../../shared/models/repair.model';
       <button pButton type="button" label="Guardar cambios" icon="pi pi-check" (click)="updateClient()"></button>
     </p-dialog>
 
-
-    <p-dialog header="Reparaciones del cliente" [(visible)]="repairsVisible" [modal]="true" [style]="{width:'56rem'}">
-      <div class="native-table-wrap">
+    <p-dialog [header]="showClientData ? 'Detalle del cliente' : 'Reparaciones del cliente'" [(visible)]="historyVisible" [modal]="true" [style]="{width:'70rem', maxWidth:'95vw'}">
+      @if (showClientData && selectedClient) {
+        <div class="detail-grid client-detail-grid">
+          @if (fullName) { <div class="detail-item"><label>Nombre</label><strong>{{ fullName }}</strong></div> }
+          @if (selectedClient.dni) { <div class="detail-item"><label>DNI</label><strong>{{ selectedClient.dni }}</strong></div> }
+          @if (selectedClient.email) { <div class="detail-item"><label>Email</label><strong>{{ selectedClient.email }}</strong></div> }
+          @if (selectedClient.phone) { <div class="detail-item"><label>Teléfono</label><strong>{{ selectedClient.phone }}</strong></div> }
+          @if (selectedClient.address) { <div class="detail-item"><label>Dirección</label><strong>{{ selectedClient.address }}</strong></div> }
+          @if (selectedClient.birthDate) { <div class="detail-item"><label>Nacimiento</label><strong>{{ selectedClient.birthDate | date:'dd/MM/yyyy' }}</strong></div> }
+          @if (selectedClient.phones?.length) { <div class="detail-item"><label>Otros teléfonos</label><strong>{{ selectedClient.phones?.join(', ') }}</strong></div> }
+          @if (selectedClient.emails?.length) { <div class="detail-item"><label>Otros emails</label><strong>{{ selectedClient.emails?.join(', ') }}</strong></div> }
+          @if (selectedClient.notes) { <div class="detail-item detail-wide"><label>Notas</label><div>{{ selectedClient.notes }}</div></div> }
+        </div>
+      }
+      <div class="native-table-wrap client-history-table">
         <table class="native-table">
-          <thead><tr><th>Orden</th><th>Estado</th><th>Ingreso</th><th>Entrega</th><th>Detalle</th></tr></thead>
+          <thead><tr><th>Orden</th><th>Estado</th><th>Dispositivo</th><th>Ingreso</th><th>Entrega</th><th>Detalle</th></tr></thead>
           <tbody>
-            @for (r of clientRepairs; track r.id || r.orderNumber) {
+            @for (repair of clientRepairs; track repair.id) {
               <tr>
-                <td>#{{ r.orderNumber }}</td>
-                <td>{{ r.status }}</td>
-                <td>{{ r.receiveDateTime ? (r.receiveDateTime | date:'dd/MM/yyyy HH:mm') : '-' }}</td>
-                <td>{{ r.returnDateTime ? (r.returnDateTime | date:'dd/MM/yyyy HH:mm') : '-' }}</td>
-                <td><button class="icon-action" type="button" aria-label="Ver reparación" (click)="goToRepair(r)"><i class="pi pi-eye"></i></button></td>
+                <td>#{{ repair.orderNumber || '-' }}</td>
+                <td><span class="status-pill" [ngClass]="statusClass(repair.status)">{{ statusLabel(repair.status) }}</span></td>
+                <td>{{ deviceLabel(repair) }}</td>
+                <td>{{ repair.receiveDateTime ? (repair.receiveDateTime | date:'dd/MM/yyyy HH:mm') : '-' }}</td>
+                <td>{{ repair.returnDateTime ? (repair.returnDateTime | date:'dd/MM/yyyy HH:mm') : '-' }}</td>
+                <td><button class="icon-action" type="button" aria-label="Ver reparación" (click)="openRepairDetail(repair)"><i class="pi pi-eye"></i></button></td>
               </tr>
-            } @empty {
-              <tr><td class="empty-cell" colspan="5">Este cliente no tiene reparaciones registradas.</td></tr>
-            }
+            } @empty { <tr><td class="empty-cell" colspan="6">Este cliente no tiene reparaciones registradas.</td></tr> }
           </tbody>
         </table>
       </div>
-      @if (selectedRepair) {
-        <div class="field"><label>Descripción</label><div>{{ selectedRepair.description || 'Sin descripción' }}</div></div>
-        <div class="field"><label>Presupuesto</label><div>{{ (selectedRepair.quotedAmount || 0) | currency:'ARS':'symbol':'1.2-2':'es-AR' }}</div></div>
-      }
+      <div class="table-pager" aria-label="Paginación del historial">
+        <span>{{ historyPaginationLabel }}</span>
+        <div class="pager-actions">
+          <button class="pager-button" type="button" [disabled]="historyPage === 0" (click)="previousHistoryPage()"><i class="pi pi-chevron-left"></i></button>
+          <span>Página {{ historyPage + 1 }} de {{ displayHistoryTotalPages }}</span>
+          <button class="pager-button" type="button" [disabled]="historyPage + 1 >= displayHistoryTotalPages" (click)="nextHistoryPage()"><i class="pi pi-chevron-right"></i></button>
+        </div>
+      </div>
     </p-dialog>
+    <app-repair-detail-dialog></app-repair-detail-dialog>
   `
 })
-export class ClientsPageComponent implements OnInit {
-  clients: Client[] = [];
-  draft: Client = { name: '', lastName: '', dni: '', email: '', phone: '' };
-  editing: Client = { name: '', lastName: '', dni: '', email: '', phone: '' };
+export class ClientsPageComponent implements OnInit, OnDestroy {
+  @ViewChild(RepairDetailDialogComponent) private repairDetailDialog?: RepairDetailDialogComponent;
+  private readonly destroy$ = new Subject<void>();
+  private readonly search$ = new Subject<string>();
+  clients: ClientListItem[] = [];
+  draft: Client = this.emptyClient();
+  editing: Client = this.emptyClient();
   editVisible = false;
   searchTerm = '';
-  currentPage = 1;
+  currentPage = 0;
   pageSize = 10;
-  repairsVisible = false;
-  clientRepairs: Repair[] = [];
-  selectedRepair: Repair | null = null;
+  totalElements = 0;
+  totalPages = 0;
+  historyVisible = false;
+  showClientData = true;
+  selectedClientId = '';
+  selectedClient: Client | null = null;
+  clientRepairs: ClientRepairHistoryItem[] = [];
+  historyPage = 0;
+  historyPageSize = 5;
+  historyTotalElements = 0;
+  historyTotalPages = 0;
 
-  constructor(private readonly api: ApiService, private readonly messageService: MessageService, private readonly confirmationService: ConfirmationService, private readonly router: Router, private readonly changeDetector: ChangeDetectorRef) {}
+  constructor(private readonly api: ApiService, private readonly messages: MessageService, private readonly confirmations: ConfirmationService, private readonly changeDetector: ChangeDetectorRef) {}
 
-  ngOnInit(): void { this.reload(); }
+  ngOnInit(): void {
+    this.search$.pipe(debounceTime(300), distinctUntilChanged(), takeUntil(this.destroy$)).subscribe(() => { this.currentPage = 0; this.reload(); });
+    this.reload();
+  }
+  ngOnDestroy(): void { this.destroy$.next(); this.destroy$.complete(); }
 
   save(): void {
     this.api.createClient(this.draft).subscribe({
-      next: () => { this.messageService.add({ severity: 'success', summary: 'Cliente guardado', detail: 'El cliente se creó correctamente.' }); this.draft = { name: '', lastName: '', dni: '', email: '', phone: '' }; this.reload(); },
-      error: (error) => { const detail = error?.status === 403 ? 'No autorizado (403). Verificá permisos/token de sesión.' : 'No se pudo guardar el cliente.'; this.messageService.add({ severity: 'error', summary: 'Error', detail }); }
+      next: () => { this.messages.add({ severity: 'success', summary: 'Cliente guardado', detail: 'El cliente se creó correctamente.' }); this.draft = this.emptyClient(); this.reload(); },
+      error: () => this.messages.add({ severity: 'error', summary: 'Error', detail: 'No se pudo guardar el cliente.' })
     });
   }
-
-  openEdit(client: Client): void { this.editing = { ...client }; this.editVisible = true; }
-
+  openEdit(client: ClientListItem): void {
+    this.api.getClientById(client.id).subscribe((detail) => { this.editing = { ...detail }; this.editVisible = true; });
+  }
   updateClient(): void {
     this.api.createClient(this.editing).subscribe({
-      next: () => { this.messageService.add({ severity: 'success', summary: 'Cliente actualizado', detail: 'Cambios guardados.' }); this.editVisible = false; this.reload(); },
-      error: (error) => { const detail = error?.status === 403 ? 'No autorizado (403). Verificá permisos/token de sesión.' : 'No se pudo actualizar el cliente.'; this.messageService.add({ severity: 'error', summary: 'Error', detail }); }
+      next: () => { this.messages.add({ severity: 'success', summary: 'Cliente actualizado', detail: 'Cambios guardados.' }); this.editVisible = false; this.reload(); },
+      error: () => this.messages.add({ severity: 'error', summary: 'Error', detail: 'No se pudo actualizar el cliente.' })
     });
   }
+  openClientDialog(client: ClientListItem, includeClient: boolean): void {
+    this.selectedClientId = client.id;
+    this.showClientData = includeClient;
+    this.selectedClient = { id: client.id, name: client.name, lastName: client.lastName, dni: '', email: client.email || '', phone: client.phone || '' };
+    this.historyPage = 0;
+    this.loadHistory();
+  }
+  openRepairDetail(repair: ClientRepairHistoryItem): void {
+    this.repairDetailDialog?.open(repair.id, this.fullName || '-', this.deviceLabel(repair));
+  }
+  confirmDelete(client: ClientListItem): void {
+    this.confirmations.confirm({ message: `¿Eliminar a ${client.name} ${client.lastName}?`, header: 'Confirmar eliminación', acceptLabel: 'Eliminar', rejectLabel: 'Cancelar', accept: () => this.deleteClient(client.id) });
+  }
+  deleteClient(id: string): void {
+    this.api.deleteClient(id).subscribe({ next: () => { this.messages.add({ severity: 'success', summary: 'Cliente eliminado', detail: 'Se eliminó correctamente.' }); this.reload(); }, error: () => this.messages.add({ severity: 'error', summary: 'Error', detail: 'No se pudo eliminar el cliente.' }) });
+  }
+  onSearch(term: string): void { this.search$.next(term.trim()); }
+  previousPage(): void { if (this.currentPage > 0) { this.currentPage--; this.reload(); } }
+  nextPage(): void { if (this.currentPage + 1 < this.totalPages) { this.currentPage++; this.reload(); } }
+  previousHistoryPage(): void { if (this.historyPage > 0) { this.historyPage--; this.loadHistory(); } }
+  nextHistoryPage(): void { if (this.historyPage + 1 < this.historyTotalPages) { this.historyPage++; this.loadHistory(); } }
+  stop(event: Event): void { event.stopPropagation(); }
+  whatsAppLink(phone: string): string { return `https://wa.me/${(phone || '').replace(/\D/g, '')}`; }
+  deviceLabel(repair: ClientRepairHistoryItem): string { return [repair.deviceBrand, repair.deviceModel].filter(Boolean).join(' ') || '-'; }
+  statusLabel(status: Repair['status']): string { return { POR_RECIBIR: 'Por recibir', RECIBIDA: 'Recibida', PRESUPUESTADA_ESPERANDO_RESPUESTA: 'Presupuestada', HACIENDO: 'Haciendo', ESPERANDO_RETIRO: 'Esperando retiro', RETIRADA: 'Retirada' }[status]; }
+  statusClass(status: Repair['status']): string { return { POR_RECIBIR: 'is-muted', RECIBIDA: 'is-info', PRESUPUESTADA_ESPERANDO_RESPUESTA: 'is-warning', HACIENDO: 'is-active', ESPERANDO_RETIRO: 'is-success', RETIRADA: 'is-closed' }[status]; }
+  get fullName(): string { return this.selectedClient ? `${this.selectedClient.name || ''} ${this.selectedClient.lastName || ''}`.trim() : ''; }
+  get displayTotalPages(): number { return Math.max(1, this.totalPages); }
+  get displayHistoryTotalPages(): number { return Math.max(1, this.historyTotalPages); }
+  get paginationLabel(): string { if (!this.totalElements) return '0 clientes'; const start = this.currentPage * this.pageSize + 1; return `${start}-${Math.min(start + this.clients.length - 1, this.totalElements)} de ${this.totalElements} clientes`; }
+  get historyPaginationLabel(): string { if (!this.historyTotalElements) return '0 reparaciones'; const start = this.historyPage * this.historyPageSize + 1; return `${start}-${Math.min(start + this.clientRepairs.length - 1, this.historyTotalElements)} de ${this.historyTotalElements} reparaciones`; }
 
-  openRepairs(client: Client): void {
-    this.api.getRepairs().subscribe((repairs) => {
-      this.clientRepairs = repairs
-        .filter((repair) => repair.idClient === client.id)
-        .sort((a, b) => new Date(b.receiveDateTime || 0).getTime() - new Date(a.receiveDateTime || 0).getTime());
-      this.selectedRepair = this.clientRepairs[0] || null;
-      this.repairsVisible = true;
+  private reload(): void {
+    this.api.getClientPage(this.currentPage, this.pageSize, this.searchTerm.trim()).subscribe((page) => {
+      this.clients = page.content; this.currentPage = page.page; this.totalElements = page.totalElements; this.totalPages = page.totalPages; this.changeDetector.detectChanges();
     });
   }
-
-
-  goToRepair(repair: Repair): void {
-    this.selectedRepair = repair;
-    this.repairsVisible = false;
-    const term = repair.orderNumber || repair.id || '';
-    this.router.navigate(['/reparaciones'], { queryParams: term ? { q: term } : undefined });
-  }
-  confirmDelete(client: Client): void {
-    this.confirmationService.confirm({
-      message: `¿Eliminar a ${client.name} ${client.lastName}?`,
-      header: 'Confirmar eliminación',
-      acceptLabel: 'Eliminar',
-      rejectLabel: 'Cancelar',
-      accept: () => this.deleteClient(client)
+  private loadHistory(): void {
+    this.api.getClientHistory(this.selectedClientId, this.historyPage, this.historyPageSize, this.showClientData).subscribe((result) => {
+      if (result.client) this.selectedClient = result.client;
+      this.clientRepairs = result.repairs.content;
+      this.historyPage = result.repairs.page;
+      this.historyTotalElements = result.repairs.totalElements;
+      this.historyTotalPages = result.repairs.totalPages;
+      this.historyVisible = true;
+      this.changeDetector.detectChanges();
     });
   }
-
-  deleteClient(client: Client): void {
-    this.api.deleteClient(client.id!).subscribe({
-      next: () => { this.messageService.add({ severity: 'success', summary: 'Cliente eliminado', detail: 'Se eliminó correctamente.' }); this.reload(); },
-      error: (error) => { const detail = error?.status === 403 ? 'No autorizado (403). Verificá permisos/token de sesión.' : 'No se pudo eliminar el cliente.'; this.messageService.add({ severity: 'error', summary: 'Error', detail }); }
-    });
-  }
-
-  onSearch(): void { if (!this.searchTerm.trim()) { this.reload(); return; } this.api.searchClients(this.searchTerm).subscribe((clients) => { this.clients = clients; this.currentPage = 1; this.changeDetector.detectChanges(); }); }
-  whatsAppLink(phone: string): string { const digits = (phone || "").replace(/\D/g, ""); return `https://wa.me/${digits}`; }
-  get totalPages(): number { return Math.max(1, Math.ceil(this.clients.length / this.pageSize)); }
-  get visibleClients(): Client[] {
-    const page = Math.min(this.currentPage, this.totalPages);
-    const start = (page - 1) * this.pageSize;
-    return this.clients.slice(start, start + this.pageSize);
-  }
-  get paginationLabel(): string {
-    if (!this.clients.length) return '0 clientes';
-    const start = (Math.min(this.currentPage, this.totalPages) - 1) * this.pageSize + 1;
-    const end = Math.min(start + this.pageSize - 1, this.clients.length);
-    return `${start}-${end} de ${this.clients.length} clientes`;
-  }
-  previousPage(): void { this.currentPage = Math.max(1, this.currentPage - 1); }
-  nextPage(): void { this.currentPage = Math.min(this.totalPages, this.currentPage + 1); }
-  private reload(): void { this.api.getClients().subscribe((clients) => { this.clients = clients.slice().reverse(); this.currentPage = 1; this.changeDetector.detectChanges(); }); }
+  private emptyClient(): Client { return { name: '', lastName: '', dni: '', email: '', phone: '' }; }
 }

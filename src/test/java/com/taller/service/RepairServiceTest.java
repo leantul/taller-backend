@@ -9,6 +9,7 @@ import com.taller.model.repository.RepairPartRepository;
 import com.taller.model.repository.RepairPaymentRepository;
 import com.taller.model.repository.RepairRepository;
 import com.taller.model.repository.projection.RepairListView;
+import com.taller.model.repository.projection.StatusBoardRepairView;
 import com.taller.resource.dto.RepairDTO;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -18,6 +19,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
 import java.util.Optional;
+import java.time.LocalDateTime;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -25,6 +27,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -67,6 +70,40 @@ class RepairServiceTest {
         RepairDTO saved = repairService.save(dto);
 
         assertEquals("2", saved.getOrderNumber());
+        assertNotNull(saved.getReceiveDateTime());
+    }
+
+    @Test
+    void save_newRepair_preservesSelectedReceiveDate() {
+        stubSavedRepair();
+        when(repairRepository.nextOrderValue()).thenReturn(4L);
+        LocalDateTime selectedReceiveDate = LocalDateTime.of(2026, 5, 20, 14, 30);
+
+        RepairDTO dto = new RepairDTO();
+        dto.setIdClient("c1");
+        dto.setIdDevice("d1");
+        dto.setDescription("Test");
+        dto.setStatus(RepairStatusEnum.RECIBIDA);
+        dto.setReceiveDateTime(selectedReceiveDate);
+
+        RepairDTO saved = repairService.save(dto);
+
+        assertEquals(selectedReceiveDate, saved.getReceiveDateTime());
+    }
+
+    @Test
+    void save_newReceivedRepair_withoutSelectedDate_assignsCurrentDate() {
+        stubSavedRepair();
+        when(repairRepository.nextOrderValue()).thenReturn(5L);
+
+        RepairDTO dto = new RepairDTO();
+        dto.setIdClient("c1");
+        dto.setIdDevice("d1");
+        dto.setDescription("Test");
+        dto.setStatus(RepairStatusEnum.RECIBIDA);
+
+        RepairDTO saved = repairService.save(dto);
+
         assertNotNull(saved.getReceiveDateTime());
     }
 
@@ -157,6 +194,65 @@ class RepairServiceTest {
 
         assertFalse(objectMapper.writeValueAsString(listed).contains("repairNotes"));
         assertFalse(objectMapper.writeValueAsString(searched).contains("repairNotes"));
+    }
+
+    @Test
+    void statusBoard_mapsEnrichedLabelsWithoutLoadingRelatedEntities() {
+        StatusBoardRepairView row = mock(StatusBoardRepairView.class);
+        when(row.getId()).thenReturn("r1");
+        when(row.getClientName()).thenReturn("Ada");
+        when(row.getClientLastName()).thenReturn("Lovelace");
+        when(row.getDeviceTypeName()).thenReturn("Notebook");
+        when(row.getDeviceBrand()).thenReturn("Lenovo");
+        when(row.getDeviceModel()).thenReturn("T14");
+        when(repairRepository.findStatusBoardRows()).thenReturn(List.of(row));
+
+        var result = repairService.getStatusBoard().getFirst();
+
+        assertEquals("Ada Lovelace", result.clientName());
+        assertEquals("Notebook Lenovo T14", result.deviceLabel());
+    }
+
+    @Test
+    void statusBoard_preservesMissingDeviceTypePlaceholder() {
+        StatusBoardRepairView row = mock(StatusBoardRepairView.class);
+        when(row.getDeviceBrand()).thenReturn("Lenovo");
+        when(row.getDeviceModel()).thenReturn("T14");
+        when(repairRepository.findStatusBoardRows()).thenReturn(List.of(row));
+
+        var result = repairService.getStatusBoard().getFirst();
+
+        assertEquals("- Lenovo T14", result.deviceLabel());
+    }
+
+    @Test
+    void updateStatus_preservesFieldsNotOwnedByStatusBoard() {
+        Repair existing = existingRepair("Trabajo realizado");
+        existing.setLaborAmount(new java.math.BigDecimal("12000"));
+        existing.setQuoteNotes("Presupuesto aprobado");
+        existing.setApproved(true);
+        when(repairRepository.findById("id-1")).thenReturn(Optional.of(existing));
+        when(repairRepository.save(existing)).thenReturn(existing);
+
+        repairService.updateStatus("id-1", RepairStatusEnum.HACIENDO);
+
+        assertEquals(RepairStatusEnum.HACIENDO, existing.getStatus());
+        assertEquals(new java.math.BigDecimal("12000"), existing.getLaborAmount());
+        assertEquals("Presupuesto aprobado", existing.getQuoteNotes());
+        assertEquals(true, existing.getApproved());
+        verify(repairRepository).save(existing);
+    }
+
+    @Test
+    void updateStatus_toRetiradaAssignsReturnDateWhenMissing() {
+        Repair existing = existingRepair(null);
+        when(repairRepository.findById("id-1")).thenReturn(Optional.of(existing));
+        when(repairRepository.save(existing)).thenReturn(existing);
+
+        repairService.updateStatus("id-1", RepairStatusEnum.RETIRADA);
+
+        assertEquals(RepairStatusEnum.RETIRADA, existing.getStatus());
+        assertNotNull(existing.getReturnDateTime());
     }
 
     private RepairDTO updateDto(String repairNotes) {

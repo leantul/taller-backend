@@ -76,6 +76,7 @@ class NotificationServiceTest {
         lenient().when(deviceObservationRepository.findByResolvedAtIsNullAndFollowUpAtBetweenOrderByFollowUpAtAsc(any(LocalDateTime.class), any(LocalDateTime.class))).thenReturn(List.of());
         lenient().when(deviceObservationRepository.findAllById(any())).thenReturn(List.of());
         lenient().when(notificationRepository.findByEntityIdInAndType(any(), anyString())).thenReturn(List.of());
+        lenient().when(notificationRepository.findByEntityIdInAndTypeInAndEventDateBetween(any(), any(), any(), any())).thenReturn(List.of());
         lenient().when(notificationRepository.save(any(Notification.class))).thenAnswer(invocation -> invocation.getArgument(0));
         lenient().when(notificationRepository.saveAll(any())).thenAnswer(invocation -> invocation.getArgument(0));
     }
@@ -89,16 +90,13 @@ class NotificationServiceTest {
         when(appMetadataRepository.findById(anyString())).thenReturn(Optional.of(metadata(today.minusDays(1))));
         when(repairRepository.findByStatusAndReturnDateTimeIsNotNullOrderByReturnDateTimeDesc(RepairStatusEnum.RETIRADA))
                 .thenReturn(List.of(repair));
-        when(notificationRepository.findByEntityIdAndTypeAndEventDate("device-1", "WARRANTY_6_MONTHS", today.atStartOfDay()))
-                .thenReturn(Optional.empty());
-        when(notificationRepository.findByReadedFalseOrderByEventDateDesc()).thenReturn(List.of());
+        notificationService.synchronize();
 
-        notificationService.latest();
-
-        ArgumentCaptor<Notification> captor = ArgumentCaptor.forClass(Notification.class);
-        verify(notificationRepository).save(captor.capture());
-        assertEquals(today.atStartOfDay(), captor.getValue().getEventDate());
-        assertEquals("WARRANTY_6_MONTHS", captor.getValue().getType());
+        ArgumentCaptor<Iterable> captor = ArgumentCaptor.forClass(Iterable.class);
+        verify(notificationRepository).saveAll(captor.capture());
+        Notification notification = (Notification) captor.getValue().iterator().next();
+        assertEquals(today.atStartOfDay(), notification.getEventDate());
+        assertEquals("WARRANTY_6_MONTHS", notification.getType());
     }
 
     @Test
@@ -119,37 +117,48 @@ class NotificationServiceTest {
         when(appMetadataRepository.findById(anyString())).thenReturn(Optional.of(metadata(today.minusDays(3))));
         when(repairRepository.findByStatusAndReturnDateTimeIsNotNullOrderByReturnDateTimeDesc(RepairStatusEnum.RETIRADA))
                 .thenReturn(List.of(repair));
-        when(notificationRepository.findByEntityIdAndTypeAndEventDate("device-2", "WARRANTY_6_MONTHS", dueDate.atStartOfDay()))
-                .thenReturn(Optional.empty());
         when(notificationRepository.findByReadedFalseOrderByEventDateDesc()).thenReturn(List.of(existingUnread));
         when(repairRepository.findAllById(any())).thenReturn(List.of(repair));
 
+        notificationService.synchronize();
         List<NotificationDTO> notifications = notificationService.latest();
 
-        verify(notificationRepository, atLeastOnce()).save(any(Notification.class));
+        verify(notificationRepository, atLeastOnce()).saveAll(any());
         assertEquals(1, notifications.size());
         assertFalse(Boolean.TRUE.equals(notifications.get(0).getReaded()));
         assertEquals("device-2", notifications.get(0).getDeviceId());
     }
 
     @Test
-    void unreadCount_doesNotDuplicateExistingNotifications() {
-        LocalDate today = LocalDate.now();
-        Repair repair = deliveredRepair("repair-3", "device-3", today.minusYears(1).atTime(18, 0));
-
-        when(appMetadataRepository.findById(anyString())).thenReturn(Optional.of(metadata(today.minusDays(1))));
-        when(repairRepository.findByStatusAndReturnDateTimeIsNotNullOrderByReturnDateTimeDesc(RepairStatusEnum.RETIRADA))
-                .thenReturn(List.of(repair));
-        when(notificationRepository.findByEntityIdAndTypeAndEventDate("device-3", "WARRANTY_6_MONTHS", today.minusMonths(6).atStartOfDay()))
-                .thenReturn(Optional.of(new Notification()));
-        when(notificationRepository.findByEntityIdAndTypeAndEventDate("device-3", "WARRANTY_1_YEAR", today.atStartOfDay()))
-                .thenReturn(Optional.of(new Notification()));
+    void unreadCount_onlyReadsCurrentCount() {
         when(notificationRepository.countByReadedFalse()).thenReturn(2L);
 
         long unread = notificationService.unreadCount();
 
         assertEquals(2L, unread);
         verify(notificationRepository, never()).save(any(Notification.class));
+        verify(repairRepository, never()).findByStatusAndReturnDateTimeIsNotNullOrderByReturnDateTimeDesc(any());
+    }
+
+    @Test
+    void synchronize_doesNotDuplicateExistingWarrantyNotifications() {
+        LocalDate today = LocalDate.now();
+        Repair repair = deliveredRepair("repair-3", "device-3", today.minusYears(1).atTime(18, 0));
+        Notification existing = Notification.builder()
+                .type("WARRANTY_1_YEAR")
+                .entityId("device-3")
+                .eventDate(today.atStartOfDay())
+                .build();
+
+        when(appMetadataRepository.findById(anyString())).thenReturn(Optional.of(metadata(today.minusDays(1))));
+        when(repairRepository.findByStatusAndReturnDateTimeIsNotNullOrderByReturnDateTimeDesc(RepairStatusEnum.RETIRADA))
+                .thenReturn(List.of(repair));
+        when(notificationRepository.findByEntityIdInAndTypeInAndEventDateBetween(any(), any(), any(), any()))
+                .thenReturn(List.of(existing));
+
+        notificationService.synchronize();
+
+        verify(notificationRepository, never()).saveAll(any());
     }
 
     @Test
@@ -168,9 +177,7 @@ class NotificationServiceTest {
                 .thenReturn(List.of());
         when(deviceObservationRepository.findByResolvedAtIsNullAndFollowUpAtLessThanEqualOrderByFollowUpAtAsc(any(LocalDateTime.class)))
                 .thenReturn(List.of(observation));
-        when(notificationRepository.findByReadedFalseOrderByEventDateDesc()).thenReturn(List.of());
-
-        notificationService.latest();
+        notificationService.synchronize();
 
         ArgumentCaptor<Iterable> captor = ArgumentCaptor.forClass(Iterable.class);
         verify(notificationRepository).saveAll(captor.capture());

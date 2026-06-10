@@ -28,6 +28,11 @@ export interface Repair {
   observations?: DeviceObservation[];
 }
 
+export interface StatusBoardRepair extends Repair {
+  clientName: string;
+  deviceLabel: string;
+}
 
-export type RepairCreateDTO = Omit<Repair, "id" | "receiveDateTime" | "returnDateTime" | "repairNotes"> & { orderNumber?: string };
+
+export type RepairCreateDTO = Omit<Repair, "id" | "returnDateTime" | "repairNotes"> & { orderNumber?: string };
 export type RepairUpdateDTO = Partial<Repair> & Pick<Repair, "id">;

@@ -1,12 +1,16 @@
 import { HttpInterceptorFn } from '@angular/common/http';
 import { ApplicationRef, inject, NgZone } from '@angular/core';
 import { catchError, finalize, throwError } from 'rxjs';
+import { MessageService } from 'primeng/api';
 import { LoadingService } from '../services/loading.service';
+import { ErrorDialogService } from '../services/error-dialog.service';
 import { AuthService } from './auth.service';
 
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const loading = inject(LoadingService);
   const authService = inject(AuthService);
+  const messageService = inject(MessageService);
+  const errorDialogService = inject(ErrorDialogService);
   const appRef = inject(ApplicationRef);
   const zone = inject(NgZone);
   const token = authService.getToken();
@@ -22,6 +26,16 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
     catchError((error) => {
       if (error?.status === 401 && !isAuthRequest) {
         authService.logout();
+      } else if (!isAuthRequest) {
+        zone.run(() => {
+          const detail = resolveErrorDetail(error);
+          messageService.add({
+            severity: 'error',
+            summary: `Error ${error?.status || ''}`.trim(),
+            detail
+          });
+          errorDialogService.show(`Error ${error?.status || ''}`.trim(), detail);
+        });
       }
       return throwError(() => error);
     }),
@@ -39,3 +53,19 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
     })
   );
 };
+
+function resolveErrorDetail(error: any): string {
+  if (typeof error?.error === 'string' && error.error.trim()) {
+    return error.error;
+  }
+  if (error?.error?.error) {
+    return String(error.error.error);
+  }
+  if (error?.error?.message) {
+    return String(error.error.message);
+  }
+  if (error?.message) {
+    return String(error.message);
+  }
+  return 'Ocurrió un error inesperado al procesar la solicitud.';
+}

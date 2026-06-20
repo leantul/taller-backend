@@ -256,6 +256,35 @@ a { color: inherit; }
 
 .is-loading { pointer-events: none; }
 
+.error-dialog {
+  display: grid;
+  gap: .9rem;
+}
+
+.error-dialog-header {
+  color: var(--danger-500);
+}
+
+.error-dialog-detail {
+  margin: 0;
+  padding: .95rem 1rem;
+  max-height: min(60vh, 34rem);
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--surface-soft);
+  color: var(--text);
+  font: 500 .84rem/1.45 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.error-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: .65rem;
+}
+
 .page-heading {
   display: flex;
   align-items: end;

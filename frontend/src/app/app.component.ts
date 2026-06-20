@@ -6,15 +6,40 @@ import { AuthService } from './core/auth/auth.service';
 import { ThemeMode, ThemeService } from './core/services/theme.service';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { ToastModule } from 'primeng/toast';
+import { DialogModule } from 'primeng/dialog';
+import { MessageService } from 'primeng/api';
 import { LoadingService } from './core/services/loading.service';
 import { NotificationStateService } from './core/services/notification-state.service';
+import { ErrorDialogService, ErrorDialogState } from './core/services/error-dialog.service';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, CommonModule, ProgressSpinnerModule, ToastModule],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, CommonModule, ProgressSpinnerModule, ToastModule, DialogModule],
   template: `
     <p-toast position="top-right"></p-toast>
+    <p-dialog
+      header="Detalle del error"
+      [visible]="!!errorDialog"
+      [modal]="true"
+      [draggable]="false"
+      [resizable]="false"
+      [closable]="true"
+      [style]="{ width: '52rem', maxWidth: '95vw' }"
+      (visibleChange)="onErrorDialogVisibleChange($event)">
+      @if (errorDialog) {
+        <div class="error-dialog">
+          <div class="error-dialog-header">
+            <strong>{{ errorDialog.title }}</strong>
+          </div>
+          <pre class="error-dialog-detail">{{ errorDialog.detail }}</pre>
+          <div class="error-dialog-actions">
+            <button class="secondary-button" type="button" (click)="copyErrorDetail()">Copiar</button>
+            <button class="primary-button" type="button" (click)="closeErrorDialog()">Cerrar</button>
+          </div>
+        </div>
+      }
+    </p-dialog>
     <main class="app-shell" [class.is-loading]="(loadingService.loading$ | async) !== 0" [class.is-authenticated]="auth.isLoggedIn()">
       @if ((loadingService.loading$ | async) !== 0) {
         <div class="global-loading-overlay">
@@ -63,6 +88,7 @@ import { NotificationStateService } from './core/services/notification-state.ser
 export class AppComponent implements OnInit {
   themeMode: ThemeMode;
   unreadNotifications = 0;
+  errorDialog: ErrorDialogState | null = null;
   navItems = [
     { label: 'Dashboard', icon: 'pi pi-home', path: '/', exact: true },
     { label: 'Clientes', icon: 'pi pi-users', path: '/clientes' },
@@ -99,7 +125,9 @@ export class AppComponent implements OnInit {
     private readonly router: Router,
     private readonly themeService: ThemeService,
     public readonly loadingService: LoadingService,
-    private readonly notificationState: NotificationStateService
+    private readonly notificationState: NotificationStateService,
+    private readonly errorDialogService: ErrorDialogService,
+    private readonly messageService: MessageService
   ) {
     this.themeMode = this.themeService.initTheme();
   }
@@ -107,6 +135,10 @@ export class AppComponent implements OnInit {
   ngOnInit(): void {
     this.notificationState.unreadCount$.subscribe((count) => {
       this.unreadNotifications = count;
+    });
+
+    this.errorDialogService.state$.subscribe((state) => {
+      this.errorDialog = state;
     });
 
     if (this.auth.isLoggedIn()) {
@@ -124,4 +156,19 @@ export class AppComponent implements OnInit {
 
   toggleTheme(): void { this.themeMode = this.themeService.toggleTheme(this.themeMode); }
   goToPassword(): void { this.router.navigate(['/cambiar-password']); }
+  closeErrorDialog(): void { this.errorDialogService.close(); }
+  onErrorDialogVisibleChange(visible: boolean): void { if (!visible) this.closeErrorDialog(); }
+
+  copyErrorDetail(): void {
+    const detail = this.errorDialog?.detail || '';
+    if (!detail) {
+      return;
+    }
+
+    navigator.clipboard.writeText(detail).then(() => {
+      this.messageService.add({ severity: 'success', summary: 'Copiado', detail: 'El detalle del error se copió al portapapeles.' });
+    }).catch(() => {
+      this.messageService.add({ severity: 'warn', summary: 'No se pudo copiar', detail: 'Copiá el texto manualmente desde el diálogo.' });
+    });
+  }
 }

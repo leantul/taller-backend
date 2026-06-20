@@ -26,8 +26,10 @@ public class ClientController {
     public PageDTO<ClientListItemDTO> getPage(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
-            @RequestParam(defaultValue = "") String term) {
-        return clientService.findPage(page, size, term);
+            @RequestParam(defaultValue = "") String term,
+            @RequestParam(defaultValue = "createdAt") String sortBy,
+            @RequestParam(defaultValue = "desc") String sortDir) {
+        return clientService.findPage(page, size, term, sortBy, sortDir);
     }
 
     @GetMapping("/{id}/history")

@@ -1,10 +1,7 @@
-import { Repair } from './repair.model';
-
 export interface FinanceRow {
   repairId: string;
-  orderNumber: string;
+  clientName: string;
   date: string | null;
-  status: Repair['status'];
   income: number | string;
   partsCost: number | string;
   net: number | string;

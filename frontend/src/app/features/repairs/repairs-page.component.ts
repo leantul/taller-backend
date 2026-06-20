@@ -41,15 +41,6 @@ type RepairTableRow = {
 })
 export class RepairsPageComponent implements OnInit {
   @ViewChild(RepairDetailDialogComponent) private repairDetailDialog?: RepairDetailDialogComponent;
-  private readonly statusOrder: Record<Repair['status'], number> = {
-    POR_RECIBIR: 0,
-    RECIBIDA: 1,
-    PRESUPUESTADA_ESPERANDO_RESPUESTA: 2,
-    HACIENDO: 3,
-    ESPERANDO_RETIRO: 4,
-    RETIRADA: 5
-  };
-
   repairs: Repair[] = [];
   filteredRepairs: Repair[] = [];
   visibleRepairRows: RepairTableRow[] = [];
@@ -88,6 +79,7 @@ export class RepairsPageComponent implements OnInit {
   currentPage = 1;
   pageSize = 10;
   totalPages = 1;
+  totalElements = 0;
   paginationLabel = '0 reparaciones';
   isSaving = false;
   isUpdating = false;
@@ -99,8 +91,7 @@ export class RepairsPageComponent implements OnInit {
 
   constructor(private readonly api: ApiService, private readonly messageService: MessageService, private readonly route: ActivatedRoute, private readonly confirmationService: ConfirmationService, private readonly changeDetector: ChangeDetectorRef) {}
   ngOnInit(): void {
-    forkJoin({ repairs: this.api.getRepairs(), clients: this.api.getClients(), devices: this.api.getDevices(), deviceTypes: this.api.getDeviceTypes() }).subscribe(({ repairs, clients, devices, deviceTypes }) => {
-      this.repairs = repairs.slice().reverse();
+    forkJoin({ clients: this.api.getClients(), devices: this.api.getDevices(), deviceTypes: this.api.getDeviceTypes() }).subscribe(({ clients, devices, deviceTypes }) => {
       this.clients = clients;
       this.clientsById = new Map(clients.filter(item => !!item.id).map(item => [item.id!, item]));
       this.devicesById = new Map(devices.filter(item => !!item.id).map(item => [item.id!, item]));
@@ -110,7 +101,7 @@ export class RepairsPageComponent implements OnInit {
       this.rebuildStaticOptions();
       this.updateFilteredClients();
       this.refreshSelectionSummaries();
-      this.applyFilters();
+      this.reload();
       this.changeDetector.detectChanges();
     });
 
@@ -366,32 +357,40 @@ export class RepairsPageComponent implements OnInit {
   }
 
   applyFilters(): void {
-    const term = this.searchTerm.trim().toLowerCase();
-    this.filteredRepairs = this.repairs
-      .filter((r) => {
-        const matchesTerm = !term || [r.idClient, r.idDevice, this.clientLabel(r), this.deviceLabel(r), r.orderNumber, r.description].filter(Boolean).join(' ').toLowerCase().includes(term);
-        const receive = r.receiveDateTime ? new Date(r.receiveDateTime) : null;
-        const matchesFrom = !this.fromDate || (receive && receive >= this.fromDate);
-        const matchesTo = !this.toDate || (receive && receive <= this.toDate);
-        return Boolean(matchesTerm && matchesFrom && matchesTo);
-      })
-      .sort((left, right) => this.compareRepairs(left, right));
-
     this.currentPage = 1;
-    this.updateVisibleRepairs();
+    this.reload();
   }
-  private reload(): void { this.api.getRepairs().subscribe((repairs) => { this.repairs = repairs.slice().reverse(); this.applyFilters(); this.changeDetector.detectChanges(); }); }
+  private reload(): void {
+    this.api.getRepairPage(
+      this.currentPage - 1,
+      this.pageSize,
+      this.searchTerm.trim(),
+      this.toApiDateTime(this.fromDate),
+      this.toApiDateTime(this.toDate, true)
+    ).subscribe((page) => {
+      this.repairs = page.content;
+      this.filteredRepairs = page.content;
+      this.currentPage = page.page + 1;
+      this.totalElements = page.totalElements;
+      this.totalPages = Math.max(1, page.totalPages);
+      this.updateVisibleRepairs();
+      this.changeDetector.detectChanges();
+    });
+  }
 
   clientLabel(repair: Repair): string {
+    if (repair.clientName) return repair.clientName;
     const client = this.clientsById.get(repair.idClient);
     return client ? `${client.name} ${client.lastName}`.trim() : repair.idClient;
   }
 
   clientPhone(repair: Repair): string {
+    if (repair.clientPhone) return repair.clientPhone;
     return this.clientsById.get(repair.idClient)?.phone || '';
   }
 
   deviceLabel(repair: Repair): string {
+    if (repair.deviceLabel) return repair.deviceLabel;
     const device = this.devicesById.get(repair.idDevice);
     if (!device) return repair.idDevice || '-';
     return `${device.brand || '-'} - ${device.model || '-'}`.replace(/\s+/g, ' ').trim();
@@ -405,13 +404,17 @@ export class RepairsPageComponent implements OnInit {
     row.repair.id || row.repair.orderNumber || `${row.repair.idClient}-${row.repair.idDevice}-${row.repair.receiveDateTime || index}`;
 
   previousPage(): void {
-    this.currentPage = Math.max(1, this.currentPage - 1);
-    this.updateVisibleRepairs();
+    if (this.currentPage > 1) {
+      this.currentPage--;
+      this.reload();
+    }
   }
 
   nextPage(): void {
-    this.currentPage = Math.min(this.totalPages, this.currentPage + 1);
-    this.updateVisibleRepairs();
+    if (this.currentPage < this.totalPages) {
+      this.currentPage++;
+      this.reload();
+    }
   }
 
   whatsAppLink(phone: string): string {
@@ -458,40 +461,27 @@ export class RepairsPageComponent implements OnInit {
   }
 
   private updateVisibleRepairs(): void {
-    this.totalPages = Math.max(1, Math.ceil(this.filteredRepairs.length / this.pageSize));
-    const page = Math.min(this.currentPage, this.totalPages);
-    const start = (page - 1) * this.pageSize;
-    this.currentPage = page;
-    this.visibleRepairRows = this.filteredRepairs
-      .slice(start, start + this.pageSize)
-      .map((repair) => this.toTableRow(repair));
-    if (!this.filteredRepairs.length) {
+    const start = (this.currentPage - 1) * this.pageSize;
+    this.visibleRepairRows = this.repairs.map((repair) => this.toTableRow(repair));
+    if (!this.totalElements) {
       this.paginationLabel = '0 reparaciones';
     } else {
-      const end = Math.min(start + this.pageSize, this.filteredRepairs.length);
-      this.paginationLabel = `${start + 1}-${end} de ${this.filteredRepairs.length} reparaciones`;
+      const end = Math.min(start + this.repairs.length, this.totalElements);
+      this.paginationLabel = `${start + 1}-${end} de ${this.totalElements} reparaciones`;
     }
     this.changeDetector.detectChanges();
   }
 
-  private compareRepairs(left: Repair, right: Repair): number {
-    const statusDiff = this.statusOrder[left.status] - this.statusOrder[right.status];
-    if (statusDiff !== 0) {
-      return statusDiff;
+  private toApiDateTime(date: Date | null, endOfDay = false): string | undefined {
+    if (!date) return undefined;
+    const value = new Date(date);
+    if (endOfDay) {
+      value.setHours(23, 59, 59, 999);
+    } else {
+      value.setHours(0, 0, 0, 0);
     }
-
-    const rightDate = this.sortTimestamp(right);
-    const leftDate = this.sortTimestamp(left);
-    if (rightDate !== leftDate) {
-      return rightDate - leftDate;
-    }
-
-    return (right.orderNumber || '').localeCompare(left.orderNumber || '', undefined, { numeric: true, sensitivity: 'base' });
-  }
-
-  private sortTimestamp(repair: Repair): number {
-    const raw = repair.receiveDateTime || repair.returnDateTime;
-    return raw ? new Date(raw).getTime() : 0;
+    const pad = (input: number) => String(input).padStart(2, '0');
+    return `${value.getFullYear()}-${pad(value.getMonth() + 1)}-${pad(value.getDate())}T${pad(value.getHours())}:${pad(value.getMinutes())}:${pad(value.getSeconds())}`;
   }
 
   private toTableRow(repair: Repair): RepairTableRow {

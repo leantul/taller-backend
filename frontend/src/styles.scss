@@ -1147,6 +1147,27 @@ textarea.p-inputtext {
   text-transform: uppercase;
 }
 
+.sortable-th {
+  display: inline-flex;
+  align-items: center;
+  gap: .35rem;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  text-align: left;
+  text-transform: inherit;
+  cursor: pointer;
+}
+
+.sortable-th i {
+  color: var(--brand-500);
+  font-size: .76rem;
+}
+
 .native-table tr:last-child td {
   border-bottom: 0;
 }

@@ -9,20 +9,23 @@ import com.taller.model.repository.DeviceObservationRepository;
 import com.taller.model.repository.RepairPaymentRepository;
 import com.taller.model.repository.RepairPartRepository;
 import com.taller.model.repository.RepairRepository;
+import com.taller.model.repository.projection.FinanceRepairView;
 import com.taller.model.repository.projection.RepairListView;
 import com.taller.model.repository.projection.StatusBoardRepairView;
 import com.taller.resource.dto.DeviceObservationDTO;
+import com.taller.resource.dto.PageDTO;
 import com.taller.resource.dto.RepairDTO;
 import com.taller.resource.dto.RepairPartDTO;
 import com.taller.resource.dto.RepairPaymentDTO;
 import com.taller.resource.dto.StatusBoardRepairDTO;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -40,6 +43,12 @@ public class RepairService {
     @Transactional(readOnly = true)
     public List<RepairDTO> getAllRepairs() {
       return repairRepository.findListRows().stream().map(this::toListDto).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public PageDTO<RepairDTO> findPage(int page, int size, String term, LocalDateTime from, LocalDateTime to) {
+        Page<RepairListView> result = repairRepository.findPage(normalizeTerm(term), from, to, pageRequest(page, size, 100));
+        return toPage(result, result.getContent().stream().map(this::toListDto).toList());
     }
 
     @Transactional(readOnly = true)
@@ -159,8 +168,7 @@ public class RepairService {
 
     @Transactional(readOnly = true)
     public BigDecimal totalIncome(LocalDateTime from, LocalDateTime to) {
-        List<RepairListView> repairs = repairRepository.findFinanceRowsBetween(from, to);
-        Map<String, List<RepairPart>> partsByRepairId = partsByRepairId(repairs.stream().map(RepairListView::getId).toList());
+        List<FinanceRepairView> repairs = repairRepository.findFinanceRowsBetween(from, to);
 
         return repairs.stream()
                 .map(repair -> {
@@ -168,16 +176,7 @@ public class RepairService {
                             ? repair.getLaborAmount()
                             : (repair.getPrice() != null ? repair.getPrice() : BigDecimal.ZERO);
 
-                    BigDecimal partsIncome = partsByRepairId.getOrDefault(repair.getId(), List.of()).stream()
-                            .map(part -> {
-                                BigDecimal cost = part.getCost() != null ? part.getCost() : BigDecimal.ZERO;
-                                BigDecimal sale = part.getSalePrice() != null ? part.getSalePrice() : BigDecimal.ZERO;
-                                BigDecimal qty = BigDecimal.valueOf(part.getQuantity() != null ? part.getQuantity() : 1);
-                                return sale.subtract(cost).multiply(qty);
-                            })
-                            .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-                    return laborIncome.add(partsIncome);
+                    return laborIncome.add(repair.getPartsProfit() != null ? repair.getPartsProfit() : BigDecimal.ZERO);
                 })
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
@@ -231,6 +230,9 @@ public class RepairService {
         dto.setApproved(repair.getApproved());
         dto.setRejected(repair.getRejected());
         dto.setReadyNotifiedAt(repair.getReadyNotifiedAt());
+        dto.setClientName(joinLabel(repair.getClientName(), repair.getClientLastName()));
+        dto.setClientPhone(repair.getClientPhone());
+        dto.setDeviceLabel(joinLabel(defaultLabel(repair.getDeviceTypeName()), repair.getDeviceBrand(), repair.getDeviceModel()));
         return dto;
     }
 
@@ -341,16 +343,20 @@ public class RepairService {
         return repairDTO.getClient() != null ? repairDTO.getClient().getId() : null;
     }
 
+    private <T> PageDTO<T> toPage(Page<?> page, List<T> content) {
+        return new PageDTO<>(content, page.getNumber(), page.getSize(), page.getTotalElements(), page.getTotalPages());
+    }
+
+    private String normalizeTerm(String term) {
+        return term == null ? "" : term.trim();
+    }
+
+    private PageRequest pageRequest(int page, int size, int maximumSize) {
+        return PageRequest.of(Math.max(0, page), Math.min(Math.max(1, size), maximumSize));
+    }
+
     private String normalizeOptionalText(String value) {
         String normalized = value.trim();
         return normalized.isEmpty() ? null : normalized;
-    }
-
-    private Map<String, List<RepairPart>> partsByRepairId(Collection<String> repairIds) {
-        if (repairIds == null || repairIds.isEmpty()) {
-            return Map.of();
-        }
-        return repairPartRepository.findByRepairIdIn(repairIds).stream()
-                .collect(Collectors.groupingBy(RepairPart::getRepairId));
     }
 }

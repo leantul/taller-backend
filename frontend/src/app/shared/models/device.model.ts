@@ -31,6 +31,7 @@ export interface Device {
   clientId: string;
   technicalDetails?: string;
   currentPassword?: string;
+  clientName?: string;
   passwordHistory?: DevicePasswordHistory[];
   observations?: DeviceObservation[];
 }

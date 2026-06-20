@@ -22,4 +22,10 @@ public interface RepairListView {
     Boolean getApproved();
     Boolean getRejected();
     LocalDateTime getReadyNotifiedAt();
+    String getClientName();
+    String getClientLastName();
+    String getClientPhone();
+    String getDeviceTypeName();
+    String getDeviceBrand();
+    String getDeviceModel();
 }

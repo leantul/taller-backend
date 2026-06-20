@@ -26,6 +26,9 @@ export interface Repair {
   returnDateTime?: string;
   parts?: RepairPart[];
   observations?: DeviceObservation[];
+  clientName?: string;
+  clientPhone?: string;
+  deviceLabel?: string;
 }
 
 export interface StatusBoardRepair extends Repair {

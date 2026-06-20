@@ -1,10 +1,8 @@
 package com.taller.service;
 
-import com.taller.model.RepairPart;
 import com.taller.model.enums.RepairStatusEnum;
-import com.taller.model.repository.RepairPartRepository;
 import com.taller.model.repository.RepairRepository;
-import com.taller.model.repository.projection.RepairListView;
+import com.taller.model.repository.projection.FinanceRepairView;
 import com.taller.resource.dto.DashboardSeriesItemDTO;
 import com.taller.resource.dto.FinanceRowDTO;
 import com.taller.resource.dto.FinanceSummaryDTO;
@@ -20,6 +18,7 @@ import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Stream;
 import java.util.stream.Collectors;
 
 @Service
@@ -27,25 +26,20 @@ import java.util.stream.Collectors;
 public class FinanceService {
 
     private final RepairRepository repairRepository;
-    private final RepairPartRepository repairPartRepository;
 
     @Transactional(readOnly = true)
     public FinanceSummaryDTO getSummary(LocalDate from, LocalDate to) {
         LocalDateTime fromDateTime = from != null ? from.atStartOfDay() : null;
         LocalDateTime toDateTime = to != null ? to.plusDays(1).atStartOfDay().minusNanos(1) : null;
-        List<RepairListView> filteredRepairs = findFinanceRows(fromDateTime, toDateTime);
-        List<RepairListView> deliveredRepairs = filteredRepairs.stream()
+        List<FinanceRepairView> filteredRepairs = findFinanceRows(fromDateTime, toDateTime);
+        List<FinanceRepairView> deliveredRepairs = filteredRepairs.stream()
                 .filter(repair -> repair.getStatus() == RepairStatusEnum.RETIRADA)
                 .toList();
-        Map<String, List<RepairPart>> partsByRepairId = deliveredRepairs.isEmpty()
-                ? Map.of()
-                : repairPartRepository.findByRepairIdIn(deliveredRepairs.stream().map(RepairListView::getId).toList()).stream()
-                .collect(Collectors.groupingBy(RepairPart::getRepairId));
 
         List<FinanceRowDTO> rows = deliveredRepairs.stream()
-                .map(repair -> toRowDto(repair, partsByRepairId.getOrDefault(repair.getId(), List.of())))
+                .map(this::toRowDto)
                 .sorted(Comparator.comparing(FinanceRowDTO::getDate, Comparator.nullsLast(Comparator.reverseOrder()))
-                        .thenComparing(FinanceRowDTO::getOrderNumber, Comparator.nullsLast(String::compareToIgnoreCase)))
+                        .thenComparing(FinanceRowDTO::getClientName, Comparator.nullsLast(String::compareToIgnoreCase)))
                 .toList();
 
         BigDecimal totalIncome = rows.stream()
@@ -85,13 +79,9 @@ public class FinanceService {
         YearMonth firstMonth = currentMonth.minusMonths(11);
         LocalDateTime from = firstMonth.atDay(1).atStartOfDay();
 
-        List<RepairListView> repairs = findFinanceRows(from, null).stream()
+        List<FinanceRepairView> repairs = findFinanceRows(from, null).stream()
                 .filter(repair -> repair.getStatus() == RepairStatusEnum.RETIRADA)
                 .toList();
-        Map<String, List<RepairPart>> partsByRepairId = repairs.isEmpty()
-                ? Map.of()
-                : repairPartRepository.findByRepairIdIn(repairs.stream().map(RepairListView::getId).toList()).stream()
-                .collect(Collectors.groupingBy(RepairPart::getRepairId));
 
         Map<YearMonth, BigDecimal> monthlyNet = new LinkedHashMap<>();
         YearMonth cursor = firstMonth;
@@ -100,7 +90,7 @@ public class FinanceService {
             cursor = cursor.plusMonths(1);
         }
 
-        for (RepairListView repair : repairs) {
+        for (FinanceRepairView repair : repairs) {
             LocalDateTime date = resolveFinanceDate(repair);
             if (date == null) {
                 continue;
@@ -112,7 +102,7 @@ public class FinanceService {
             }
 
             BigDecimal income = safeMoney(repair.getPrice());
-            BigDecimal partsCost = sumPartsCost(partsByRepairId.getOrDefault(repair.getId(), List.of()));
+            BigDecimal partsCost = safeMoney(repair.getPartsCost());
             monthlyNet.put(month, monthlyNet.get(month).add(income.subtract(partsCost)));
         }
 
@@ -121,36 +111,29 @@ public class FinanceService {
                 .toList();
     }
 
-    private FinanceRowDTO toRowDto(RepairListView repair, List<RepairPart> parts) {
+    private FinanceRowDTO toRowDto(FinanceRepairView repair) {
         BigDecimal income = safeMoney(repair.getPrice());
-        BigDecimal partsCost = sumPartsCost(parts);
+        BigDecimal partsCost = safeMoney(repair.getPartsCost());
 
         FinanceRowDTO row = new FinanceRowDTO();
         row.setRepairId(repair.getId());
-        row.setOrderNumber(repair.getOrderNumber());
+        row.setClientName(formatClientName(repair));
         row.setDate(resolveFinanceDate(repair));
-        row.setStatus(repair.getStatus());
         row.setIncome(income);
         row.setPartsCost(partsCost);
         row.setNet(income.subtract(partsCost));
         return row;
     }
 
-    private LocalDateTime resolveFinanceDate(RepairListView repair) {
+    private LocalDateTime resolveFinanceDate(FinanceRepairView repair) {
         return repair.getReturnDateTime() != null ? repair.getReturnDateTime() : repair.getReceiveDateTime();
-    }
-
-    private BigDecimal sumPartsCost(List<RepairPart> parts) {
-        return parts.stream()
-                .map(part -> safeMoney(part.getCost()).multiply(BigDecimal.valueOf(part.getQuantity() != null ? part.getQuantity() : 1)))
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
     private BigDecimal safeMoney(BigDecimal value) {
         return value != null ? value : BigDecimal.ZERO;
     }
 
-    private List<RepairListView> findFinanceRows(LocalDateTime from, LocalDateTime to) {
+    private List<FinanceRepairView> findFinanceRows(LocalDateTime from, LocalDateTime to) {
         if (from != null && to != null) {
             return repairRepository.findFinanceRowsBetween(from, to);
         }
@@ -164,6 +147,13 @@ public class FinanceService {
         }
 
         return repairRepository.findFinanceRowsAll();
+    }
+
+    private String formatClientName(FinanceRepairView repair) {
+        String fullName = Stream.of(repair.getClientName(), repair.getClientLastName())
+                .filter(value -> value != null && !value.isBlank())
+                .collect(Collectors.joining(" "));
+        return fullName.isBlank() ? "-" : fullName;
     }
 
     private String formatMonth(YearMonth month) {

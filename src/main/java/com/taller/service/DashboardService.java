@@ -3,12 +3,12 @@ package com.taller.service;
 import com.taller.model.enums.RepairStatusEnum;
 import com.taller.model.repository.ClientRepository;
 import com.taller.model.repository.DeviceRepository;
-import com.taller.model.repository.RepairPartRepository;
 import com.taller.model.repository.RepairRepository;
 import com.taller.model.repository.projection.ClientBasicView;
 import com.taller.model.repository.projection.DeviceBasicView;
 import com.taller.model.repository.projection.DeviceLastRepairView;
 import com.taller.model.repository.projection.DeviceTypeCountView;
+import com.taller.model.repository.projection.FinanceRepairView;
 import com.taller.model.repository.projection.RepairListView;
 import com.taller.model.repository.projection.RepairStatusCountView;
 import com.taller.resource.dto.ClientDTO;
@@ -39,7 +39,6 @@ import java.util.stream.Collectors;
 public class DashboardService {
 
     private final RepairService repairService;
-    private final RepairPartRepository repairPartRepository;
     private final ClientRepository clientRepository;
     private final DeviceRepository deviceRepository;
     private final RepairRepository repairRepository;
@@ -50,9 +49,9 @@ public class DashboardService {
         LocalDateTime to = from.plusMonths(1).minusSeconds(1);
 
         BigDecimal income = repairService.totalIncome(from, to);
-        List<RepairListView> repairs = repairRepository.findFinanceRowsBetween(from, to);
-        BigDecimal costs = repairPartRepository.findByRepairIdIn(repairs.stream().map(RepairListView::getId).toList()).stream()
-                .map(part -> safeMoney(part.getCost()).multiply(BigDecimal.valueOf(part.getQuantity() != null ? part.getQuantity() : 1)))
+        List<FinanceRepairView> repairs = repairRepository.findFinanceRowsBetween(from, to);
+        BigDecimal costs = repairs.stream()
+                .map(repair -> safeMoney(repair.getPartsCost()))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         return DashboardDTO.builder()

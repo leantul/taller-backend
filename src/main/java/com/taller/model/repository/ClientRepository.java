@@ -22,9 +22,9 @@ public interface ClientRepository extends JpaRepository<Client, String> {
             SELECT c.id AS id,
                    c.name AS name,
                    c.lastName AS lastName,
-                   c.email AS email,
                    c.phone AS phone,
-                   (SELECT COUNT(d.id) FROM Device d WHERE d.clientId = c.id) AS deviceCount
+                   (SELECT COUNT(d.id) FROM Device d WHERE d.clientId = c.id) AS deviceCount,
+                   (SELECT COUNT(r.id) FROM Repair r WHERE r.idClient = c.id) AS repairCount
             FROM Client c
             WHERE :term = ''
                OR lower(c.name) LIKE lower(concat('%', :term, '%'))
@@ -32,7 +32,16 @@ public interface ClientRepository extends JpaRepository<Client, String> {
                OR lower(c.dni) LIKE lower(concat('%', :term, '%'))
                OR lower(c.phone) LIKE lower(concat('%', :term, '%'))
                OR lower(c.email) LIKE lower(concat('%', :term, '%'))
-            ORDER BY c.creationDateTime DESC
+            ORDER BY
+              CASE WHEN :sortBy = 'name' AND :sortDir = 'asc' THEN lower(concat(c.name, ' ', c.lastName)) END ASC,
+              CASE WHEN :sortBy = 'name' AND :sortDir = 'desc' THEN lower(concat(c.name, ' ', c.lastName)) END DESC,
+              CASE WHEN :sortBy = 'deviceCount' AND :sortDir = 'asc' THEN (SELECT COUNT(d.id) FROM Device d WHERE d.clientId = c.id) END ASC,
+              CASE WHEN :sortBy = 'deviceCount' AND :sortDir = 'desc' THEN (SELECT COUNT(d.id) FROM Device d WHERE d.clientId = c.id) END DESC,
+              CASE WHEN :sortBy = 'repairCount' AND :sortDir = 'asc' THEN (SELECT COUNT(r.id) FROM Repair r WHERE r.idClient = c.id) END ASC,
+              CASE WHEN :sortBy = 'repairCount' AND :sortDir = 'desc' THEN (SELECT COUNT(r.id) FROM Repair r WHERE r.idClient = c.id) END DESC,
+              CASE WHEN :sortBy = 'phone' AND :sortDir = 'asc' THEN lower(c.phone) END ASC,
+              CASE WHEN :sortBy = 'phone' AND :sortDir = 'desc' THEN lower(c.phone) END DESC,
+              c.creationDateTime DESC
             """,
             countQuery = """
             SELECT COUNT(c)
@@ -44,7 +53,11 @@ public interface ClientRepository extends JpaRepository<Client, String> {
                OR lower(c.phone) LIKE lower(concat('%', :term, '%'))
                OR lower(c.email) LIKE lower(concat('%', :term, '%'))
             """)
-    Page<ClientListView> findPage(@Param("term") String term, Pageable pageable);
+    Page<ClientListView> findPage(
+            @Param("term") String term,
+            @Param("sortBy") String sortBy,
+            @Param("sortDir") String sortDir,
+            Pageable pageable);
 
     @Query("""
             SELECT c.id AS id,

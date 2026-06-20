@@ -24,6 +24,7 @@ export class ApiService {
   deleteClient = this.clients.delete.bind(this.clients);
 
   getDevices = this.devices.getAll.bind(this.devices);
+  getDevicePage = this.devices.getPage.bind(this.devices);
   getDeviceTypes = this.devices.getTypes.bind(this.devices);
   getDeviceById = this.devices.getById.bind(this.devices);
   searchDevices = this.devices.search.bind(this.devices);
@@ -40,6 +41,7 @@ export class ApiService {
   deleteDeviceObservation = this.devices.deleteObservation.bind(this.devices);
 
   getRepairs = this.repairs.getAll.bind(this.repairs);
+  getRepairPage = this.repairs.getPage.bind(this.repairs);
   getStatusBoardRepairs = this.repairs.getStatusBoard.bind(this.repairs);
   getRepairById = this.repairs.getById.bind(this.repairs);
   searchRepairs = this.repairs.search.bind(this.repairs);

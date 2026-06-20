@@ -12,7 +12,10 @@ import com.taller.resource.dto.DeviceDTO;
 import com.taller.resource.dto.DeviceObservationDTO;
 import com.taller.resource.dto.DevicePasswordHistoryDTO;
 import com.taller.resource.dto.DevicePasswordUpsertDTO;
+import com.taller.resource.dto.PageDTO;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -69,6 +72,19 @@ public class DeviceService {
         return rows.stream()
                 .map(device -> toListDto(device, observationsByDeviceId.getOrDefault(device.getId(), List.of())))
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public PageDTO<DeviceDTO> findPage(int page, int size, String term, String clientId, String clientTerm) {
+        Page<DeviceListView> result = deviceRepository.findPage(
+                normalizeTerm(term),
+                normalizeTerm(clientId),
+                normalizeTerm(clientTerm),
+                pageRequest(page, size, 100));
+        Map<String, List<DeviceObservation>> observationsByDeviceId = observationsByDeviceId(result.getContent().stream().map(DeviceListView::getId).toList());
+        return toPage(result, result.getContent().stream()
+                .map(device -> toListDto(device, observationsByDeviceId.getOrDefault(device.getId(), List.of())))
+                .toList());
     }
 
     @Transactional(readOnly = true)
@@ -205,6 +221,7 @@ public class DeviceService {
         dto.setDeviceTypeId(device.getDeviceTypeId());
         dto.setDeviceTypeName(device.getDeviceTypeName());
         dto.setClientId(device.getClientId());
+        dto.setClientName(joinLabel(device.getClientName(), device.getClientLastName()));
         dto.setCurrentPassword(device.getCurrentPassword());
         dto.setObservations(observations.stream().map(this::toObservationDto).toList());
         return dto;
@@ -302,5 +319,23 @@ public class DeviceService {
 
     private boolean hasText(String value) {
         return value != null && !value.isBlank();
+    }
+
+    private <T> PageDTO<T> toPage(Page<?> page, List<T> content) {
+        return new PageDTO<>(content, page.getNumber(), page.getSize(), page.getTotalElements(), page.getTotalPages());
+    }
+
+    private String normalizeTerm(String term) {
+        return term == null ? "" : term.trim();
+    }
+
+    private PageRequest pageRequest(int page, int size, int maximumSize) {
+        return PageRequest.of(Math.max(0, page), Math.min(Math.max(1, size), maximumSize));
+    }
+
+    private String joinLabel(String... values) {
+        return java.util.Arrays.stream(values)
+                .filter(value -> value != null && !value.isBlank())
+                .collect(Collectors.joining(" "));
     }
 }

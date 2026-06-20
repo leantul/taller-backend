@@ -4,6 +4,7 @@ import com.taller.model.Repair;
 import com.taller.model.enums.RepairStatusEnum;
 import com.taller.model.repository.projection.DeviceLastRepairView;
 import com.taller.model.repository.projection.ClientRepairHistoryView;
+import com.taller.model.repository.projection.FinanceRepairView;
 import com.taller.model.repository.projection.RepairListView;
 import com.taller.model.repository.projection.RepairStatusCountView;
 import com.taller.model.repository.projection.StatusBoardRepairView;
@@ -75,11 +76,90 @@ public interface RepairRepository extends JpaRepository<Repair, String> {
                    r.quoteNotes AS quoteNotes,
                    r.approved AS approved,
                    r.rejected AS rejected,
-                   r.readyNotifiedAt AS readyNotifiedAt
+                   r.readyNotifiedAt AS readyNotifiedAt,
+                   c.name AS clientName,
+                   c.lastName AS clientLastName,
+                   c.phone AS clientPhone,
+                   d.deviceType.name AS deviceTypeName,
+                   d.brand AS deviceBrand,
+                   d.model AS deviceModel
             FROM Repair r
+            LEFT JOIN r.client c
+            LEFT JOIN r.device d
             ORDER BY r.creationDateTime DESC
             """)
     List<RepairListView> findListRows();
+
+    @Query(value = """
+            SELECT r.id AS id,
+                   r.idDevice AS idDevice,
+                   r.idClient AS idClient,
+                   r.description AS description,
+                   r.orderNumber AS orderNumber,
+                   r.status AS status,
+                   r.receiveDateTime AS receiveDateTime,
+                   r.returnDateTime AS returnDateTime,
+                   r.price AS price,
+                   r.laborAmount AS laborAmount,
+                   r.extraAmount AS extraAmount,
+                   r.quotedAmount AS quotedAmount,
+                   r.quoteNotes AS quoteNotes,
+                   r.approved AS approved,
+                   r.rejected AS rejected,
+                   r.readyNotifiedAt AS readyNotifiedAt,
+                   c.name AS clientName,
+                   c.lastName AS clientLastName,
+                   c.phone AS clientPhone,
+                   d.deviceType.name AS deviceTypeName,
+                   d.brand AS deviceBrand,
+                   d.model AS deviceModel
+            FROM Repair r
+            LEFT JOIN r.client c
+            LEFT JOIN r.device d
+            WHERE (:term = ''
+               OR lower(r.orderNumber) LIKE lower(concat('%', :term, '%'))
+               OR lower(r.description) LIKE lower(concat('%', :term, '%'))
+               OR lower(c.name) LIKE lower(concat('%', :term, '%'))
+               OR lower(c.lastName) LIKE lower(concat('%', :term, '%'))
+               OR lower(d.brand) LIKE lower(concat('%', :term, '%'))
+               OR lower(d.model) LIKE lower(concat('%', :term, '%'))
+               OR lower(d.deviceType.name) LIKE lower(concat('%', :term, '%')))
+              AND (:from IS NULL OR r.receiveDateTime >= :from)
+              AND (:to IS NULL OR r.receiveDateTime <= :to)
+            ORDER BY
+              CASE r.status
+                WHEN com.taller.model.enums.RepairStatusEnum.POR_RECIBIR THEN 0
+                WHEN com.taller.model.enums.RepairStatusEnum.RECIBIDA THEN 1
+                WHEN com.taller.model.enums.RepairStatusEnum.PRESUPUESTADA_ESPERANDO_RESPUESTA THEN 2
+                WHEN com.taller.model.enums.RepairStatusEnum.HACIENDO THEN 3
+                WHEN com.taller.model.enums.RepairStatusEnum.ESPERANDO_RETIRO THEN 4
+                WHEN com.taller.model.enums.RepairStatusEnum.RETIRADA THEN 5
+                ELSE 6
+              END ASC,
+              COALESCE(r.receiveDateTime, r.returnDateTime) DESC,
+              r.orderNumber DESC
+            """,
+            countQuery = """
+            SELECT COUNT(r)
+            FROM Repair r
+            LEFT JOIN r.client c
+            LEFT JOIN r.device d
+            WHERE (:term = ''
+               OR lower(r.orderNumber) LIKE lower(concat('%', :term, '%'))
+               OR lower(r.description) LIKE lower(concat('%', :term, '%'))
+               OR lower(c.name) LIKE lower(concat('%', :term, '%'))
+               OR lower(c.lastName) LIKE lower(concat('%', :term, '%'))
+               OR lower(d.brand) LIKE lower(concat('%', :term, '%'))
+               OR lower(d.model) LIKE lower(concat('%', :term, '%'))
+               OR lower(d.deviceType.name) LIKE lower(concat('%', :term, '%')))
+              AND (:from IS NULL OR r.receiveDateTime >= :from)
+              AND (:to IS NULL OR r.receiveDateTime <= :to)
+            """)
+    Page<RepairListView> findPage(
+            @Param("term") String term,
+            @Param("from") LocalDateTime from,
+            @Param("to") LocalDateTime to,
+            Pageable pageable);
 
     @Query("""
             SELECT r.id AS id,
@@ -97,8 +177,16 @@ public interface RepairRepository extends JpaRepository<Repair, String> {
                    r.quoteNotes AS quoteNotes,
                    r.approved AS approved,
                    r.rejected AS rejected,
-                   r.readyNotifiedAt AS readyNotifiedAt
+                   r.readyNotifiedAt AS readyNotifiedAt,
+                   c.name AS clientName,
+                   c.lastName AS clientLastName,
+                   c.phone AS clientPhone,
+                   d.deviceType.name AS deviceTypeName,
+                   d.brand AS deviceBrand,
+                   d.model AS deviceModel
             FROM Repair r
+            LEFT JOIN r.client c
+            LEFT JOIN r.device d
             ORDER BY r.creationDateTime DESC
             """)
     List<RepairListView> findLatestRows(Pageable pageable);
@@ -129,95 +217,87 @@ public interface RepairRepository extends JpaRepository<Repair, String> {
 
     @Query("""
             SELECT r.id AS id,
-                   r.idDevice AS idDevice,
-                   r.idClient AS idClient,
-                   r.description AS description,
-                   r.orderNumber AS orderNumber,
+                   c.name AS clientName,
+                   c.lastName AS clientLastName,
                    r.status AS status,
                    r.receiveDateTime AS receiveDateTime,
                    r.returnDateTime AS returnDateTime,
                    r.price AS price,
                    r.laborAmount AS laborAmount,
-                   r.extraAmount AS extraAmount,
                    r.quotedAmount AS quotedAmount,
-                   r.quoteNotes AS quoteNotes,
-                   r.approved AS approved,
-                   r.rejected AS rejected,
-                   r.readyNotifiedAt AS readyNotifiedAt
+                   COALESCE(SUM(COALESCE(p.cost, 0) * COALESCE(p.quantity, 1)), 0) AS partsCost,
+                   COALESCE(SUM((COALESCE(p.salePrice, 0) - COALESCE(p.cost, 0)) * COALESCE(p.quantity, 1)), 0) AS partsProfit
             FROM Repair r
+            LEFT JOIN r.client c
+            LEFT JOIN r.parts p
             WHERE COALESCE(r.returnDateTime, r.receiveDateTime) >= :from
               AND COALESCE(r.returnDateTime, r.receiveDateTime) <= :to
-            ORDER BY COALESCE(r.returnDateTime, r.receiveDateTime) DESC, r.orderNumber DESC
+            GROUP BY r.id, c.name, c.lastName, r.status, r.receiveDateTime, r.returnDateTime, r.price, r.laborAmount, r.quotedAmount
+            ORDER BY COALESCE(r.returnDateTime, r.receiveDateTime) DESC
             """)
-    List<RepairListView> findFinanceRowsBetween(@Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
+    List<FinanceRepairView> findFinanceRowsBetween(@Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
 
     @Query("""
             SELECT r.id AS id,
-                   r.idDevice AS idDevice,
-                   r.idClient AS idClient,
-                   r.description AS description,
-                   r.orderNumber AS orderNumber,
+                   c.name AS clientName,
+                   c.lastName AS clientLastName,
                    r.status AS status,
                    r.receiveDateTime AS receiveDateTime,
                    r.returnDateTime AS returnDateTime,
                    r.price AS price,
                    r.laborAmount AS laborAmount,
-                   r.extraAmount AS extraAmount,
                    r.quotedAmount AS quotedAmount,
-                   r.quoteNotes AS quoteNotes,
-                   r.approved AS approved,
-                   r.rejected AS rejected,
-                   r.readyNotifiedAt AS readyNotifiedAt
+                   COALESCE(SUM(COALESCE(p.cost, 0) * COALESCE(p.quantity, 1)), 0) AS partsCost,
+                   COALESCE(SUM((COALESCE(p.salePrice, 0) - COALESCE(p.cost, 0)) * COALESCE(p.quantity, 1)), 0) AS partsProfit
             FROM Repair r
+            LEFT JOIN r.client c
+            LEFT JOIN r.parts p
             WHERE COALESCE(r.returnDateTime, r.receiveDateTime) >= :from
-            ORDER BY COALESCE(r.returnDateTime, r.receiveDateTime) DESC, r.orderNumber DESC
+            GROUP BY r.id, c.name, c.lastName, r.status, r.receiveDateTime, r.returnDateTime, r.price, r.laborAmount, r.quotedAmount
+            ORDER BY COALESCE(r.returnDateTime, r.receiveDateTime) DESC
             """)
-    List<RepairListView> findFinanceRowsFrom(@Param("from") LocalDateTime from);
+    List<FinanceRepairView> findFinanceRowsFrom(@Param("from") LocalDateTime from);
 
     @Query("""
             SELECT r.id AS id,
-                   r.idDevice AS idDevice,
-                   r.idClient AS idClient,
-                   r.description AS description,
-                   r.orderNumber AS orderNumber,
+                   c.name AS clientName,
+                   c.lastName AS clientLastName,
                    r.status AS status,
                    r.receiveDateTime AS receiveDateTime,
                    r.returnDateTime AS returnDateTime,
                    r.price AS price,
                    r.laborAmount AS laborAmount,
-                   r.extraAmount AS extraAmount,
                    r.quotedAmount AS quotedAmount,
-                   r.quoteNotes AS quoteNotes,
-                   r.approved AS approved,
-                   r.rejected AS rejected,
-                   r.readyNotifiedAt AS readyNotifiedAt
+                   COALESCE(SUM(COALESCE(p.cost, 0) * COALESCE(p.quantity, 1)), 0) AS partsCost,
+                   COALESCE(SUM((COALESCE(p.salePrice, 0) - COALESCE(p.cost, 0)) * COALESCE(p.quantity, 1)), 0) AS partsProfit
             FROM Repair r
+            LEFT JOIN r.client c
+            LEFT JOIN r.parts p
             WHERE COALESCE(r.returnDateTime, r.receiveDateTime) <= :to
-            ORDER BY COALESCE(r.returnDateTime, r.receiveDateTime) DESC, r.orderNumber DESC
+            GROUP BY r.id, c.name, c.lastName, r.status, r.receiveDateTime, r.returnDateTime, r.price, r.laborAmount, r.quotedAmount
+            ORDER BY COALESCE(r.returnDateTime, r.receiveDateTime) DESC
             """)
-    List<RepairListView> findFinanceRowsTo(@Param("to") LocalDateTime to);
+    List<FinanceRepairView> findFinanceRowsTo(@Param("to") LocalDateTime to);
 
     @Query("""
             SELECT r.id AS id,
-                   r.idDevice AS idDevice,
-                   r.idClient AS idClient,
-                   r.description AS description,
-                   r.orderNumber AS orderNumber,
+                   c.name AS clientName,
+                   c.lastName AS clientLastName,
                    r.status AS status,
                    r.receiveDateTime AS receiveDateTime,
                    r.returnDateTime AS returnDateTime,
                    r.price AS price,
                    r.laborAmount AS laborAmount,
-                   r.extraAmount AS extraAmount,
                    r.quotedAmount AS quotedAmount,
-                   r.quoteNotes AS quoteNotes,
-                   r.approved AS approved,
-                   r.rejected AS rejected,
-                   r.readyNotifiedAt AS readyNotifiedAt
+                   COALESCE(SUM(COALESCE(p.cost, 0) * COALESCE(p.quantity, 1)), 0) AS partsCost,
+                   COALESCE(SUM((COALESCE(p.salePrice, 0) - COALESCE(p.cost, 0)) * COALESCE(p.quantity, 1)), 0) AS partsProfit
             FROM Repair r
-            ORDER BY COALESCE(r.returnDateTime, r.receiveDateTime) DESC, r.orderNumber DESC
+            LEFT JOIN r.client c
+            LEFT JOIN r.parts p
+            GROUP BY r.id, c.name, c.lastName, r.status, r.receiveDateTime, r.returnDateTime, r.price, r.laborAmount, r.quotedAmount
+            ORDER BY COALESCE(r.returnDateTime, r.receiveDateTime) DESC
             """)
-    List<RepairListView> findFinanceRowsAll();
+    List<FinanceRepairView> findFinanceRowsAll();
 
     List<Repair> findByStatusAndReturnDateTimeIsNotNullOrderByReturnDateTimeDesc(RepairStatusEnum status);
 

@@ -3,6 +3,7 @@ package com.taller.resource.controller;
 import com.taller.resource.dto.DeviceDTO;
 import com.taller.resource.dto.DeviceObservationDTO;
 import com.taller.resource.dto.DevicePasswordUpsertDTO;
+import com.taller.resource.dto.PageDTO;
 import com.taller.service.DeviceService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -37,6 +38,16 @@ public class DeviceController {
     @GetMapping
     public List<DeviceDTO> getDevices() {
         return deviceService.getAllDevices();
+    }
+
+    @GetMapping("/page")
+    public PageDTO<DeviceDTO> getPage(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "") String term,
+            @RequestParam(defaultValue = "") String clientId,
+            @RequestParam(defaultValue = "") String clientTerm) {
+        return deviceService.findPage(page, size, term, clientId, clientTerm);
     }
 
     @GetMapping("/{id}")

@@ -12,8 +12,10 @@ export class ClientApiService {
 
   getAll(): Observable<Client[]> { return this.http.get<Client[]>(this.url); }
   getById(id: string): Observable<Client> { return this.http.get<Client>(`${this.url}/${id}`); }
-  getPage(page: number, size: number, term = ''): Observable<PageResponse<ClientListItem>> {
-    return this.http.get<PageResponse<ClientListItem>>(`${this.url}/page?page=${page}&size=${size}&term=${encodeURIComponent(term)}`);
+  getPage(page: number, size: number, term = '', sortBy = 'createdAt', sortDir: 'asc' | 'desc' = 'desc'): Observable<PageResponse<ClientListItem>> {
+    return this.http.get<PageResponse<ClientListItem>>(
+      `${this.url}/page?page=${page}&size=${size}&term=${encodeURIComponent(term)}&sortBy=${encodeURIComponent(sortBy)}&sortDir=${sortDir}`
+    );
   }
   getHistory(id: string, page: number, size: number, includeClient: boolean): Observable<ClientHistory> {
     return this.http.get<ClientHistory>(`${this.url}/${id}/history?page=${page}&size=${size}&includeClient=${includeClient}`);

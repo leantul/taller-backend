@@ -35,4 +35,7 @@ public class RepairDTO {
     private List<RepairPartDTO> parts;
     private List<RepairPaymentDTO> payments;
     private List<DeviceObservationDTO> observations;
+    private String clientName;
+    private String clientPhone;
+    private String deviceLabel;
 }

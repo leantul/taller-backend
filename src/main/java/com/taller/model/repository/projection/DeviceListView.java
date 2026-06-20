@@ -8,5 +8,7 @@ public interface DeviceListView {
     String getDeviceTypeId();
     String getDeviceTypeName();
     String getClientId();
+    String getClientName();
+    String getClientLastName();
     String getCurrentPassword();
 }

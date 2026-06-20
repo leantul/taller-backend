@@ -17,6 +17,7 @@ public class DeviceDTO {
     private String currentPassword;
     private String technicalDetails;
     private String clientId;
+    private String clientName;
     private List<DevicePasswordHistoryDTO> passwordHistory;
     private List<DeviceObservationDTO> observations;
 }

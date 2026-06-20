@@ -92,7 +92,7 @@ const HISTORY_DATE_FORMATTER = new Intl.DateTimeFormat('es-AR', {
                   <td>{{ d.deviceTypeName || '-' }}</td>
                   <td>{{ d.brand }}</td>
                   <td>{{ d.model }}</td>
-                  <td>{{ getClientName(d.clientId) }}</td>
+                  <td>{{ d.clientName || getClientName(d.clientId) }}</td>
                   <td>
                     <button class="observation-summary-button" type="button" (click)="openObservationManager(d)">
                       <i class="pi pi-flag"></i>
@@ -316,6 +316,8 @@ export class DevicesPageComponent implements OnInit {
   searchTerm = '';
   currentPage = 1;
   pageSize = 10;
+  totalPages = 1;
+  totalElements = 0;
   showDraftPassword = false;
   showEditPassword = false;
   showCurrentPassword = false;
@@ -570,19 +572,8 @@ export class DevicesPageComponent implements OnInit {
   }
 
   applyFilters(): void {
-    const term = this.searchTerm.trim().toLowerCase();
-    const clientTerm = this.selectedClientSearchText();
-    this.filteredDevices = this.devices
-      .map((device) => ({ ...device, clientName: this.getClientName(device.clientId) }))
-      .filter((device) => {
-        const byClient = this.selectedClientId
-          ? device.clientId === this.selectedClientId
-          : (!clientTerm || (device.clientName || '').toLowerCase().includes(clientTerm));
-        const observationText = (device.observations || []).map((observation) => observation.note).join(' ');
-        const byTerm = !term || `${device.deviceTypeName || ''} ${device.brand} ${device.model} ${device.clientId} ${device.clientName} ${device.currentPassword || ''} ${observationText}`.toLowerCase().includes(term);
-        return byClient && byTerm;
-      });
     this.currentPage = 1;
+    this.reload();
   }
 
   getClientName(clientId: string): string {
@@ -638,35 +629,44 @@ export class DevicesPageComponent implements OnInit {
     }
   }
 
-  get totalPages(): number {
-    return Math.max(1, Math.ceil(this.filteredDevices.length / this.pageSize));
-  }
-
   get visibleDevices(): (Device & { clientName?: string })[] {
-    const page = Math.min(this.currentPage, this.totalPages);
-    const start = (page - 1) * this.pageSize;
-    return this.filteredDevices.slice(start, start + this.pageSize);
+    return this.devices;
   }
 
   get paginationLabel(): string {
-    if (!this.filteredDevices.length) return '0 dispositivos';
-    const start = (Math.min(this.currentPage, this.totalPages) - 1) * this.pageSize + 1;
-    const end = Math.min(start + this.pageSize - 1, this.filteredDevices.length);
-    return `${start}-${end} de ${this.filteredDevices.length} dispositivos`;
+    if (!this.totalElements) return '0 dispositivos';
+    const start = (this.currentPage - 1) * this.pageSize + 1;
+    const end = Math.min(start + this.devices.length - 1, this.totalElements);
+    return `${start}-${end} de ${this.totalElements} dispositivos`;
   }
 
   previousPage(): void {
-    this.currentPage = Math.max(1, this.currentPage - 1);
+    if (this.currentPage > 1) {
+      this.currentPage--;
+      this.reload();
+    }
   }
 
   nextPage(): void {
-    this.currentPage = Math.min(this.totalPages, this.currentPage + 1);
+    if (this.currentPage < this.totalPages) {
+      this.currentPage++;
+      this.reload();
+    }
   }
 
   private reload(): void {
-    this.api.getDevices().subscribe((devices) => {
-      this.devices = devices.slice().reverse().map((device) => this.normalizeDevice(device));
-      this.applyFilters();
+    this.api.getDevicePage(
+      this.currentPage - 1,
+      this.pageSize,
+      this.searchTerm.trim(),
+      this.selectedClientId || '',
+      this.selectedClientId ? '' : this.selectedClientSearchText()
+    ).subscribe((page) => {
+      this.devices = page.content.map((device) => this.normalizeDevice(device));
+      this.filteredDevices = this.devices;
+      this.currentPage = page.page + 1;
+      this.totalElements = page.totalElements;
+      this.totalPages = Math.max(1, page.totalPages);
       this.changeDetector.detectChanges();
     });
   }
@@ -714,7 +714,7 @@ export class DevicesPageComponent implements OnInit {
     if (this.editing.id && normalized.id === this.editing.id) {
       this.editing = { ...this.editing, currentPassword: normalized.currentPassword, passwordHistory: normalized.passwordHistory };
     }
-    this.applyFilters();
+    this.reload();
     this.changeDetector.detectChanges();
   }
 
@@ -725,7 +725,7 @@ export class DevicesPageComponent implements OnInit {
     if (this.editing.id && normalized.id === this.editing.id) {
       this.editing = { ...this.editing, observations: normalized.observations };
     }
-    this.applyFilters();
+    this.reload();
     this.changeDetector.detectChanges();
   }
 

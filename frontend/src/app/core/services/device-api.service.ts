@@ -3,6 +3,7 @@ import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { APP_CONFIG } from '../config/app-config';
 import { Device, DeviceObservation, DeviceType } from '../../shared/models/device.model';
+import { PageResponse } from '../../shared/models/client.model';
 
 @Injectable({ providedIn: 'root' })
 export class DeviceApiService {
@@ -11,6 +12,10 @@ export class DeviceApiService {
   constructor(private readonly http: HttpClient) {}
 
   getAll(): Observable<Device[]> { return this.http.get<Device[]>(this.url); }
+  getPage(page: number, size: number, term = '', clientId = '', clientTerm = ''): Observable<PageResponse<Device>> {
+    const params = new URLSearchParams({ page: String(page), size: String(size), term, clientId, clientTerm });
+    return this.http.get<PageResponse<Device>>(`${this.url}/page?${params.toString()}`);
+  }
   getTypes(): Observable<DeviceType[]> { return this.http.get<DeviceType[]>(`${APP_CONFIG.apiUrl}/device-type`); }
   getById(id: string): Observable<Device> { return this.http.get<Device>(`${this.url}/${id}`); }
   search(term: string): Observable<Device[]> { return this.http.get<Device[]>(`${this.url}/search?term=${encodeURIComponent(term)}`); }

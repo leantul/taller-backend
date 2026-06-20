@@ -3,6 +3,7 @@ import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { APP_CONFIG } from '../config/app-config';
 import { Repair, RepairCreateDTO, RepairUpdateDTO, StatusBoardRepair } from '../../shared/models/repair.model';
+import { PageResponse } from '../../shared/models/client.model';
 
 @Injectable({ providedIn: 'root' })
 export class RepairApiService {
@@ -11,6 +12,12 @@ export class RepairApiService {
   constructor(private readonly http: HttpClient) {}
 
   getAll(): Observable<Repair[]> { return this.http.get<Repair[]>(this.url); }
+  getPage(page: number, size: number, term = '', from?: string, to?: string): Observable<PageResponse<Repair>> {
+    const params = new URLSearchParams({ page: String(page), size: String(size), term });
+    if (from) params.set('from', from);
+    if (to) params.set('to', to);
+    return this.http.get<PageResponse<Repair>>(`${this.url}/page?${params.toString()}`);
+  }
   getStatusBoard(): Observable<StatusBoardRepair[]> { return this.http.get<StatusBoardRepair[]>(`${this.url}/status-board`); }
   getById(id: string): Observable<Repair> { return this.http.get<Repair>(`${this.url}/${id}`); }
   search(term: string): Observable<Repair[]> { return this.http.get<Repair[]>(`${this.url}/search?term=${encodeURIComponent(term)}`); }

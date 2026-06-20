@@ -7,7 +7,6 @@ import { UIChart } from 'primeng/chart';
 import { MessageService } from 'primeng/api';
 import { ApiService } from '../../core/services/api.service';
 import { FinanceRow, FinanceSummary } from '../../shared/models/finance.model';
-import { Repair } from '../../shared/models/repair.model';
 import { ThemeMode, ThemeService } from '../../core/services/theme.service';
 
 @Component({
@@ -67,11 +66,11 @@ import { ThemeMode, ThemeService } from '../../core/services/theme.service';
       <p-card header="Detalle por reparación">
         <div class="native-table-wrap">
           <table class="native-table finance-table">
-            <thead><tr><th>Orden</th><th>Fecha</th><th>Ingreso</th><th>Repuestos</th><th>Neto</th></tr></thead>
+            <thead><tr><th>Cliente</th><th>Fecha</th><th>Ingreso</th><th>Repuestos</th><th>Neto</th></tr></thead>
             <tbody>
               @for (row of deliveredFinanceRows; track row.repairId + row.date) {
                 <tr>
-                  <td>#{{ row.orderNumber || '-' }}</td>
+                  <td>{{ row.clientName || '-' }}</td>
                   <td>{{ row.date ? (row.date | date:'dd/MM/yyyy') : '-' }}</td>
                   <td>{{ formatMoney(row.income) }}</td>
                   <td>{{ formatMoney(row.partsCost) }}</td>
@@ -205,18 +204,6 @@ export class FinancePageComponent implements OnInit, OnDestroy {
     return 0;
   }
 
-  statusLabel(status: Repair['status']): string {
-    switch (status) {
-      case 'POR_RECIBIR': return 'Por recibir';
-      case 'RECIBIDA': return 'Recibida';
-      case 'PRESUPUESTADA_ESPERANDO_RESPUESTA': return 'Presupuestada';
-      case 'HACIENDO': return 'Haciendo';
-      case 'ESPERANDO_RETIRO': return 'Esperando retiro';
-      case 'RETIRADA': return 'Retirada';
-      default: return status;
-    }
-  }
-
   private hydrateSummary(summary: FinanceSummary): void {
     this.financeRows = summary.rows || [];
     this.repairCount = summary.repairCount || 0;
@@ -230,7 +217,7 @@ export class FinancePageComponent implements OnInit, OnDestroy {
   }
 
   get deliveredFinanceRows(): FinanceRow[] {
-    return this.financeRows.filter((row) => row.status === 'RETIRADA');
+    return this.financeRows;
   }
 
   private buildMonthlyNetChart(summary: FinanceSummary): void {

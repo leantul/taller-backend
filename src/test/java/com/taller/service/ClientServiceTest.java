@@ -42,19 +42,21 @@ class ClientServiceTest {
     }
 
     @Test
-    void findPage_mapsOnlyListFieldsAndDeviceCount() {
+    void findPage_mapsOnlyListFieldsAndCounts() {
         ClientListView row = mock(ClientListView.class);
         when(row.getId()).thenReturn("c1");
         when(row.getName()).thenReturn("Ada");
         when(row.getLastName()).thenReturn("Lovelace");
         when(row.getDeviceCount()).thenReturn(3L);
-        when(clientRepository.findPage("ada", PageRequest.of(0, 10)))
+        when(row.getRepairCount()).thenReturn(7L);
+        when(clientRepository.findPage("ada", "repairCount", "desc", PageRequest.of(0, 10)))
                 .thenReturn(new PageImpl<>(List.of(row), PageRequest.of(0, 10), 1));
 
-        PageDTO<?> result = service.findPage(0, 10, " ada ");
+        PageDTO<?> result = service.findPage(0, 10, " ada ", "repairCount", "desc");
 
         assertEquals(1, result.totalElements());
         assertEquals(3L, ((com.taller.resource.dto.ClientListItemDTO) result.content().getFirst()).deviceCount());
+        assertEquals(7L, ((com.taller.resource.dto.ClientListItemDTO) result.content().getFirst()).repairCount());
     }
 
     @Test

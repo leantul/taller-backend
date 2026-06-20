@@ -28,8 +28,12 @@ public class ClientService {
     private final RepairRepository repairRepository;
 
     @Transactional(readOnly = true)
-    public PageDTO<ClientListItemDTO> findPage(int page, int size, String term) {
-        Page<ClientListView> result = clientRepository.findPage(normalizeTerm(term), pageRequest(page, size, 100));
+    public PageDTO<ClientListItemDTO> findPage(int page, int size, String term, String sortBy, String sortDir) {
+        Page<ClientListView> result = clientRepository.findPage(
+                normalizeTerm(term),
+                normalizeSortBy(sortBy),
+                normalizeSortDir(sortDir),
+                pageRequest(page, size, 100));
         return toPage(result, result.getContent().stream().map(this::toListItemDto).toList());
     }
 
@@ -115,7 +119,13 @@ public class ClientService {
     }
 
     private ClientListItemDTO toListItemDto(ClientListView client) {
-        return new ClientListItemDTO(client.getId(), client.getName(), client.getLastName(), client.getEmail(), client.getPhone(), client.getDeviceCount());
+        return new ClientListItemDTO(
+                client.getId(),
+                client.getName(),
+                client.getLastName(),
+                client.getPhone(),
+                client.getDeviceCount(),
+                client.getRepairCount());
     }
 
     private ClientRepairHistoryItemDTO toHistoryItemDto(ClientRepairHistoryView repair) {
@@ -131,6 +141,17 @@ public class ClientService {
 
     private String normalizeTerm(String term) {
         return term == null ? "" : term.trim();
+    }
+
+    private String normalizeSortBy(String sortBy) {
+        return switch (sortBy == null ? "" : sortBy.trim()) {
+            case "name", "deviceCount", "repairCount", "phone" -> sortBy.trim();
+            default -> "createdAt";
+        };
+    }
+
+    private String normalizeSortDir(String sortDir) {
+        return "asc".equalsIgnoreCase(sortDir) ? "asc" : "desc";
     }
 
     private PageRequest pageRequest(int page, int size, int maximumSize) {

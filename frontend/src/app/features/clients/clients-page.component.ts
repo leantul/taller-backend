@@ -44,13 +44,21 @@ import { repairStatusClass, repairStatusLabel } from '../../shared/utils/repair-
         </div>
         <div class="native-table-wrap">
           <table class="native-table">
-            <thead><tr><th>Nombre</th><th>Cantidad de dispositivos</th><th>Email</th><th>Teléfono</th><th>Acciones</th></tr></thead>
+            <thead>
+              <tr>
+                <th><button class="sortable-th" type="button" (click)="sortByColumn('name')">Nombre <i [ngClass]="sortIcon('name')"></i></button></th>
+                <th><button class="sortable-th" type="button" (click)="sortByColumn('deviceCount')">Cantidad de dispositivos <i [ngClass]="sortIcon('deviceCount')"></i></button></th>
+                <th><button class="sortable-th" type="button" (click)="sortByColumn('repairCount')">Reparaciones <i [ngClass]="sortIcon('repairCount')"></i></button></th>
+                <th><button class="sortable-th" type="button" (click)="sortByColumn('phone')">Teléfono <i [ngClass]="sortIcon('phone')"></i></button></th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
             <tbody>
               @for (client of clients; track client.id) {
                 <tr class="clickable-row" (click)="openClientDialog(client, true)">
                   <td>{{ client.name }} {{ client.lastName }}</td>
                   <td>{{ client.deviceCount }}</td>
-                  <td>{{ client.email || '-' }}</td>
+                  <td>{{ client.repairCount }}</td>
                   <td>{{ client.phone || '-' }} @if (client.phone) { <a [href]="whatsAppLink(client.phone)" target="_blank" rel="noopener" class="wa-link" (click)="$event.stopPropagation()"><i class="pi pi-whatsapp"></i></a> }</td>
                   <td>
                     <div class="action-buttons">
@@ -136,6 +144,8 @@ export class ClientsPageComponent implements OnInit, OnDestroy {
   editing: Client = this.emptyClient();
   editVisible = false;
   searchTerm = '';
+  sortBy: 'createdAt' | 'name' | 'deviceCount' | 'repairCount' | 'phone' = 'createdAt';
+  sortDir: 'asc' | 'desc' = 'desc';
   currentPage = 0;
   pageSize = 10;
   totalElements = 0;
@@ -176,7 +186,7 @@ export class ClientsPageComponent implements OnInit, OnDestroy {
   openClientDialog(client: ClientListItem, includeClient: boolean): void {
     this.selectedClientId = client.id;
     this.showClientData = includeClient;
-    this.selectedClient = { id: client.id, name: client.name, lastName: client.lastName, dni: '', email: client.email || '', phone: client.phone || '' };
+    this.selectedClient = { id: client.id, name: client.name, lastName: client.lastName, dni: '', email: '', phone: client.phone || '' };
     this.historyPage = 0;
     this.loadHistory();
   }
@@ -190,6 +200,20 @@ export class ClientsPageComponent implements OnInit, OnDestroy {
     this.api.deleteClient(id).subscribe({ next: () => { this.messages.add({ severity: 'success', summary: 'Cliente eliminado', detail: 'Se eliminó correctamente.' }); this.reload(); }, error: () => this.messages.add({ severity: 'error', summary: 'Error', detail: 'No se pudo eliminar el cliente.' }) });
   }
   onSearch(term: string): void { this.search$.next(term.trim()); }
+  sortByColumn(column: 'name' | 'deviceCount' | 'repairCount' | 'phone'): void {
+    if (this.sortBy === column) {
+      this.sortDir = this.sortDir === 'asc' ? 'desc' : 'asc';
+    } else {
+      this.sortBy = column;
+      this.sortDir = column === 'name' ? 'asc' : 'desc';
+    }
+    this.currentPage = 0;
+    this.reload();
+  }
+  sortIcon(column: 'name' | 'deviceCount' | 'repairCount' | 'phone'): string {
+    if (this.sortBy !== column) return 'pi pi-sort-alt';
+    return this.sortDir === 'asc' ? 'pi pi-sort-amount-up-alt' : 'pi pi-sort-amount-down';
+  }
   previousPage(): void { if (this.currentPage > 0) { this.currentPage--; this.reload(); } }
   nextPage(): void { if (this.currentPage + 1 < this.totalPages) { this.currentPage++; this.reload(); } }
   previousHistoryPage(): void { if (this.historyPage > 0) { this.historyPage--; this.loadHistory(); } }
@@ -206,7 +230,7 @@ export class ClientsPageComponent implements OnInit, OnDestroy {
   get historyPaginationLabel(): string { if (!this.historyTotalElements) return '0 reparaciones'; const start = this.historyPage * this.historyPageSize + 1; return `${start}-${Math.min(start + this.clientRepairs.length - 1, this.historyTotalElements)} de ${this.historyTotalElements} reparaciones`; }
 
   private reload(): void {
-    this.api.getClientPage(this.currentPage, this.pageSize, this.searchTerm.trim()).subscribe((page) => {
+    this.api.getClientPage(this.currentPage, this.pageSize, this.searchTerm.trim(), this.sortBy, this.sortDir).subscribe((page) => {
       this.clients = page.content; this.currentPage = page.page; this.totalElements = page.totalElements; this.totalPages = page.totalPages; this.changeDetector.detectChanges();
     });
   }

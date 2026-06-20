@@ -4,8 +4,8 @@ public record ClientListItemDTO(
         String id,
         String name,
         String lastName,
-        String email,
         String phone,
-        long deviceCount
+        long deviceCount,
+        long repairCount
 ) {
 }

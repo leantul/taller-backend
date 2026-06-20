@@ -1,5 +1,6 @@
 package com.taller.resource.controller;
 
+import com.taller.resource.dto.PageDTO;
 import com.taller.resource.dto.RepairDTO;
 import com.taller.resource.dto.RepairStatusUpdateDTO;
 import com.taller.resource.dto.StatusBoardRepairDTO;
@@ -10,6 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.time.LocalDateTime;
 
 @RestController
 @RequestMapping("/repair")
@@ -21,6 +23,16 @@ public class RepairController {
     @GetMapping
     public List<RepairDTO> getRepair() {
         return repairService.getAllRepairs();
+    }
+
+    @GetMapping("/page")
+    public PageDTO<RepairDTO> getPage(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "") String term,
+            @RequestParam(required = false) LocalDateTime from,
+            @RequestParam(required = false) LocalDateTime to) {
+        return repairService.findPage(page, size, term, from, to);
     }
 
     @GetMapping("/status-board")

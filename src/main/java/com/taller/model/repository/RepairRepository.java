@@ -124,8 +124,6 @@ public interface RepairRepository extends JpaRepository<Repair, String> {
                OR lower(d.brand) LIKE lower(concat('%', :term, '%'))
                OR lower(d.model) LIKE lower(concat('%', :term, '%'))
                OR lower(d.deviceType.name) LIKE lower(concat('%', :term, '%')))
-              AND (:from IS NULL OR r.receiveDateTime >= :from)
-              AND (:to IS NULL OR r.receiveDateTime <= :to)
             ORDER BY
               CASE r.status
                 WHEN com.taller.model.enums.RepairStatusEnum.POR_RECIBIR THEN 0
@@ -152,10 +150,213 @@ public interface RepairRepository extends JpaRepository<Repair, String> {
                OR lower(d.brand) LIKE lower(concat('%', :term, '%'))
                OR lower(d.model) LIKE lower(concat('%', :term, '%'))
                OR lower(d.deviceType.name) LIKE lower(concat('%', :term, '%')))
-              AND (:from IS NULL OR r.receiveDateTime >= :from)
-              AND (:to IS NULL OR r.receiveDateTime <= :to)
             """)
     Page<RepairListView> findPage(
+            @Param("term") String term,
+            Pageable pageable);
+
+    @Query(value = """
+            SELECT r.id AS id,
+                   r.idDevice AS idDevice,
+                   r.idClient AS idClient,
+                   r.description AS description,
+                   r.orderNumber AS orderNumber,
+                   r.status AS status,
+                   r.receiveDateTime AS receiveDateTime,
+                   r.returnDateTime AS returnDateTime,
+                   r.price AS price,
+                   r.laborAmount AS laborAmount,
+                   r.extraAmount AS extraAmount,
+                   r.quotedAmount AS quotedAmount,
+                   r.quoteNotes AS quoteNotes,
+                   r.approved AS approved,
+                   r.rejected AS rejected,
+                   r.readyNotifiedAt AS readyNotifiedAt,
+                   c.name AS clientName,
+                   c.lastName AS clientLastName,
+                   c.phone AS clientPhone,
+                   d.deviceType.name AS deviceTypeName,
+                   d.brand AS deviceBrand,
+                   d.model AS deviceModel
+            FROM Repair r
+            LEFT JOIN r.client c
+            LEFT JOIN r.device d
+            WHERE (:term = ''
+               OR lower(r.orderNumber) LIKE lower(concat('%', :term, '%'))
+               OR lower(r.description) LIKE lower(concat('%', :term, '%'))
+               OR lower(c.name) LIKE lower(concat('%', :term, '%'))
+               OR lower(c.lastName) LIKE lower(concat('%', :term, '%'))
+               OR lower(d.brand) LIKE lower(concat('%', :term, '%'))
+               OR lower(d.model) LIKE lower(concat('%', :term, '%'))
+               OR lower(d.deviceType.name) LIKE lower(concat('%', :term, '%')))
+              AND r.receiveDateTime >= :from
+            ORDER BY
+              CASE r.status
+                WHEN com.taller.model.enums.RepairStatusEnum.POR_RECIBIR THEN 0
+                WHEN com.taller.model.enums.RepairStatusEnum.RECIBIDA THEN 1
+                WHEN com.taller.model.enums.RepairStatusEnum.PRESUPUESTADA_ESPERANDO_RESPUESTA THEN 2
+                WHEN com.taller.model.enums.RepairStatusEnum.HACIENDO THEN 3
+                WHEN com.taller.model.enums.RepairStatusEnum.ESPERANDO_RETIRO THEN 4
+                WHEN com.taller.model.enums.RepairStatusEnum.RETIRADA THEN 5
+                ELSE 6
+              END ASC,
+              COALESCE(r.receiveDateTime, r.returnDateTime) DESC,
+              r.orderNumber DESC
+            """,
+            countQuery = """
+            SELECT COUNT(r)
+            FROM Repair r
+            LEFT JOIN r.client c
+            LEFT JOIN r.device d
+            WHERE (:term = ''
+               OR lower(r.orderNumber) LIKE lower(concat('%', :term, '%'))
+               OR lower(r.description) LIKE lower(concat('%', :term, '%'))
+               OR lower(c.name) LIKE lower(concat('%', :term, '%'))
+               OR lower(c.lastName) LIKE lower(concat('%', :term, '%'))
+               OR lower(d.brand) LIKE lower(concat('%', :term, '%'))
+               OR lower(d.model) LIKE lower(concat('%', :term, '%'))
+               OR lower(d.deviceType.name) LIKE lower(concat('%', :term, '%')))
+              AND r.receiveDateTime >= :from
+            """)
+    Page<RepairListView> findPageFrom(
+            @Param("term") String term,
+            @Param("from") LocalDateTime from,
+            Pageable pageable);
+
+    @Query(value = """
+            SELECT r.id AS id,
+                   r.idDevice AS idDevice,
+                   r.idClient AS idClient,
+                   r.description AS description,
+                   r.orderNumber AS orderNumber,
+                   r.status AS status,
+                   r.receiveDateTime AS receiveDateTime,
+                   r.returnDateTime AS returnDateTime,
+                   r.price AS price,
+                   r.laborAmount AS laborAmount,
+                   r.extraAmount AS extraAmount,
+                   r.quotedAmount AS quotedAmount,
+                   r.quoteNotes AS quoteNotes,
+                   r.approved AS approved,
+                   r.rejected AS rejected,
+                   r.readyNotifiedAt AS readyNotifiedAt,
+                   c.name AS clientName,
+                   c.lastName AS clientLastName,
+                   c.phone AS clientPhone,
+                   d.deviceType.name AS deviceTypeName,
+                   d.brand AS deviceBrand,
+                   d.model AS deviceModel
+            FROM Repair r
+            LEFT JOIN r.client c
+            LEFT JOIN r.device d
+            WHERE (:term = ''
+               OR lower(r.orderNumber) LIKE lower(concat('%', :term, '%'))
+               OR lower(r.description) LIKE lower(concat('%', :term, '%'))
+               OR lower(c.name) LIKE lower(concat('%', :term, '%'))
+               OR lower(c.lastName) LIKE lower(concat('%', :term, '%'))
+               OR lower(d.brand) LIKE lower(concat('%', :term, '%'))
+               OR lower(d.model) LIKE lower(concat('%', :term, '%'))
+               OR lower(d.deviceType.name) LIKE lower(concat('%', :term, '%')))
+              AND r.receiveDateTime <= :to
+            ORDER BY
+              CASE r.status
+                WHEN com.taller.model.enums.RepairStatusEnum.POR_RECIBIR THEN 0
+                WHEN com.taller.model.enums.RepairStatusEnum.RECIBIDA THEN 1
+                WHEN com.taller.model.enums.RepairStatusEnum.PRESUPUESTADA_ESPERANDO_RESPUESTA THEN 2
+                WHEN com.taller.model.enums.RepairStatusEnum.HACIENDO THEN 3
+                WHEN com.taller.model.enums.RepairStatusEnum.ESPERANDO_RETIRO THEN 4
+                WHEN com.taller.model.enums.RepairStatusEnum.RETIRADA THEN 5
+                ELSE 6
+              END ASC,
+              COALESCE(r.receiveDateTime, r.returnDateTime) DESC,
+              r.orderNumber DESC
+            """,
+            countQuery = """
+            SELECT COUNT(r)
+            FROM Repair r
+            LEFT JOIN r.client c
+            LEFT JOIN r.device d
+            WHERE (:term = ''
+               OR lower(r.orderNumber) LIKE lower(concat('%', :term, '%'))
+               OR lower(r.description) LIKE lower(concat('%', :term, '%'))
+               OR lower(c.name) LIKE lower(concat('%', :term, '%'))
+               OR lower(c.lastName) LIKE lower(concat('%', :term, '%'))
+               OR lower(d.brand) LIKE lower(concat('%', :term, '%'))
+               OR lower(d.model) LIKE lower(concat('%', :term, '%'))
+               OR lower(d.deviceType.name) LIKE lower(concat('%', :term, '%')))
+              AND r.receiveDateTime <= :to
+            """)
+    Page<RepairListView> findPageTo(
+            @Param("term") String term,
+            @Param("to") LocalDateTime to,
+            Pageable pageable);
+
+    @Query(value = """
+            SELECT r.id AS id,
+                   r.idDevice AS idDevice,
+                   r.idClient AS idClient,
+                   r.description AS description,
+                   r.orderNumber AS orderNumber,
+                   r.status AS status,
+                   r.receiveDateTime AS receiveDateTime,
+                   r.returnDateTime AS returnDateTime,
+                   r.price AS price,
+                   r.laborAmount AS laborAmount,
+                   r.extraAmount AS extraAmount,
+                   r.quotedAmount AS quotedAmount,
+                   r.quoteNotes AS quoteNotes,
+                   r.approved AS approved,
+                   r.rejected AS rejected,
+                   r.readyNotifiedAt AS readyNotifiedAt,
+                   c.name AS clientName,
+                   c.lastName AS clientLastName,
+                   c.phone AS clientPhone,
+                   d.deviceType.name AS deviceTypeName,
+                   d.brand AS deviceBrand,
+                   d.model AS deviceModel
+            FROM Repair r
+            LEFT JOIN r.client c
+            LEFT JOIN r.device d
+            WHERE (:term = ''
+               OR lower(r.orderNumber) LIKE lower(concat('%', :term, '%'))
+               OR lower(r.description) LIKE lower(concat('%', :term, '%'))
+               OR lower(c.name) LIKE lower(concat('%', :term, '%'))
+               OR lower(c.lastName) LIKE lower(concat('%', :term, '%'))
+               OR lower(d.brand) LIKE lower(concat('%', :term, '%'))
+               OR lower(d.model) LIKE lower(concat('%', :term, '%'))
+               OR lower(d.deviceType.name) LIKE lower(concat('%', :term, '%')))
+              AND r.receiveDateTime >= :from
+              AND r.receiveDateTime <= :to
+            ORDER BY
+              CASE r.status
+                WHEN com.taller.model.enums.RepairStatusEnum.POR_RECIBIR THEN 0
+                WHEN com.taller.model.enums.RepairStatusEnum.RECIBIDA THEN 1
+                WHEN com.taller.model.enums.RepairStatusEnum.PRESUPUESTADA_ESPERANDO_RESPUESTA THEN 2
+                WHEN com.taller.model.enums.RepairStatusEnum.HACIENDO THEN 3
+                WHEN com.taller.model.enums.RepairStatusEnum.ESPERANDO_RETIRO THEN 4
+                WHEN com.taller.model.enums.RepairStatusEnum.RETIRADA THEN 5
+                ELSE 6
+              END ASC,
+              COALESCE(r.receiveDateTime, r.returnDateTime) DESC,
+              r.orderNumber DESC
+            """,
+            countQuery = """
+            SELECT COUNT(r)
+            FROM Repair r
+            LEFT JOIN r.client c
+            LEFT JOIN r.device d
+            WHERE (:term = ''
+               OR lower(r.orderNumber) LIKE lower(concat('%', :term, '%'))
+               OR lower(r.description) LIKE lower(concat('%', :term, '%'))
+               OR lower(c.name) LIKE lower(concat('%', :term, '%'))
+               OR lower(c.lastName) LIKE lower(concat('%', :term, '%'))
+               OR lower(d.brand) LIKE lower(concat('%', :term, '%'))
+               OR lower(d.model) LIKE lower(concat('%', :term, '%'))
+               OR lower(d.deviceType.name) LIKE lower(concat('%', :term, '%')))
+              AND r.receiveDateTime >= :from
+              AND r.receiveDateTime <= :to
+            """)
+    Page<RepairListView> findPageBetween(
             @Param("term") String term,
             @Param("from") LocalDateTime from,
             @Param("to") LocalDateTime to,

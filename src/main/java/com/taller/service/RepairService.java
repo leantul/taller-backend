@@ -47,7 +47,7 @@ public class RepairService {
 
     @Transactional(readOnly = true)
     public PageDTO<RepairDTO> findPage(int page, int size, String term, LocalDateTime from, LocalDateTime to) {
-        Page<RepairListView> result = repairRepository.findPage(normalizeTerm(term), from, to, pageRequest(page, size, 100));
+        Page<RepairListView> result = findRepairPage(normalizeTerm(term), from, to, pageRequest(page, size, 100));
         return toPage(result, result.getContent().stream().map(this::toListDto).toList());
     }
 
@@ -353,6 +353,19 @@ public class RepairService {
 
     private PageRequest pageRequest(int page, int size, int maximumSize) {
         return PageRequest.of(Math.max(0, page), Math.min(Math.max(1, size), maximumSize));
+    }
+
+    private Page<RepairListView> findRepairPage(String term, LocalDateTime from, LocalDateTime to, PageRequest pageRequest) {
+        if (from != null && to != null) {
+            return repairRepository.findPageBetween(term, from, to, pageRequest);
+        }
+        if (from != null) {
+            return repairRepository.findPageFrom(term, from, pageRequest);
+        }
+        if (to != null) {
+            return repairRepository.findPageTo(term, to, pageRequest);
+        }
+        return repairRepository.findPage(term, pageRequest);
     }
 
     private String normalizeOptionalText(String value) {

@@ -101,6 +101,9 @@
                     <i class="pi pi-whatsapp"></i>
                   </button>
                   <button class="icon-action" type="button" aria-label="Cambiar estado" (click)="onRowActionClick($event); openStatusModal(row.repair)"><i class="pi pi-sync"></i></button>
+                  @if (row.repair.status === 'ESPERANDO_RETIRO') {
+                    <button class="icon-action" type="button" aria-label="Emitir informe" (click)="onRowActionClick($event); openDeliveryReport($event, row.repair)"><i class="pi pi-file-pdf"></i></button>
+                  }
                   <button class="icon-action" type="button" aria-label="Editar reparación" (click)="onRowActionClick($event); openEditModal(row.repair)"><i class="pi pi-pencil"></i></button>
                   <button class="icon-action danger" type="button" aria-label="Eliminar reparación" [disabled]="isDeleting" (click)="onRowActionClick($event); confirmDeleteRepair(row.repair)"><i class="pi pi-trash"></i></button>
                 </div>
@@ -142,6 +145,7 @@
 </p-dialog>
 
 <app-repair-detail-dialog></app-repair-detail-dialog>
+<app-delivery-report-dialog></app-delivery-report-dialog>
 
 @if (showEditModal) {
 <p-dialog header="Editar reparación" [(visible)]="showEditModal" [modal]="true" [style]="{width:'36rem'}">

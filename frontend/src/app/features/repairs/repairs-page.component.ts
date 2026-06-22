@@ -19,6 +19,7 @@ import { Client } from '../../shared/models/client.model';
 import { Device, DeviceType } from '../../shared/models/device.model';
 import { MessageService } from 'primeng/api';
 import { RepairDetailDialogComponent } from '../../shared/components/repair-detail-dialog.component';
+import { DeliveryReportDialogComponent } from '../../shared/components/delivery-report-dialog.component';
 import { fromDateTimeLocal, REPAIR_STATUS_OPTIONS, repairStatusClass, repairStatusLabel, toDateTimeLocal } from '../../shared/utils/repair-status.util';
 
 type RepairTableRow = {
@@ -35,12 +36,13 @@ type RepairTableRow = {
 @Component({
   selector: 'app-repairs-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, CardModule, InputTextModule, ButtonModule, SelectModule, AutoCompleteModule, InputNumberModule, DatePickerModule, DialogModule, ConfirmDialogModule, RepairDetailDialogComponent],
+  imports: [CommonModule, FormsModule, CardModule, InputTextModule, ButtonModule, SelectModule, AutoCompleteModule, InputNumberModule, DatePickerModule, DialogModule, ConfirmDialogModule, RepairDetailDialogComponent, DeliveryReportDialogComponent],
   providers: [ConfirmationService],
   templateUrl: './repairs-page.component.html'
 })
 export class RepairsPageComponent implements OnInit {
   @ViewChild(RepairDetailDialogComponent) private repairDetailDialog?: RepairDetailDialogComponent;
+  @ViewChild(DeliveryReportDialogComponent) private deliveryReportDialog?: DeliveryReportDialogComponent;
   repairs: Repair[] = [];
   filteredRepairs: Repair[] = [];
   visibleRepairRows: RepairTableRow[] = [];
@@ -306,6 +308,12 @@ export class RepairsPageComponent implements OnInit {
   openDetailModal(repair: Repair): void {
     if (!repair.id) return;
     this.repairDetailDialog?.open(repair.id, this.clientLabel(repair), this.deviceLabel(repair));
+  }
+
+  openDeliveryReport(event: Event, repair: Repair): void {
+    event.stopPropagation();
+    event.preventDefault();
+    this.deliveryReportDialog?.open(repair);
   }
 
   onEditStatusChange(): void {

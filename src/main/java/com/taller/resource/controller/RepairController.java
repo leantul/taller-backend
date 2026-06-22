@@ -1,12 +1,16 @@
 package com.taller.resource.controller;
 
 import com.taller.resource.dto.PageDTO;
+import com.taller.resource.dto.RepairReportDTO;
 import com.taller.resource.dto.RepairDTO;
 import com.taller.resource.dto.RepairStatusUpdateDTO;
 import com.taller.resource.dto.StatusBoardRepairDTO;
+import com.taller.service.DeliveryReportService;
 import com.taller.service.RepairService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -19,6 +23,7 @@ import java.time.LocalDateTime;
 public class RepairController {
 
     private final RepairService repairService;
+    private final DeliveryReportService deliveryReportService;
 
     @GetMapping
     public List<RepairDTO> getRepair() {
@@ -64,6 +69,26 @@ public class RepairController {
     public ResponseEntity<Void> updateStatus(@PathVariable String id, @RequestBody RepairStatusUpdateDTO request) {
         repairService.updateStatus(id, request.status());
         return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/{id}/delivery-report")
+    public RepairReportDTO getDeliveryReport(@PathVariable String id) {
+        return deliveryReportService.getByRepairId(id);
+    }
+
+    @PutMapping("/{id}/delivery-report")
+    public ResponseEntity<RepairReportDTO> saveDeliveryReport(@PathVariable String id, @RequestBody RepairReportDTO reportDTO) {
+        return ResponseEntity.ok(deliveryReportService.save(id, reportDTO));
+    }
+
+    @GetMapping("/{id}/delivery-report/pdf")
+    public ResponseEntity<byte[]> getDeliveryReportPdf(@PathVariable String id) {
+        RepairDTO repair = repairService.getRepairById(id);
+        String filename = "reporte-reparacion-" + (repair != null && repair.getOrderNumber() != null ? repair.getOrderNumber() : id) + ".pdf";
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + filename + "\"")
+                .contentType(MediaType.APPLICATION_PDF)
+                .body(deliveryReportService.generatePdf(id));
     }
 
     @DeleteMapping("/{id}")

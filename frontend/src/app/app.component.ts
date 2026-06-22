@@ -96,7 +96,8 @@ export class AppComponent implements OnInit {
     { label: 'Reparaciones', icon: 'pi pi-wrench', path: '/reparaciones' },
     { label: 'Finanzas', icon: 'pi pi-chart-line', path: '/finanzas' },
     { label: 'Estados', icon: 'pi pi-th-large', path: '/status' },
-    { label: 'Avisos', icon: 'pi pi-bell', path: '/notificaciones' }
+    { label: 'Avisos', icon: 'pi pi-bell', path: '/notificaciones' },
+    { label: 'Taller', icon: 'pi pi-cog', path: '/taller' }
   ];
   get username(): string { return localStorage.getItem('fullName') || this.getNameFromToken() || localStorage.getItem('username') || 'Usuario'; }
   get usernameInitial(): string { return this.username.trim().charAt(0).toUpperCase() || 'U'; }

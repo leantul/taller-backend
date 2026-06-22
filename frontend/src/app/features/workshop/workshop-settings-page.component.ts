@@ -29,6 +29,7 @@ import { SoftwareCatalogItem, WorkshopSettings } from '../../shared/models/deliv
         </div>
         <div class="report-form-grid two-cols">
           <label class="field"><span>Nombre del taller</span><input class="control" [(ngModel)]="settings.businessName" name="businessName" /></label>
+          <label class="field"><span>Título del reporte</span><input class="control" [(ngModel)]="settings.reportTitle" name="reportTitle" /></label>
           <label class="field">
             <span class="inline-label"><i class="pi pi-whatsapp"></i> WhatsApp</span>
             <input class="control" [(ngModel)]="settings.whatsapp" name="whatsapp" />
@@ -79,7 +80,7 @@ import { SoftwareCatalogItem, WorkshopSettings } from '../../shared/models/deliv
   `
 })
 export class WorkshopSettingsPageComponent implements OnInit {
-  settings: WorkshopSettings = { businessName: 'Taller', whatsapp: '', instagram: '', logoAssetPath: 'report/logo-light.png' };
+  settings: WorkshopSettings = { businessName: 'Taller', whatsapp: '', instagram: '', reportTitle: 'REPORTE DE REPARACIÓN', logoAssetPath: 'report/logo-light.png' };
   catalog: SoftwareCatalogItem[] = [];
   draftItem: SoftwareCatalogItem = { name: '', detail: '' };
 

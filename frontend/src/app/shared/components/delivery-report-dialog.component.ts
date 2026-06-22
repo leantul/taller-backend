@@ -57,7 +57,7 @@ import { Repair } from '../models/repair.model';
                 <label class="field"><span>Marca</span><input class="control" [(ngModel)]="report.deviceBrand" /></label>
                 <label class="field"><span>Modelo</span><input class="control" [(ngModel)]="report.deviceModel" /></label>
                 <label class="field"><span>Serie</span><input class="control" [(ngModel)]="report.deviceSerialNumber" /></label>
-                <label class="field"><span>Fecha de emisión</span><input class="control" type="datetime-local" [(ngModel)]="issuedAtLocal" /></label>
+                <label class="field"><span>Fecha de emisión</span><input class="control" type="date" [(ngModel)]="issuedAtLocal" /></label>
               </div>
             </section>
           </div>
@@ -204,14 +204,14 @@ export class DeliveryReportDialogComponent {
     if (!this.report?.issuedAt) {
       return '';
     }
-    return this.report.issuedAt.slice(0, 16);
+    return this.report.issuedAt.slice(0, 10);
   }
 
   set issuedAtLocal(value: string) {
     if (!this.report) {
       return;
     }
-    this.report.issuedAt = value ? `${value}:00` : '';
+    this.report.issuedAt = value ? `${value}T00:00:00` : '';
   }
 
   addHardwareItem(): void {

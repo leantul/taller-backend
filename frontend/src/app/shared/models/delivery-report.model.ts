@@ -47,5 +47,6 @@ export interface WorkshopSettings {
   businessName: string;
   whatsapp?: string;
   instagram?: string;
+  reportTitle: string;
   logoAssetPath: string;
 }

@@ -382,7 +382,7 @@ public interface RepairRepository extends JpaRepository<Repair, String> {
                    d.model AS deviceModel,
                    d.serialNumber AS deviceSerialNumber,
                    r.description AS reportedIssue,
-                   COALESCE(r.repairNotes, r.quoteNotes) AS workPerformed,
+                   r.quoteNotes AS workPerformed,
                    r.price AS finalAmount
             FROM Repair r
             LEFT JOIN r.client c

@@ -13,6 +13,7 @@ public class WorkshopSettingsService {
 
     public static final String DEFAULT_LOGO_ASSET_PATH = "report/logo-light.png";
     private static final String DEFAULT_BUSINESS_NAME = "Taller";
+    private static final String DEFAULT_REPORT_TITLE = "REPORTE DE REPARACIÓN";
 
     private final WorkshopSettingsRepository workshopSettingsRepository;
 
@@ -27,6 +28,7 @@ public class WorkshopSettingsService {
         settings.setBusinessName(normalizeRequired(dto.getBusinessName(), DEFAULT_BUSINESS_NAME));
         settings.setWhatsapp(normalizeOptional(dto.getWhatsapp()));
         settings.setInstagram(normalizeOptional(dto.getInstagram()));
+        settings.setReportTitle(normalizeRequired(dto.getReportTitle(), DEFAULT_REPORT_TITLE));
         settings.setLogoAssetPath(DEFAULT_LOGO_ASSET_PATH);
         return toDto(workshopSettingsRepository.save(settings));
     }
@@ -41,6 +43,7 @@ public class WorkshopSettingsService {
                 .businessName(DEFAULT_BUSINESS_NAME)
                 .whatsapp("")
                 .instagram("")
+                .reportTitle(DEFAULT_REPORT_TITLE)
                 .logoAssetPath(DEFAULT_LOGO_ASSET_PATH)
                 .build();
         return workshopSettingsRepository.save(settings);
@@ -52,6 +55,7 @@ public class WorkshopSettingsService {
         dto.setBusinessName(settings.getBusinessName());
         dto.setWhatsapp(settings.getWhatsapp());
         dto.setInstagram(settings.getInstagram());
+        dto.setReportTitle(settings.getReportTitle());
         dto.setLogoAssetPath(settings.getLogoAssetPath());
         return dto;
     }

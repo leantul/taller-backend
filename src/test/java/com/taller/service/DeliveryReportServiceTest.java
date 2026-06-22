@@ -77,7 +77,7 @@ class DeliveryReportServiceTest {
         assertEquals("Lovelace", report.getClientLastName());
         assertEquals("Notebook", report.getDeviceTypeName());
         assertEquals("Lenovo", report.getDeviceBrand());
-        assertEquals("Pantalla reemplazada y pruebas completas.", report.getWorkPerformed());
+        assertEquals("Detalle del presupuesto base para el reporte.", report.getWorkPerformed());
         assertEquals(1, report.getHardwareItems().size());
         assertFalse(report.getShowPartPrices());
         assertEquals(BigDecimal.valueOf(58000), report.getFinalAmount());
@@ -134,6 +134,7 @@ class DeliveryReportServiceTest {
         RepairReportView savedView = savedReportView();
         WorkshopSettings settings = WorkshopSettings.builder()
                 .businessName("Taller")
+                .reportTitle("REPORTE DE REPARACIÓN")
                 .logoAssetPath(WorkshopSettingsService.DEFAULT_LOGO_ASSET_PATH)
                 .build();
 
@@ -162,7 +163,7 @@ class DeliveryReportServiceTest {
         when(source.getDeviceModel()).thenReturn("T14");
         when(source.getDeviceSerialNumber()).thenReturn("SN-1");
         when(source.getReportedIssue()).thenReturn("No enciende");
-        when(source.getWorkPerformed()).thenReturn("Pantalla reemplazada y pruebas completas.");
+        when(source.getWorkPerformed()).thenReturn("Detalle del presupuesto base para el reporte.");
         when(source.getFinalAmount()).thenReturn(BigDecimal.valueOf(58000));
         return source;
     }

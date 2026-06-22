@@ -100,7 +100,6 @@ public class DeliveryReportPdfService {
                       <div class="header-right">
                         <div class="contact-line">%s %s</div>
                         <div class="contact-line">%s %s</div>
-                        <div class="contact-line">%s</div>
                       </div>
                     </div>
                     <div class="rule"></div>
@@ -147,7 +146,6 @@ public class DeliveryReportPdfService {
                 logo,
                 whatsappIcon(), escapeText(blankFallback(settings.getWhatsapp())),
                 instagramIcon(), escapeText(blankFallback(settings.getInstagram())),
-                escapeText(blankFallback(settings.getBusinessName())),
                 escapeText(blankFallback(report.getOrderNumber())),
                 escapeText(report.getIssuedAt() != null ? DATE_TIME_FORMATTER.format(report.getIssuedAt()) : "-"),
                 escapeText(blankFallback(report.getClientName())),

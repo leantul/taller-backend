@@ -29,6 +29,9 @@ public class WorkshopSettings extends BasicEntity {
     @Column(name = "instagram")
     private String instagram;
 
+    @Column(name = "report_title", nullable = false)
+    private String reportTitle;
+
     @Column(name = "logo_asset_path", nullable = false)
     private String logoAssetPath;
 }

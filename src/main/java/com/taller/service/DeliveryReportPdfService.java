@@ -9,6 +9,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
 import java.text.NumberFormat;
 import java.time.format.DateTimeFormatter;
 import java.util.Base64;
@@ -20,9 +21,10 @@ import org.springframework.stereotype.Service;
 @Service
 public class DeliveryReportPdfService {
 
-    private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
-    private static final String WHATSAPP_ICON_ASSET_PATH = "report/whatsapp-icon.png";
-    private static final String INSTAGRAM_ICON_ASSET_PATH = "report/instagram-icon.png";
+    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+    private static final String DEFAULT_REPORT_TITLE = "REPORTE DE REPARACIÓN";
+    private static final String WHATSAPP_ICON_ASSET_PATH = "report/whatsapp-icon.svg";
+    private static final String INSTAGRAM_ICON_ASSET_PATH = "report/instagram-icon.svg";
 
     public byte[] generate(RepairReportDTO report, WorkshopSettings settings) {
         try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
@@ -39,8 +41,9 @@ public class DeliveryReportPdfService {
 
     private String buildHtml(RepairReportDTO report, WorkshopSettings settings) {
         String logo = toDataUri(settings.getLogoAssetPath());
-        String whatsappIcon = toDataUri(WHATSAPP_ICON_ASSET_PATH);
-        String instagramIcon = toDataUri(INSTAGRAM_ICON_ASSET_PATH);
+        String reportTitle = blankFallback(settings.getReportTitle(), DEFAULT_REPORT_TITLE);
+        String whatsappIcon = toSvgDataUri(WHATSAPP_ICON_ASSET_PATH);
+        String instagramIcon = toSvgDataUri(INSTAGRAM_ICON_ASSET_PATH);
         List<RepairReportHardwareItemDTO> hardwareItems = visibleHardwareItems(report.getHardwareItems());
         List<RepairReportSoftwareItemDTO> softwareItems = visibleSoftwareItems(report.getSoftwareItems());
         boolean showPriceColumn = Boolean.TRUE.equals(report.getShowPartPrices())
@@ -73,8 +76,8 @@ public class DeliveryReportPdfService {
                       .header-right { width: 26%%; text-align: right; }
                       .logo { width: 150px; height: auto; }
                       .title { font-size: 23px; font-weight: 700; letter-spacing: 1px; }
-                      .contact-line { margin-bottom: 6px; white-space: nowrap; font-size: 10.5px; color: #52606b; }
-                      .contact-line img { width: 12px; height: 12px; vertical-align: -2px; margin-right: 5px; }
+                      .contact-line { margin-bottom: 7px; white-space: nowrap; font-size: 10.5px; color: #52606b; }
+                      .contact-line img { width: 18px; height: 18px; vertical-align: -4px; margin-right: 7px; }
                       .rule { height: 1px; background: #d5dde3; margin: 8px 0 16px; }
                       .meta { display: table; width: 100%%; margin-bottom: 16px; }
                       .meta > div { display: table-cell; vertical-align: top; }
@@ -100,10 +103,10 @@ public class DeliveryReportPdfService {
                   <body>
                     <div class="header">
                       <div class="header-left"><img class="logo" src="%s" alt="Logo taller" /></div>
-                      <div class="header-center"><div class="title">REPORTE DE REPARACIÓN</div></div>
+                      <div class="header-center"><div class="title">%s</div></div>
                       <div class="header-right">
-                        <div class="contact-line">%s %s</div>
-                        <div class="contact-line">%s %s</div>
+                        <div class="contact-line"><img src="%s" alt="WhatsApp" />%s</div>
+                        <div class="contact-line"><img src="%s" alt="Instagram" />%s</div>
                       </div>
                     </div>
                     <div class="rule"></div>
@@ -148,10 +151,11 @@ public class DeliveryReportPdfService {
                 </html>
                 """.formatted(
                 logo,
-                contactIcon(whatsappIcon), escapeText(blankFallback(settings.getWhatsapp())),
-                contactIcon(instagramIcon), escapeText(blankFallback(settings.getInstagram())),
+                escapeText(reportTitle),
+                whatsappIcon, escapeText(blankFallback(settings.getWhatsapp())),
+                instagramIcon, escapeText(blankFallback(settings.getInstagram())),
                 escapeText(blankFallback(report.getOrderNumber())),
-                escapeText(report.getIssuedAt() != null ? DATE_TIME_FORMATTER.format(report.getIssuedAt()) : "-"),
+                escapeText(report.getIssuedAt() != null ? DATE_FORMATTER.format(report.getIssuedAt()) : "-"),
                 escapeText(blankFallback(report.getClientName())),
                 escapeText(blankFallback(report.getClientLastName())),
                 escapeText(blankFallback(report.getClientPhone())),
@@ -243,6 +247,10 @@ public class DeliveryReportPdfService {
         return value == null || value.isBlank() ? "-" : value.trim();
     }
 
+    private String blankFallback(String value, String fallback) {
+        return value == null || value.isBlank() ? fallback : value.trim();
+    }
+
     private String money(BigDecimal value) {
         NumberFormat format = NumberFormat.getCurrencyInstance(new Locale("es", "AR"));
         return format.format(value != null ? value : BigDecimal.ZERO);
@@ -259,6 +267,17 @@ public class DeliveryReportPdfService {
         }
     }
 
+    private String toSvgDataUri(String assetPath) {
+        ClassPathResource resource = new ClassPathResource(assetPath);
+        try (InputStream inputStream = resource.getInputStream()) {
+            String svg = new String(inputStream.readAllBytes(), StandardCharsets.UTF_8).trim();
+            return "data:image/svg+xml;base64," + Base64.getEncoder()
+                    .encodeToString(svg.getBytes(StandardCharsets.UTF_8));
+        } catch (IOException exception) {
+            throw new IllegalStateException("No se pudo cargar el icono del reporte", exception);
+        }
+    }
+
     private String escapeText(String value) {
         return value
                 .replace("&", "&amp;")
@@ -268,7 +287,4 @@ public class DeliveryReportPdfService {
                 .replace("\n", "<br />");
     }
 
-    private String contactIcon(String dataUri) {
-        return "<img alt=\"\" src=\"" + dataUri + "\" />";
-    }
 }

@@ -27,6 +27,8 @@ class DeliveryReportPdfServiceTest {
         assertTrue(text.contains("REPORTE"));
         assertTrue(text.contains("REPARACIÓN"));
         assertTrue(text.contains("Google Chrome"));
+        assertTrue(text.contains("22/06/2026"));
+        assertFalse(text.contains("11:00"));
         assertFalse(text.contains("25.000"));
         assertFalse(text.toLowerCase().contains("secreto"));
         assertFalse(text.contains("ESPERANDO_RETIRO"));
@@ -95,6 +97,7 @@ class DeliveryReportPdfServiceTest {
                 .businessName("Taller")
                 .whatsapp("11 3344 5566")
                 .instagram("@taller")
+                .reportTitle("REPORTE DE REPARACIÓN")
                 .logoAssetPath(WorkshopSettingsService.DEFAULT_LOGO_ASSET_PATH)
                 .build();
     }

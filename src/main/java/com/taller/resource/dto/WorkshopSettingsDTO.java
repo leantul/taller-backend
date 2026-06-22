@@ -10,5 +10,6 @@ public class WorkshopSettingsDTO {
     private String businessName;
     private String whatsapp;
     private String instagram;
+    private String reportTitle;
     private String logoAssetPath;
 }

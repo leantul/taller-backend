@@ -20,7 +20,8 @@ export const routes: Routes = [
   { path: 'finanzas', component: FinancePageComponent, canActivate: [authGuard] },
   { path: 'notificaciones', component: NotificationsPageComponent, canActivate: [authGuard] },
   { path: 'status', component: StatusPageComponent, canActivate: [authGuard] },
-  { path: 'taller', component: WorkshopSettingsPageComponent, canActivate: [authGuard] },
+  { path: 'configuracion', component: WorkshopSettingsPageComponent, canActivate: [authGuard] },
+  { path: 'taller', redirectTo: 'configuracion', pathMatch: 'full' },
   { path: 'cambiar-password', component: ChangePasswordPageComponent, canActivate: [authGuard] },
   { path: '**', redirectTo: '' }
 ];

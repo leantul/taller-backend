@@ -9,7 +9,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigDecimal;
-import java.nio.charset.StandardCharsets;
 import java.text.NumberFormat;
 import java.time.format.DateTimeFormatter;
 import java.util.Base64;
@@ -23,8 +22,8 @@ public class DeliveryReportPdfService {
 
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy");
     private static final String DEFAULT_REPORT_TITLE = "REPORTE DE REPARACIÓN";
-    private static final String WHATSAPP_ICON_ASSET_PATH = "report/whatsapp-icon.svg";
-    private static final String INSTAGRAM_ICON_ASSET_PATH = "report/instagram-icon.svg";
+    private static final String WHATSAPP_ICON_ASSET_PATH = "report/whatsapp-icon.png";
+    private static final String INSTAGRAM_ICON_ASSET_PATH = "report/instagram-icon.png";
 
     public byte[] generate(RepairReportDTO report, WorkshopSettings settings) {
         try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
@@ -42,8 +41,8 @@ public class DeliveryReportPdfService {
     private String buildHtml(RepairReportDTO report, WorkshopSettings settings) {
         String logo = toDataUri(settings.getLogoAssetPath());
         String reportTitle = blankFallback(settings.getReportTitle(), DEFAULT_REPORT_TITLE);
-        String whatsappIcon = toSvgDataUri(WHATSAPP_ICON_ASSET_PATH);
-        String instagramIcon = toSvgDataUri(INSTAGRAM_ICON_ASSET_PATH);
+        String whatsappIcon = toDataUri(WHATSAPP_ICON_ASSET_PATH);
+        String instagramIcon = toDataUri(INSTAGRAM_ICON_ASSET_PATH);
         List<RepairReportHardwareItemDTO> hardwareItems = visibleHardwareItems(report.getHardwareItems());
         List<RepairReportSoftwareItemDTO> softwareItems = visibleSoftwareItems(report.getSoftwareItems());
         boolean showPriceColumn = Boolean.TRUE.equals(report.getShowPartPrices())
@@ -264,17 +263,6 @@ public class DeliveryReportPdfService {
             return "data:image/png;base64," + Base64.getEncoder().encodeToString(bytes);
         } catch (IOException exception) {
             throw new IllegalStateException("No se pudo cargar el logo del reporte", exception);
-        }
-    }
-
-    private String toSvgDataUri(String assetPath) {
-        ClassPathResource resource = new ClassPathResource(assetPath);
-        try (InputStream inputStream = resource.getInputStream()) {
-            String svg = new String(inputStream.readAllBytes(), StandardCharsets.UTF_8).trim();
-            return "data:image/svg+xml;base64," + Base64.getEncoder()
-                    .encodeToString(svg.getBytes(StandardCharsets.UTF_8));
-        } catch (IOException exception) {
-            throw new IllegalStateException("No se pudo cargar el icono del reporte", exception);
         }
     }
 

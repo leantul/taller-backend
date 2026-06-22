@@ -4,6 +4,7 @@ import com.taller.model.Repair;
 import com.taller.model.enums.RepairStatusEnum;
 import com.taller.model.repository.projection.DeviceLastRepairView;
 import com.taller.model.repository.projection.ClientRepairHistoryView;
+import com.taller.model.repository.projection.DeliveryReportSourceView;
 import com.taller.model.repository.projection.FinanceRepairView;
 import com.taller.model.repository.projection.RepairListView;
 import com.taller.model.repository.projection.RepairStatusCountView;
@@ -415,6 +416,28 @@ public interface RepairRepository extends JpaRepository<Repair, String> {
             ORDER BY r.creationDateTime DESC
             """)
     List<RepairListView> searchListRows(String term);
+
+    @Query("""
+            SELECT r.id AS repairId,
+                   r.orderNumber AS orderNumber,
+                   c.name AS clientName,
+                   c.lastName AS clientLastName,
+                   c.phone AS clientPhone,
+                   c.email AS clientEmail,
+                   c.dni AS clientDni,
+                   d.deviceType.name AS deviceTypeName,
+                   d.brand AS deviceBrand,
+                   d.model AS deviceModel,
+                   d.serialNumber AS deviceSerialNumber,
+                   r.description AS reportedIssue,
+                   COALESCE(r.repairNotes, r.quoteNotes) AS workPerformed,
+                   r.price AS finalAmount
+            FROM Repair r
+            LEFT JOIN r.client c
+            LEFT JOIN r.device d
+            WHERE r.id = :repairId
+            """)
+    java.util.Optional<DeliveryReportSourceView> findDeliveryReportSourceById(@Param("repairId") String repairId);
 
     @Query("""
             SELECT r.id AS id,

@@ -1,8 +1,5 @@
 package com.taller.service;
 
-import com.taller.model.Client;
-import com.taller.model.Device;
-import com.taller.model.Repair;
 import com.taller.model.RepairPart;
 import com.taller.model.RepairReport;
 import com.taller.model.RepairReportHardwareItem;
@@ -12,6 +9,10 @@ import com.taller.model.repository.RepairReportHardwareItemRepository;
 import com.taller.model.repository.RepairReportRepository;
 import com.taller.model.repository.RepairReportSoftwareItemRepository;
 import com.taller.model.repository.RepairRepository;
+import com.taller.model.repository.projection.DeliveryReportSourceView;
+import com.taller.model.repository.projection.RepairReportHardwareItemView;
+import com.taller.model.repository.projection.RepairReportSoftwareItemView;
+import com.taller.model.repository.projection.RepairReportView;
 import com.taller.resource.dto.RepairReportDTO;
 import com.taller.resource.dto.RepairReportHardwareItemDTO;
 import com.taller.resource.dto.RepairReportSoftwareItemDTO;
@@ -35,15 +36,17 @@ public class DeliveryReportService {
 
     @Transactional(readOnly = true)
     public RepairReportDTO getByRepairId(String repairId) {
-        return repairReportRepository.findByRepairId(repairId)
+        return repairReportRepository.findViewByRepairId(repairId)
                 .map(this::toDto)
                 .orElseGet(() -> buildDefaultReport(repairId));
     }
 
     @Transactional
     public RepairReportDTO save(String repairId, RepairReportDTO dto) {
-        Repair repair = findRepair(repairId);
-        RepairReport report = repairReportRepository.findByRepairId(repairId).orElseGet(RepairReport::new);
+        DeliveryReportSourceView repair = findRepairSource(repairId);
+        RepairReport report = repairReportRepository.findIdViewByRepairId(repairId)
+                .map(idView -> repairReportRepository.getReferenceById(idView.getId()))
+                .orElseGet(RepairReport::new);
 
         report.setRepairId(repairId);
         report.setOrderNumber(valueOrFallback(dto.getOrderNumber(), repair.getOrderNumber()));
@@ -97,7 +100,9 @@ public class DeliveryReportService {
         }
         repairReportSoftwareItemRepository.saveAll(softwareItems);
 
-        return toDto(saved);
+        return repairReportRepository.findViewByRepairId(repairId)
+                .map(this::toDto)
+                .orElseThrow();
     }
 
     @Transactional(readOnly = true)
@@ -107,38 +112,36 @@ public class DeliveryReportService {
     }
 
     private RepairReportDTO buildDefaultReport(String repairId) {
-        Repair repair = findRepair(repairId);
-        Client client = repair.getClient();
-        Device device = repair.getDevice();
+        DeliveryReportSourceView repair = findRepairSource(repairId);
 
         RepairReportDTO dto = new RepairReportDTO();
         dto.setRepairId(repairId);
         dto.setOrderNumber(repair.getOrderNumber());
         dto.setIssuedAt(java.time.LocalDateTime.now());
-        dto.setClientName(client != null ? client.getName() : null);
-        dto.setClientLastName(client != null ? client.getLastName() : null);
-        dto.setClientPhone(client != null ? client.getPhone() : null);
-        dto.setClientEmail(client != null ? client.getEmail() : null);
-        dto.setClientDni(client != null ? client.getDni() : null);
-        dto.setDeviceTypeName(device != null && device.getDeviceType() != null ? device.getDeviceType().getName() : null);
-        dto.setDeviceBrand(device != null ? device.getBrand() : null);
-        dto.setDeviceModel(device != null ? device.getModel() : null);
-        dto.setDeviceSerialNumber(device != null ? device.getSerialNumber() : null);
-        dto.setReportedIssue(repair.getDescription());
-        dto.setWorkPerformed(firstNonBlank(repair.getRepairNotes(), repair.getQuoteNotes()));
+        dto.setClientName(repair.getClientName());
+        dto.setClientLastName(repair.getClientLastName());
+        dto.setClientPhone(repair.getClientPhone());
+        dto.setClientEmail(repair.getClientEmail());
+        dto.setClientDni(repair.getClientDni());
+        dto.setDeviceTypeName(repair.getDeviceTypeName());
+        dto.setDeviceBrand(repair.getDeviceBrand());
+        dto.setDeviceModel(repair.getDeviceModel());
+        dto.setDeviceSerialNumber(repair.getDeviceSerialNumber());
+        dto.setReportedIssue(repair.getReportedIssue());
+        dto.setWorkPerformed(repair.getWorkPerformed());
         dto.setFinalObservations(null);
         dto.setShowPartPrices(false);
-        dto.setFinalAmount(repair.getPrice());
+        dto.setFinalAmount(repair.getFinalAmount());
         dto.setHardwareItems(repairPartRepository.findByRepairId(repairId).stream().map(this::toHardwareDto).toList());
         dto.setSoftwareItems(List.of());
         return dto;
     }
 
-    private Repair findRepair(String repairId) {
-        return repairRepository.findById(repairId).orElseThrow();
+    private DeliveryReportSourceView findRepairSource(String repairId) {
+        return repairRepository.findDeliveryReportSourceById(repairId).orElseThrow();
     }
 
-    private RepairReportDTO toDto(RepairReport report) {
+    private RepairReportDTO toDto(RepairReportView report) {
         RepairReportDTO dto = new RepairReportDTO();
         dto.setId(report.getId());
         dto.setRepairId(report.getRepairId());
@@ -158,8 +161,8 @@ public class DeliveryReportService {
         dto.setFinalObservations(report.getFinalObservations());
         dto.setShowPartPrices(report.getShowPartPrices());
         dto.setFinalAmount(report.getFinalAmount());
-        dto.setHardwareItems(repairReportHardwareItemRepository.findByRepairReportIdOrderByCreationDateTimeAsc(report.getId()).stream().map(this::toHardwareDto).toList());
-        dto.setSoftwareItems(repairReportSoftwareItemRepository.findByRepairReportIdOrderByCreationDateTimeAsc(report.getId()).stream().map(this::toSoftwareDto).toList());
+        dto.setHardwareItems(repairReportHardwareItemRepository.findViewByRepairReportIdOrderByCreationDateTimeAsc(report.getId()).stream().map(this::toHardwareDto).toList());
+        dto.setSoftwareItems(repairReportSoftwareItemRepository.findViewByRepairReportIdOrderByCreationDateTimeAsc(report.getId()).stream().map(this::toSoftwareDto).toList());
         return dto;
     }
 
@@ -173,7 +176,7 @@ public class DeliveryReportService {
         return dto;
     }
 
-    private RepairReportHardwareItemDTO toHardwareDto(RepairReportHardwareItem item) {
+    private RepairReportHardwareItemDTO toHardwareDto(RepairReportHardwareItemView item) {
         RepairReportHardwareItemDTO dto = new RepairReportHardwareItemDTO();
         dto.setId(item.getId());
         dto.setPartName(item.getPartName());
@@ -184,7 +187,7 @@ public class DeliveryReportService {
         return dto;
     }
 
-    private RepairReportSoftwareItemDTO toSoftwareDto(RepairReportSoftwareItem item) {
+    private RepairReportSoftwareItemDTO toSoftwareDto(RepairReportSoftwareItemView item) {
         RepairReportSoftwareItemDTO dto = new RepairReportSoftwareItemDTO();
         dto.setId(item.getId());
         dto.setSoftwareName(item.getSoftwareName());
@@ -199,14 +202,6 @@ public class DeliveryReportService {
     private String valueOrFallback(String primary, String fallback) {
         String normalized = normalizeOptional(primary);
         return normalized == null || normalized.isBlank() ? fallback : normalized;
-    }
-
-    private String firstNonBlank(String first, String second) {
-        String normalizedFirst = normalizeOptional(first);
-        if (normalizedFirst != null && !normalizedFirst.isBlank()) {
-            return normalizedFirst;
-        }
-        return normalizeOptional(second);
     }
 
     private <T> List<T> defaultList(List<T> value) {

@@ -4,13 +4,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.taller.model.Client;
-import com.taller.model.Device;
-import com.taller.model.DeviceType;
-import com.taller.model.Repair;
 import com.taller.model.RepairPart;
 import com.taller.model.RepairReport;
 import com.taller.model.WorkshopSettings;
@@ -19,6 +16,9 @@ import com.taller.model.repository.RepairReportHardwareItemRepository;
 import com.taller.model.repository.RepairReportRepository;
 import com.taller.model.repository.RepairReportSoftwareItemRepository;
 import com.taller.model.repository.RepairRepository;
+import com.taller.model.repository.projection.DeliveryReportSourceView;
+import com.taller.model.repository.projection.RepairReportIdView;
+import com.taller.model.repository.projection.RepairReportView;
 import com.taller.resource.dto.RepairReportDTO;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -65,9 +65,9 @@ class DeliveryReportServiceTest {
 
     @Test
     void getByRepairId_buildsDefaultSnapshotFromRepair() {
-        Repair repair = repairFixture();
-        when(repairRepository.findById("repair-1")).thenReturn(Optional.of(repair));
-        when(repairReportRepository.findByRepairId("repair-1")).thenReturn(Optional.empty());
+        DeliveryReportSourceView source = repairSourceFixtureForDefaultReport();
+        when(repairRepository.findDeliveryReportSourceById("repair-1")).thenReturn(Optional.of(source));
+        when(repairReportRepository.findViewByRepairId("repair-1")).thenReturn(Optional.empty());
         when(repairPartRepository.findByRepairId("repair-1")).thenReturn(List.of(partFixture()));
 
         RepairReportDTO report = deliveryReportService.getByRepairId("repair-1");
@@ -86,14 +86,18 @@ class DeliveryReportServiceTest {
 
     @Test
     void save_persistsSnapshotAndNestedItems() {
-        Repair repair = repairFixture();
-        when(repairRepository.findById("repair-1")).thenReturn(Optional.of(repair));
-        when(repairReportRepository.findByRepairId("repair-1")).thenReturn(Optional.empty());
+        DeliveryReportSourceView source = repairSourceFixtureForSave();
+        RepairReportView savedView = savedReportView();
+        when(repairRepository.findDeliveryReportSourceById("repair-1")).thenReturn(Optional.of(source));
+        when(repairReportRepository.findIdViewByRepairId("repair-1")).thenReturn(Optional.empty());
         when(repairReportRepository.save(any(RepairReport.class))).thenAnswer(invocation -> {
             RepairReport report = invocation.getArgument(0);
             report.setId("report-1");
             return report;
         });
+        when(repairReportRepository.findViewByRepairId("repair-1")).thenReturn(Optional.of(savedView));
+        when(repairReportHardwareItemRepository.findViewByRepairReportIdOrderByCreationDateTimeAsc("report-1")).thenReturn(List.of());
+        when(repairReportSoftwareItemRepository.findViewByRepairReportIdOrderByCreationDateTimeAsc("report-1")).thenReturn(List.of());
 
         RepairReportDTO dto = new RepairReportDTO();
         dto.setRepairId("repair-1");
@@ -127,23 +131,15 @@ class DeliveryReportServiceTest {
 
     @Test
     void generatePdf_delegatesToPdfService() {
-        RepairReport existing = RepairReport.builder()
-                .repairId("repair-1")
-                .orderNumber("15")
-                .issuedAt(LocalDateTime.of(2026, 6, 22, 11, 0))
-                .showPartPrices(false)
-                .finalAmount(BigDecimal.TEN)
-                .build();
-        existing.setId("report-1");
-
+        RepairReportView savedView = savedReportView();
         WorkshopSettings settings = WorkshopSettings.builder()
                 .businessName("Taller")
                 .logoAssetPath(WorkshopSettingsService.DEFAULT_LOGO_ASSET_PATH)
                 .build();
 
-        when(repairReportRepository.findByRepairId("repair-1")).thenReturn(Optional.of(existing));
-        when(repairReportHardwareItemRepository.findByRepairReportIdOrderByCreationDateTimeAsc("report-1")).thenReturn(List.of());
-        when(repairReportSoftwareItemRepository.findByRepairReportIdOrderByCreationDateTimeAsc("report-1")).thenReturn(List.of());
+        when(repairReportRepository.findViewByRepairId("repair-1")).thenReturn(Optional.of(savedView));
+        when(repairReportHardwareItemRepository.findViewByRepairReportIdOrderByCreationDateTimeAsc("report-1")).thenReturn(List.of());
+        when(repairReportSoftwareItemRepository.findViewByRepairReportIdOrderByCreationDateTimeAsc("report-1")).thenReturn(List.of());
         when(workshopSettingsService.resolveSettings()).thenReturn(settings);
         when(deliveryReportPdfService.generate(any(), any())).thenReturn(new byte[] {1, 2, 3});
 
@@ -153,34 +149,51 @@ class DeliveryReportServiceTest {
         verify(deliveryReportPdfService).generate(any(), any());
     }
 
-    private Repair repairFixture() {
-        Client client = new Client();
-        client.setName("Ada");
-        client.setLastName("Lovelace");
-        client.setPhone("1133445566");
-        client.setEmail("ada@example.com");
-        client.setDni("30111222");
+    private DeliveryReportSourceView repairSourceFixtureForDefaultReport() {
+        DeliveryReportSourceView source = mock(DeliveryReportSourceView.class);
+        when(source.getOrderNumber()).thenReturn("15");
+        when(source.getClientName()).thenReturn("Ada");
+        when(source.getClientLastName()).thenReturn("Lovelace");
+        when(source.getClientPhone()).thenReturn("1133445566");
+        when(source.getClientEmail()).thenReturn("ada@example.com");
+        when(source.getClientDni()).thenReturn("30111222");
+        when(source.getDeviceTypeName()).thenReturn("Notebook");
+        when(source.getDeviceBrand()).thenReturn("Lenovo");
+        when(source.getDeviceModel()).thenReturn("T14");
+        when(source.getDeviceSerialNumber()).thenReturn("SN-1");
+        when(source.getReportedIssue()).thenReturn("No enciende");
+        when(source.getWorkPerformed()).thenReturn("Pantalla reemplazada y pruebas completas.");
+        when(source.getFinalAmount()).thenReturn(BigDecimal.valueOf(58000));
+        return source;
+    }
 
-        DeviceType deviceType = new DeviceType();
-        deviceType.setName("Notebook");
+    private DeliveryReportSourceView repairSourceFixtureForSave() {
+        DeliveryReportSourceView source = mock(DeliveryReportSourceView.class);
+        when(source.getOrderNumber()).thenReturn("15");
+        return source;
+    }
 
-        Device device = new Device();
-        device.setBrand("Lenovo");
-        device.setModel("T14");
-        device.setSerialNumber("SN-1");
-        device.setPassword("secreto");
-        device.setDeviceType(deviceType);
-
-        Repair repair = new Repair();
-        repair.setId("repair-1");
-        repair.setOrderNumber("15");
-        repair.setDescription("No enciende");
-        repair.setRepairNotes("Pantalla reemplazada y pruebas completas.");
-        repair.setQuoteNotes("Servicio integral");
-        repair.setPrice(BigDecimal.valueOf(58000));
-        repair.setClient(client);
-        repair.setDevice(device);
-        return repair;
+    private RepairReportView savedReportView() {
+        RepairReportView view = mock(RepairReportView.class);
+        when(view.getId()).thenReturn("report-1");
+        when(view.getRepairId()).thenReturn("repair-1");
+        when(view.getOrderNumber()).thenReturn("15");
+        when(view.getIssuedAt()).thenReturn(LocalDateTime.of(2026, 6, 22, 11, 0));
+        when(view.getClientName()).thenReturn("Ada");
+        when(view.getClientLastName()).thenReturn("Lovelace");
+        when(view.getClientPhone()).thenReturn("1133445566");
+        when(view.getClientEmail()).thenReturn("ada@example.com");
+        when(view.getClientDni()).thenReturn("30111222");
+        when(view.getDeviceTypeName()).thenReturn("Notebook");
+        when(view.getDeviceBrand()).thenReturn("Lenovo");
+        when(view.getDeviceModel()).thenReturn("T14");
+        when(view.getDeviceSerialNumber()).thenReturn("SN-1");
+        when(view.getReportedIssue()).thenReturn("No enciende");
+        when(view.getWorkPerformed()).thenReturn("Cambio de pantalla");
+        when(view.getFinalObservations()).thenReturn("Lista para entregar");
+        when(view.getShowPartPrices()).thenReturn(true);
+        when(view.getFinalAmount()).thenReturn(BigDecimal.valueOf(58000));
+        return view;
     }
 
     private RepairPart partFixture() {

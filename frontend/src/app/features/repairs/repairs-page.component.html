@@ -71,14 +71,33 @@
 
     <div class="native-table-wrap">
       <table class="native-table repairs-table">
+        <colgroup>
+          @for (column of repairColumns; track column.key) {
+            <col [style.width]="columnWidth(column.key)" />
+          }
+        </colgroup>
         <thead>
           <tr>
-            <th>Orden</th>
-            <th>Cliente</th>
-            <th>Dispositivo</th>
-            <th>Estado</th>
-            <th>Presupuesto</th>
-            <th>Acción</th>
+            @for (column of repairColumns; track column.key) {
+              <th [style.width]="columnWidth(column.key)">
+                @if (column.sortable) {
+                  <button class="sortable-th" type="button" (click)="sortByColumn(column.key)">
+                    <span>{{ column.label }}</span>
+                    <i [class]="sortIcon(column.key)"></i>
+                  </button>
+                } @else {
+                  <span class="table-head-label">{{ column.label }}</span>
+                }
+                <button
+                  class="column-resize-handle"
+                  type="button"
+                  tabindex="-1"
+                  aria-hidden="true"
+                  (click)="$event.stopPropagation()"
+                  (mousedown)="startColumnResize($event, column.key)">
+                </button>
+              </th>
+            }
           </tr>
         </thead>
         <tbody>
@@ -101,10 +120,10 @@
                     <i class="pi pi-whatsapp"></i>
                   </button>
                   <button class="icon-action" type="button" aria-label="Cambiar estado" (click)="onRowActionClick($event); openStatusModal(row.repair)"><i class="pi pi-sync"></i></button>
+                  <button class="icon-action" type="button" aria-label="Editar reparación" (click)="onRowActionClick($event); openEditModal(row.repair)"><i class="pi pi-pencil"></i></button>
                   @if (row.repair.status === 'ESPERANDO_RETIRO') {
                     <button class="icon-action" type="button" aria-label="Emitir informe" (click)="onRowActionClick($event); openDeliveryReport($event, row.repair)"><i class="pi pi-file-pdf"></i></button>
                   }
-                  <button class="icon-action" type="button" aria-label="Editar reparación" (click)="onRowActionClick($event); openEditModal(row.repair)"><i class="pi pi-pencil"></i></button>
                   <button class="icon-action danger" type="button" aria-label="Eliminar reparación" [disabled]="isDeleting" (click)="onRowActionClick($event); confirmDeleteRepair(row.repair)"><i class="pi pi-trash"></i></button>
                 </div>
               </td>

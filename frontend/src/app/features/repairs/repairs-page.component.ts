@@ -19,6 +19,7 @@ import { Client } from '../../shared/models/client.model';
 import { Device, DeviceType } from '../../shared/models/device.model';
 import { MessageService } from 'primeng/api';
 import { RepairDetailDialogComponent } from '../../shared/components/repair-detail-dialog.component';
+import { DeliveryReportDialogComponent } from '../../shared/components/delivery-report-dialog.component';
 import { fromDateTimeLocal, REPAIR_STATUS_OPTIONS, repairStatusClass, repairStatusLabel, toDateTimeLocal } from '../../shared/utils/repair-status.util';
 
 type RepairTableRow = {
@@ -32,15 +33,25 @@ type RepairTableRow = {
   clientPhone: string;
 };
 
+type RepairTableColumnKey = 'orderLabel' | 'clientLabel' | 'deviceLabel' | 'statusLabel' | 'quotedAmountValue' | 'actions';
+
+type RepairTableColumn = {
+  key: RepairTableColumnKey;
+  label: string;
+  width: string;
+  sortable: boolean;
+};
+
 @Component({
   selector: 'app-repairs-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, CardModule, InputTextModule, ButtonModule, SelectModule, AutoCompleteModule, InputNumberModule, DatePickerModule, DialogModule, ConfirmDialogModule, RepairDetailDialogComponent],
+  imports: [CommonModule, FormsModule, CardModule, InputTextModule, ButtonModule, SelectModule, AutoCompleteModule, InputNumberModule, DatePickerModule, DialogModule, ConfirmDialogModule, RepairDetailDialogComponent, DeliveryReportDialogComponent],
   providers: [ConfirmationService],
   templateUrl: './repairs-page.component.html'
 })
 export class RepairsPageComponent implements OnInit {
   @ViewChild(RepairDetailDialogComponent) private repairDetailDialog?: RepairDetailDialogComponent;
+  @ViewChild(DeliveryReportDialogComponent) private deliveryReportDialog?: DeliveryReportDialogComponent;
   repairs: Repair[] = [];
   filteredRepairs: Repair[] = [];
   visibleRepairRows: RepairTableRow[] = [];
@@ -88,6 +99,19 @@ export class RepairsPageComponent implements OnInit {
   toDate: Date | null = null;
   statusOptions = [...REPAIR_STATUS_OPTIONS];
   typeOptions: DeviceType[] = [];
+  readonly repairColumns: RepairTableColumn[] = [
+    { key: 'orderLabel', label: 'Orden', width: '9rem', sortable: true },
+    { key: 'clientLabel', label: 'Cliente', width: '16rem', sortable: true },
+    { key: 'deviceLabel', label: 'Dispositivo', width: '16rem', sortable: true },
+    { key: 'statusLabel', label: 'Estado', width: '12rem', sortable: true },
+    { key: 'quotedAmountValue', label: 'Presupuesto', width: '11rem', sortable: true },
+    { key: 'actions', label: 'Acción', width: '14rem', sortable: false }
+  ];
+  sortColumn: Exclude<RepairTableColumnKey, 'actions'> = 'orderLabel';
+  sortDirection: 'asc' | 'desc' = 'desc';
+  private resizingColumnKey: RepairTableColumnKey | null = null;
+  private resizeStartX = 0;
+  private resizeStartWidth = 0;
 
   constructor(private readonly api: ApiService, private readonly messageService: MessageService, private readonly route: ActivatedRoute, private readonly confirmationService: ConfirmationService, private readonly changeDetector: ChangeDetectorRef) {}
   ngOnInit(): void {
@@ -308,6 +332,12 @@ export class RepairsPageComponent implements OnInit {
     this.repairDetailDialog?.open(repair.id, this.clientLabel(repair), this.deviceLabel(repair));
   }
 
+  openDeliveryReport(event: Event, repair: Repair): void {
+    event.stopPropagation();
+    event.preventDefault();
+    this.deliveryReportDialog?.open(repair);
+  }
+
   onEditStatusChange(): void {
     if (this.editingRepair.status === 'RETIRADA' && !this.editingRepair.returnDateTime) {
       this.editingRepair.returnDateTime = fromDateTimeLocal(toDateTimeLocal());
@@ -462,7 +492,7 @@ export class RepairsPageComponent implements OnInit {
 
   private updateVisibleRepairs(): void {
     const start = (this.currentPage - 1) * this.pageSize;
-    this.visibleRepairRows = this.repairs.map((repair) => this.toTableRow(repair));
+    this.visibleRepairRows = this.sortRows(this.repairs.map((repair) => this.toTableRow(repair)));
     if (!this.totalElements) {
       this.paginationLabel = '0 reparaciones';
     } else {
@@ -495,6 +525,67 @@ export class RepairsPageComponent implements OnInit {
       quotedAmountLabel: this.formatMoney(repair.quotedAmount),
       clientPhone: this.clientPhone(repair)
     };
+  }
+
+  sortByColumn(column: RepairTableColumnKey): void {
+    if (column === 'actions') {
+      return;
+    }
+    if (this.sortColumn === column) {
+      this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
+    } else {
+      this.sortColumn = column;
+      this.sortDirection = column === 'orderLabel' || column === 'quotedAmountValue' ? 'desc' : 'asc';
+    }
+    this.visibleRepairRows = this.sortRows([...this.visibleRepairRows]);
+  }
+
+  sortIcon(column: RepairTableColumnKey): string {
+    if (column === 'actions') {
+      return 'pi pi-sort-alt';
+    }
+    if (this.sortColumn !== column) {
+      return 'pi pi-sort-alt';
+    }
+    return this.sortDirection === 'asc' ? 'pi pi-sort-amount-up-alt' : 'pi pi-sort-amount-down';
+  }
+
+  columnWidth(columnKey: RepairTableColumnKey): string {
+    return this.repairColumns.find((column) => column.key === columnKey)?.width || 'auto';
+  }
+
+  startColumnResize(event: MouseEvent, columnKey: RepairTableColumnKey): void {
+    event.preventDefault();
+    event.stopPropagation();
+    const header = (event.currentTarget as HTMLElement).closest('th');
+    if (!header) {
+      return;
+    }
+
+    this.resizingColumnKey = columnKey;
+    this.resizeStartX = event.clientX;
+    this.resizeStartWidth = header.getBoundingClientRect().width;
+
+    const onMouseMove = (moveEvent: MouseEvent) => {
+      if (!this.resizingColumnKey) {
+        return;
+      }
+      const nextWidth = Math.max(96, Math.round(this.resizeStartWidth + (moveEvent.clientX - this.resizeStartX)));
+      const column = this.repairColumns.find((item) => item.key === this.resizingColumnKey);
+      if (column) {
+        column.width = `${nextWidth}px`;
+        this.changeDetector.detectChanges();
+      }
+    };
+
+    const onMouseUp = () => {
+      this.resizingColumnKey = null;
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+    };
+
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
   }
 
   onDraftDeviceChange(): void {
@@ -594,5 +685,38 @@ export class RepairsPageComponent implements OnInit {
     }
 
     return 0;
+  }
+
+  private sortRows(rows: RepairTableRow[]): RepairTableRow[] {
+    return rows.sort((left, right) => {
+      const direction = this.sortDirection === 'asc' ? 1 : -1;
+      return this.compareRows(left, right) * direction;
+    });
+  }
+
+  private compareRows(left: RepairTableRow, right: RepairTableRow): number {
+    switch (this.sortColumn) {
+      case 'orderLabel':
+        return this.numericCompare(left.repair.orderNumber, right.repair.orderNumber);
+      case 'quotedAmountValue':
+        return this.asMoney(left.repair.quotedAmount) - this.asMoney(right.repair.quotedAmount);
+      case 'clientLabel':
+        return left.clientLabel.localeCompare(right.clientLabel, 'es', { sensitivity: 'base' });
+      case 'deviceLabel':
+        return left.deviceLabel.localeCompare(right.deviceLabel, 'es', { sensitivity: 'base' });
+      case 'statusLabel':
+        return left.statusLabel.localeCompare(right.statusLabel, 'es', { sensitivity: 'base' });
+      default:
+        return 0;
+    }
+  }
+
+  private numericCompare(left: unknown, right: unknown): number {
+    const leftValue = Number(left || 0);
+    const rightValue = Number(right || 0);
+    if (Number.isFinite(leftValue) && Number.isFinite(rightValue)) {
+      return leftValue - rightValue;
+    }
+    return String(left || '').localeCompare(String(right || ''), 'es', { numeric: true, sensitivity: 'base' });
   }
 }

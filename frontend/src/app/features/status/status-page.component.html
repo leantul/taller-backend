@@ -25,6 +25,14 @@
             <small>{{ clientName(item) }}</small>
             <small>{{ deviceLabel(item) }}</small>
             <small>{{ item.price | currency:'ARS':'symbol':'1.2-2':'es-AR' }}</small>
+            @if (item.status === 'ESPERANDO_RETIRO') {
+              <div class="status-card-actions">
+                <button class="secondary-button status-card-button" type="button" (click)="openDeliveryReport($event, item)">
+                  <i class="pi pi-file-pdf"></i>
+                  <span>Informe</span>
+                </button>
+              </div>
+            }
           </article>
         } @empty {
           <div class="status-empty">Sin ordenes en esta etapa.</div>
@@ -58,7 +66,12 @@
     </div>
     <div class="dialog-actions">
       <button class="secondary-button" type="button" (click)="showDetailModal = false">Cerrar</button>
+      @if (selectedRepair.status === 'ESPERANDO_RETIRO') {
+        <button class="secondary-button" type="button" (click)="openDeliveryReport($event, selectedRepair)">Informe</button>
+      }
       <button class="primary-button" type="button" [disabled]="isSavingStatus" (click)="saveDetailStatus()">Guardar estado</button>
     </div>
   }
 </p-dialog>
+
+<app-delivery-report-dialog></app-delivery-report-dialog>

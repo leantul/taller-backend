@@ -1,6 +1,6 @@
 import { CdkDragDrop, DragDropModule, moveItemInArray, transferArrayItem } from '@angular/cdk/drag-drop';
 import { CommonModule } from '@angular/common';
-import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit, ViewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { CardModule } from 'primeng/card';
 import { DialogModule } from 'primeng/dialog';
@@ -8,14 +8,16 @@ import { MessageService } from 'primeng/api';
 import { ApiService } from '../../core/services/api.service';
 import { Repair } from '../../shared/models/repair.model';
 import { StatusBoardRepair } from '../../shared/models/repair.model';
+import { DeliveryReportDialogComponent } from '../../shared/components/delivery-report-dialog.component';
 
 @Component({
   selector: 'app-status-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, DragDropModule, CardModule, DialogModule],
+  imports: [CommonModule, FormsModule, DragDropModule, CardModule, DialogModule, DeliveryReportDialogComponent],
   templateUrl: './status-page.component.html'
 })
 export class StatusPageComponent implements OnInit {
+  @ViewChild(DeliveryReportDialogComponent) private deliveryReportDialog?: DeliveryReportDialogComponent;
   columns: { title: string; status: Repair['status']; items: Repair[] }[] = [
     { title: 'Por recibir', status: 'POR_RECIBIR', items: [] },
     { title: 'Recibida', status: 'RECIBIDA', items: [] },
@@ -63,6 +65,12 @@ export class StatusPageComponent implements OnInit {
   openDetail(item: Repair): void {
     this.selectedRepair = { ...item };
     this.showDetailModal = true;
+  }
+
+  openDeliveryReport(event: Event, repair: Repair): void {
+    event.stopPropagation();
+    event.preventDefault();
+    this.deliveryReportDialog?.open(repair);
   }
 
   saveDetailStatus(): void {

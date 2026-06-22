@@ -1,9 +1,12 @@
 import { Injectable } from '@angular/core';
 import { ClientApiService } from './client-api.service';
+import { DeliveryReportApiService } from './delivery-report-api.service';
 import { DeviceApiService } from './device-api.service';
 import { NotificationApiService } from './notification-api.service';
 import { RepairApiService } from './repair-api.service';
 import { ReportingApiService } from './reporting-api.service';
+import { SoftwareCatalogApiService } from './software-catalog-api.service';
+import { WorkshopSettingsApiService } from './workshop-settings-api.service';
 
 @Injectable({ providedIn: 'root' })
 export class ApiService {
@@ -11,6 +14,9 @@ export class ApiService {
     private readonly clients: ClientApiService,
     private readonly devices: DeviceApiService,
     private readonly repairs: RepairApiService,
+    private readonly deliveryReports: DeliveryReportApiService,
+    private readonly softwareCatalog: SoftwareCatalogApiService,
+    private readonly workshopSettings: WorkshopSettingsApiService,
     private readonly notifications: NotificationApiService,
     private readonly reporting: ReportingApiService
   ) {}
@@ -49,6 +55,14 @@ export class ApiService {
   updateRepair = this.repairs.update.bind(this.repairs);
   updateRepairStatus = this.repairs.updateStatus.bind(this.repairs);
   deleteRepair = this.repairs.delete.bind(this.repairs);
+  getDeliveryReport = this.deliveryReports.getByRepairId.bind(this.deliveryReports);
+  saveDeliveryReport = this.deliveryReports.save.bind(this.deliveryReports);
+  getDeliveryReportPdf = this.deliveryReports.getPdf.bind(this.deliveryReports);
+  getSoftwareCatalog = this.softwareCatalog.getAll.bind(this.softwareCatalog);
+  saveSoftwareCatalogItem = this.softwareCatalog.save.bind(this.softwareCatalog);
+  deleteSoftwareCatalogItem = this.softwareCatalog.delete.bind(this.softwareCatalog);
+  getWorkshopSettings = this.workshopSettings.get.bind(this.workshopSettings);
+  updateWorkshopSettings = this.workshopSettings.update.bind(this.workshopSettings);
 
   getNotifications = this.notifications.getAll.bind(this.notifications);
   getUnreadNotificationCount = this.notifications.getUnreadCount.bind(this.notifications);

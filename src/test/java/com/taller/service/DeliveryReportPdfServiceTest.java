@@ -25,7 +25,7 @@ class DeliveryReportPdfServiceTest {
         String text = extractText(pdf);
 
         assertTrue(text.contains("REPORTE"));
-        assertTrue(text.contains("REPARACION"));
+        assertTrue(text.contains("REPARACIÓN"));
         assertTrue(text.contains("Google Chrome"));
         assertFalse(text.contains("25.000"));
         assertFalse(text.toLowerCase().contains("secreto"));
@@ -40,6 +40,19 @@ class DeliveryReportPdfServiceTest {
 
         assertTrue(text.contains("25.000"));
         assertTrue(text.contains("$"));
+    }
+
+    @Test
+    void generate_hidesEmptyHardwareAndSoftwareSections() throws Exception {
+        RepairReportDTO report = report(false, false);
+        report.setHardwareItems(List.of());
+        report.setSoftwareItems(List.of());
+
+        byte[] pdf = deliveryReportPdfService.generate(report, settings());
+        String text = extractText(pdf);
+
+        assertFalse(text.contains("Repuestos cambiados"));
+        assertFalse(text.contains("Software instalado"));
     }
 
     private RepairReportDTO report(boolean showPartPrices, boolean includePrice) {

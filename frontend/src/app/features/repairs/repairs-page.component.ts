@@ -34,6 +34,7 @@ type RepairTableRow = {
 };
 
 type RepairTableColumnKey = 'orderLabel' | 'clientLabel' | 'deviceLabel' | 'statusLabel' | 'quotedAmountValue' | 'actions';
+type RepairSortField = 'orderNumber' | 'clientName' | 'deviceLabel' | 'status' | 'quotedAmount';
 
 type RepairTableColumn = {
   key: RepairTableColumnKey;
@@ -338,6 +339,10 @@ export class RepairsPageComponent implements OnInit {
     this.deliveryReportDialog?.open(repair);
   }
 
+  canOpenDeliveryReport(repair: Repair): boolean {
+    return repair.status === 'ESPERANDO_RETIRO' || repair.status === 'RETIRADA';
+  }
+
   onEditStatusChange(): void {
     if (this.editingRepair.status === 'RETIRADA' && !this.editingRepair.returnDateTime) {
       this.editingRepair.returnDateTime = fromDateTimeLocal(toDateTimeLocal());
@@ -396,7 +401,9 @@ export class RepairsPageComponent implements OnInit {
       this.pageSize,
       this.searchTerm.trim(),
       this.toApiDateTime(this.fromDate),
-      this.toApiDateTime(this.toDate, true)
+      this.toApiDateTime(this.toDate, true),
+      this.currentSortField(),
+      this.sortDirection
     ).subscribe((page) => {
       this.repairs = page.content;
       this.filteredRepairs = page.content;
@@ -492,7 +499,7 @@ export class RepairsPageComponent implements OnInit {
 
   private updateVisibleRepairs(): void {
     const start = (this.currentPage - 1) * this.pageSize;
-    this.visibleRepairRows = this.sortRows(this.repairs.map((repair) => this.toTableRow(repair)));
+    this.visibleRepairRows = this.repairs.map((repair) => this.toTableRow(repair));
     if (!this.totalElements) {
       this.paginationLabel = '0 reparaciones';
     } else {
@@ -537,7 +544,8 @@ export class RepairsPageComponent implements OnInit {
       this.sortColumn = column;
       this.sortDirection = column === 'orderLabel' || column === 'quotedAmountValue' ? 'desc' : 'asc';
     }
-    this.visibleRepairRows = this.sortRows([...this.visibleRepairRows]);
+    this.currentPage = 1;
+    this.reload();
   }
 
   sortIcon(column: RepairTableColumnKey): string {
@@ -687,36 +695,19 @@ export class RepairsPageComponent implements OnInit {
     return 0;
   }
 
-  private sortRows(rows: RepairTableRow[]): RepairTableRow[] {
-    return rows.sort((left, right) => {
-      const direction = this.sortDirection === 'asc' ? 1 : -1;
-      return this.compareRows(left, right) * direction;
-    });
-  }
-
-  private compareRows(left: RepairTableRow, right: RepairTableRow): number {
+  private currentSortField(): RepairSortField {
     switch (this.sortColumn) {
-      case 'orderLabel':
-        return this.numericCompare(left.repair.orderNumber, right.repair.orderNumber);
-      case 'quotedAmountValue':
-        return this.asMoney(left.repair.quotedAmount) - this.asMoney(right.repair.quotedAmount);
       case 'clientLabel':
-        return left.clientLabel.localeCompare(right.clientLabel, 'es', { sensitivity: 'base' });
+        return 'clientName';
       case 'deviceLabel':
-        return left.deviceLabel.localeCompare(right.deviceLabel, 'es', { sensitivity: 'base' });
+        return 'deviceLabel';
       case 'statusLabel':
-        return left.statusLabel.localeCompare(right.statusLabel, 'es', { sensitivity: 'base' });
+        return 'status';
+      case 'quotedAmountValue':
+        return 'quotedAmount';
+      case 'orderLabel':
       default:
-        return 0;
+        return 'orderNumber';
     }
-  }
-
-  private numericCompare(left: unknown, right: unknown): number {
-    const leftValue = Number(left || 0);
-    const rightValue = Number(right || 0);
-    if (Number.isFinite(leftValue) && Number.isFinite(rightValue)) {
-      return leftValue - rightValue;
-    }
-    return String(left || '').localeCompare(String(right || ''), 'es', { numeric: true, sensitivity: 'base' });
   }
 }

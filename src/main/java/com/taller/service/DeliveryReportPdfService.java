@@ -37,9 +37,22 @@ public class DeliveryReportPdfService {
 
     private String buildHtml(RepairReportDTO report, WorkshopSettings settings) {
         String logo = toDataUri(settings.getLogoAssetPath());
+        List<RepairReportHardwareItemDTO> hardwareItems = visibleHardwareItems(report.getHardwareItems());
+        List<RepairReportSoftwareItemDTO> softwareItems = visibleSoftwareItems(report.getSoftwareItems());
         boolean showPriceColumn = Boolean.TRUE.equals(report.getShowPartPrices())
-                && report.getHardwareItems() != null
-                && report.getHardwareItems().stream().anyMatch(item -> Boolean.TRUE.equals(item.getIncludePrice()));
+                && hardwareItems.stream().anyMatch(item -> Boolean.TRUE.equals(item.getIncludePrice()));
+        String hardwareSection = hardwareItems.isEmpty()
+                ? ""
+                : """
+                <div class="section-title">Repuestos cambiados</div>
+                %s
+                """.formatted(hardwareTable(hardwareItems, showPriceColumn));
+        String softwareSection = softwareItems.isEmpty()
+                ? ""
+                : """
+                <div class="section-title">Software instalado / configurado</div>
+                %s
+                """.formatted(softwareTable(softwareItems));
 
         return """
                 <!DOCTYPE html>
@@ -57,7 +70,7 @@ public class DeliveryReportPdfService {
                       .logo { width: 150px; height: auto; }
                       .title { font-size: 23px; font-weight: 700; letter-spacing: 1px; }
                       .contact-line { margin-bottom: 6px; white-space: nowrap; font-size: 10.5px; color: #52606b; }
-                      .icon { display: inline-block; width: 12px; height: 12px; vertical-align: -2px; margin-right: 5px; }
+                      .contact-line img { width: 12px; height: 12px; vertical-align: -2px; margin-right: 5px; }
                       .rule { height: 1px; background: #d5dde3; margin: 8px 0 16px; }
                       .meta { display: table; width: 100%%; margin-bottom: 16px; }
                       .meta > div { display: table-cell; vertical-align: top; }
@@ -83,7 +96,7 @@ public class DeliveryReportPdfService {
                   <body>
                     <div class="header">
                       <div class="header-left"><img class="logo" src="%s" alt="Logo taller" /></div>
-                      <div class="header-center"><div class="title">REPORTE DE REPARACION</div></div>
+                      <div class="header-center"><div class="title">REPORTE DE REPARACIÓN</div></div>
                       <div class="header-right">
                         <div class="contact-line">%s %s</div>
                         <div class="contact-line">%s %s</div>
@@ -119,9 +132,7 @@ public class DeliveryReportPdfService {
                     </div>
                     %s
                     %s
-                    <div class="section-title">Repuestos cambiados</div>
                     %s
-                    <div class="section-title">Software instalado / configurado</div>
                     %s
                     <div class="summary-strip">
                       <div>
@@ -134,8 +145,8 @@ public class DeliveryReportPdfService {
                 </html>
                 """.formatted(
                 logo,
-                whatsappSvg(), escapeText(blankFallback(settings.getWhatsapp())),
-                instagramSvg(), escapeText(blankFallback(settings.getInstagram())),
+                whatsappIcon(), escapeText(blankFallback(settings.getWhatsapp())),
+                instagramIcon(), escapeText(blankFallback(settings.getInstagram())),
                 escapeText(blankFallback(settings.getBusinessName())),
                 escapeText(blankFallback(report.getOrderNumber())),
                 escapeText(report.getIssuedAt() != null ? DATE_TIME_FORMATTER.format(report.getIssuedAt()) : "-"),
@@ -150,8 +161,8 @@ public class DeliveryReportPdfService {
                 escapeText(blankFallback(report.getDeviceSerialNumber())),
                 textPanel("Falla reportada", report.getReportedIssue()),
                 textPanel("Trabajo realizado", report.getWorkPerformed(), report.getFinalObservations()),
-                hardwareTable(report.getHardwareItems(), showPriceColumn),
-                softwareTable(report.getSoftwareItems()),
+                hardwareSection,
+                softwareSection,
                 money(report.getFinalAmount()),
                 escapeText(blankFallback(settings.getBusinessName())),
                 escapeText(blankFallback(report.getOrderNumber()))
@@ -178,9 +189,6 @@ public class DeliveryReportPdfService {
     }
 
     private String hardwareTable(List<RepairReportHardwareItemDTO> items, boolean showPriceColumn) {
-        if (items == null || items.isEmpty()) {
-            return "<div class=\"text-panel empty\">Sin repuestos cargados</div>";
-        }
         StringBuilder rows = new StringBuilder();
         for (RepairReportHardwareItemDTO item : items) {
             rows.append("<tr>")
@@ -201,9 +209,6 @@ public class DeliveryReportPdfService {
     }
 
     private String softwareTable(List<RepairReportSoftwareItemDTO> items) {
-        if (items == null || items.isEmpty()) {
-            return "<div class=\"text-panel empty\">Sin software cargado</div>";
-        }
         StringBuilder rows = new StringBuilder();
         for (RepairReportSoftwareItemDTO item : items) {
             rows.append("<tr>")
@@ -212,6 +217,24 @@ public class DeliveryReportPdfService {
                     .append("</tr>");
         }
         return "<table><thead><tr><th>Software</th><th>Detalle</th></tr></thead><tbody>" + rows + "</tbody></table>";
+    }
+
+    private List<RepairReportHardwareItemDTO> visibleHardwareItems(List<RepairReportHardwareItemDTO> items) {
+        if (items == null) {
+            return List.of();
+        }
+        return items.stream()
+                .filter(item -> item.getPartName() != null && !item.getPartName().isBlank())
+                .toList();
+    }
+
+    private List<RepairReportSoftwareItemDTO> visibleSoftwareItems(List<RepairReportSoftwareItemDTO> items) {
+        if (items == null) {
+            return List.of();
+        }
+        return items.stream()
+                .filter(item -> item.getSoftwareName() != null && !item.getSoftwareName().isBlank())
+                .toList();
     }
 
     private String blankFallback(String value) {
@@ -243,18 +266,18 @@ public class DeliveryReportPdfService {
                 .replace("\n", "<br />");
     }
 
-    private String whatsappSvg() {
+    private String whatsappIcon() {
         return """
-                <svg class="icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <svg width="12" height="12" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="vertical-align:-2px;margin-right:5px;">
                   <path fill="#177245" d="M20.5 3.5A11 11 0 0 0 3.78 17.3L2 22l4.86-1.73A11 11 0 1 0 20.5 3.5Zm-8.47 16.03c-1.88 0-3.73-.5-5.35-1.45l-.38-.22-2.88 1.03.98-2.81-.25-.41a8.81 8.81 0 1 1 7.88 3.86Zm4.83-6.62c-.26-.13-1.53-.75-1.77-.84-.24-.09-.41-.13-.59.13-.17.26-.67.84-.82 1.01-.15.17-.3.19-.56.06-.26-.13-1.08-.4-2.05-1.28-.76-.68-1.27-1.52-1.42-1.78-.15-.26-.02-.4.11-.53.12-.12.26-.3.39-.45.13-.15.17-.26.26-.43.09-.17.04-.32-.02-.45-.07-.13-.59-1.42-.81-1.95-.21-.5-.43-.43-.59-.44h-.5c-.17 0-.45.06-.68.32-.24.26-.9.88-.9 2.15s.92 2.49 1.05 2.67c.13.17 1.8 2.75 4.36 3.85.61.27 1.09.43 1.47.55.62.2 1.18.17 1.62.1.5-.07 1.53-.63 1.75-1.24.22-.61.22-1.13.15-1.24-.06-.11-.24-.17-.5-.3Z"/>
                 </svg>
                 """;
     }
 
-    private String instagramSvg() {
+    private String instagramIcon() {
         return """
-                <svg class="icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                  <path fill="#2364aa" d="M7.5 2h9A5.5 5.5 0 0 1 22 7.5v9A5.5 5.5 0 0 1 16.5 22h-9A5.5 5.5 0 0 1 2 16.5v-9A5.5 5.5 0 0 1 7.5 2Zm0 1.8A3.7 3.7 0 0 0 3.8 7.5v9a3.7 3.7 0 0 0 3.7 3.7h9a3.7 3.7 0 0 0 3.7-3.7v-9a3.7 3.7 0 0 0-3.7-3.7h-9Zm9.85 1.35a1.1 1.1 0 1 1 0 2.2 1.1 1.1 0 0 1 0-2.2ZM12 7a5 5 0 1 1 0 10 5 5 0 0 1 0-10Zm0 1.8A3.2 3.2 0 1 0 12 15.2 3.2 3.2 0 0 0 12 8.8Z"/>
+                <svg width="12" height="12" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="vertical-align:-2px;margin-right:5px;">
+                  <path fill="#c13584" d="M7.5 2h9A5.5 5.5 0 0 1 22 7.5v9A5.5 5.5 0 0 1 16.5 22h-9A5.5 5.5 0 0 1 2 16.5v-9A5.5 5.5 0 0 1 7.5 2Zm0 1.8A3.7 3.7 0 0 0 3.8 7.5v9a3.7 3.7 0 0 0 3.7 3.7h9a3.7 3.7 0 0 0 3.7-3.7v-9a3.7 3.7 0 0 0-3.7-3.7h-9Zm9.85 1.35a1.1 1.1 0 1 1 0 2.2 1.1 1.1 0 0 1 0-2.2ZM12 7a5 5 0 1 1 0 10 5 5 0 0 1 0-10Zm0 1.8A3.2 3.2 0 1 0 12 15.2 3.2 3.2 0 0 0 12 8.8Z"/>
                 </svg>
                 """;
     }

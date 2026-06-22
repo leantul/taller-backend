@@ -21,6 +21,8 @@ import com.taller.resource.dto.StatusBoardRepairDTO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.JpaSort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -46,8 +48,8 @@ public class RepairService {
     }
 
     @Transactional(readOnly = true)
-    public PageDTO<RepairDTO> findPage(int page, int size, String term, LocalDateTime from, LocalDateTime to) {
-        Page<RepairListView> result = findRepairPage(normalizeTerm(term), from, to, pageRequest(page, size, 100));
+    public PageDTO<RepairDTO> findPage(int page, int size, String term, LocalDateTime from, LocalDateTime to, String sortField, String sortOrder) {
+        Page<RepairListView> result = findRepairPage(normalizeTerm(term), from, to, pageRequest(page, size, 100, sortField, sortOrder));
         return toPage(result, result.getContent().stream().map(this::toListDto).toList());
     }
 
@@ -351,8 +353,12 @@ public class RepairService {
         return term == null ? "" : term.trim();
     }
 
-    private PageRequest pageRequest(int page, int size, int maximumSize) {
-        return PageRequest.of(Math.max(0, page), Math.min(Math.max(1, size), maximumSize));
+    private PageRequest pageRequest(int page, int size, int maximumSize, String sortField, String sortOrder) {
+        return PageRequest.of(
+                Math.max(0, page),
+                Math.min(Math.max(1, size), maximumSize),
+                resolveSort(sortField, sortOrder)
+        );
     }
 
     private Page<RepairListView> findRepairPage(String term, LocalDateTime from, LocalDateTime to, PageRequest pageRequest) {
@@ -366,6 +372,58 @@ public class RepairService {
             return repairRepository.findPageTo(term, to, pageRequest);
         }
         return repairRepository.findPage(term, pageRequest);
+    }
+
+    private Sort resolveSort(String sortField, String sortOrder) {
+        Sort.Direction direction = "asc".equalsIgnoreCase(sortOrder) ? Sort.Direction.ASC : Sort.Direction.DESC;
+        return switch (sortField == null ? "" : sortField.trim()) {
+            case "clientName" -> Sort.by(
+                    new Sort.Order(direction, "client.lastName").ignoreCase(),
+                    new Sort.Order(direction, "client.name").ignoreCase(),
+                    new Sort.Order(Sort.Direction.DESC, "orderNumber")
+            );
+            case "deviceLabel" -> Sort.by(
+                    new Sort.Order(direction, "device.brand").ignoreCase(),
+                    new Sort.Order(direction, "device.model").ignoreCase(),
+                    new Sort.Order(Sort.Direction.DESC, "orderNumber")
+            );
+            case "quotedAmount" -> Sort.by(
+                    new Sort.Order(direction, "quotedAmount"),
+                    new Sort.Order(Sort.Direction.DESC, "orderNumber")
+            );
+            case "status" -> workflowStatusSort(direction)
+                    .and(Sort.by(new Sort.Order(Sort.Direction.DESC, "orderNumber")));
+            case "orderNumber" -> numericOrderNumberSort(direction);
+            default -> defaultRepairSort();
+        };
+    }
+
+    private Sort defaultRepairSort() {
+        return workflowStatusSort(Sort.Direction.ASC)
+                .and(JpaSort.unsafe(Sort.Direction.DESC, "COALESCE(r.receiveDateTime, r.returnDateTime)"))
+                .and(numericOrderNumberSort(Sort.Direction.DESC));
+    }
+
+    private Sort workflowStatusSort(Sort.Direction direction) {
+        return JpaSort.unsafe(
+                direction,
+                """
+                CASE r.status
+                  WHEN com.taller.model.enums.RepairStatusEnum.POR_RECIBIR THEN 0
+                  WHEN com.taller.model.enums.RepairStatusEnum.RECIBIDA THEN 1
+                  WHEN com.taller.model.enums.RepairStatusEnum.PRESUPUESTADA_ESPERANDO_RESPUESTA THEN 2
+                  WHEN com.taller.model.enums.RepairStatusEnum.HACIENDO THEN 3
+                  WHEN com.taller.model.enums.RepairStatusEnum.ESPERANDO_RETIRO THEN 4
+                  WHEN com.taller.model.enums.RepairStatusEnum.RETIRADA THEN 5
+                  ELSE 6
+                END
+                """
+        );
+    }
+
+    private Sort numericOrderNumberSort(Sort.Direction direction) {
+        return JpaSort.unsafe(direction, "length(r.orderNumber)")
+                .and(JpaSort.unsafe(direction, "r.orderNumber"));
     }
 
     private String normalizeOptionalText(String value) {

@@ -29,8 +29,14 @@ import { SoftwareCatalogItem, WorkshopSettings } from '../../shared/models/deliv
         </div>
         <div class="report-form-grid two-cols">
           <label class="field"><span>Nombre del taller</span><input class="control" [(ngModel)]="settings.businessName" name="businessName" /></label>
-          <label class="field"><span>WhatsApp</span><input class="control" [(ngModel)]="settings.whatsapp" name="whatsapp" /></label>
-          <label class="field"><span>Instagram</span><input class="control" [(ngModel)]="settings.instagram" name="instagram" /></label>
+          <label class="field">
+            <span class="inline-label"><i class="pi pi-whatsapp"></i> WhatsApp</span>
+            <input class="control" [(ngModel)]="settings.whatsapp" name="whatsapp" />
+          </label>
+          <label class="field">
+            <span class="inline-label"><i class="pi pi-instagram"></i> Instagram</span>
+            <input class="control" [(ngModel)]="settings.instagram" name="instagram" />
+          </label>
           <label class="field"><span>Logo</span><input class="control" [value]="settings.logoAssetPath" readonly /></label>
         </div>
       </form>

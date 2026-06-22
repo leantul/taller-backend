@@ -14,12 +14,16 @@ import com.taller.resource.dto.RepairDTO;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
 import java.util.Optional;
 import java.time.LocalDateTime;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -253,6 +257,20 @@ class RepairServiceTest {
 
         assertEquals(RepairStatusEnum.RETIRADA, existing.getStatus());
         assertNotNull(existing.getReturnDateTime());
+    }
+
+    @Test
+    void findPage_usesRequestedSortAcrossWholeQuery() {
+        Page<RepairListView> page = new PageImpl<>(List.of());
+        when(repairRepository.findPage(any(), any(Pageable.class))).thenReturn(page);
+
+        repairService.findPage(0, 10, "", null, null, "clientName", "asc");
+
+        ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
+        verify(repairRepository).findPage(any(), pageableCaptor.capture());
+        Pageable pageable = pageableCaptor.getValue();
+
+        assertEquals("client.lastName: ASC, ignoring case,client.name: ASC, ignoring case,orderNumber: DESC", pageable.getSort().toString());
     }
 
     private RepairDTO updateDto(String repairNotes) {

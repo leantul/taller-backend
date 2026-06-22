@@ -12,10 +12,12 @@ export class RepairApiService {
   constructor(private readonly http: HttpClient) {}
 
   getAll(): Observable<Repair[]> { return this.http.get<Repair[]>(this.url); }
-  getPage(page: number, size: number, term = '', from?: string, to?: string): Observable<PageResponse<Repair>> {
+  getPage(page: number, size: number, term = '', from?: string, to?: string, sortField?: string, sortOrder?: 'asc' | 'desc'): Observable<PageResponse<Repair>> {
     const params = new URLSearchParams({ page: String(page), size: String(size), term });
     if (from) params.set('from', from);
     if (to) params.set('to', to);
+    if (sortField) params.set('sortField', sortField);
+    if (sortOrder) params.set('sortOrder', sortOrder);
     return this.http.get<PageResponse<Repair>>(`${this.url}/page?${params.toString()}`);
   }
   getStatusBoard(): Observable<StatusBoardRepair[]> { return this.http.get<StatusBoardRepair[]>(`${this.url}/status-board`); }

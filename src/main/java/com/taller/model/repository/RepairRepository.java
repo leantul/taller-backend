@@ -125,18 +125,6 @@ public interface RepairRepository extends JpaRepository<Repair, String> {
                OR lower(d.brand) LIKE lower(concat('%', :term, '%'))
                OR lower(d.model) LIKE lower(concat('%', :term, '%'))
                OR lower(d.deviceType.name) LIKE lower(concat('%', :term, '%')))
-            ORDER BY
-              CASE r.status
-                WHEN com.taller.model.enums.RepairStatusEnum.POR_RECIBIR THEN 0
-                WHEN com.taller.model.enums.RepairStatusEnum.RECIBIDA THEN 1
-                WHEN com.taller.model.enums.RepairStatusEnum.PRESUPUESTADA_ESPERANDO_RESPUESTA THEN 2
-                WHEN com.taller.model.enums.RepairStatusEnum.HACIENDO THEN 3
-                WHEN com.taller.model.enums.RepairStatusEnum.ESPERANDO_RETIRO THEN 4
-                WHEN com.taller.model.enums.RepairStatusEnum.RETIRADA THEN 5
-                ELSE 6
-              END ASC,
-              COALESCE(r.receiveDateTime, r.returnDateTime) DESC,
-              r.orderNumber DESC
             """,
             countQuery = """
             SELECT COUNT(r)
@@ -191,18 +179,6 @@ public interface RepairRepository extends JpaRepository<Repair, String> {
                OR lower(d.model) LIKE lower(concat('%', :term, '%'))
                OR lower(d.deviceType.name) LIKE lower(concat('%', :term, '%')))
               AND r.receiveDateTime >= :from
-            ORDER BY
-              CASE r.status
-                WHEN com.taller.model.enums.RepairStatusEnum.POR_RECIBIR THEN 0
-                WHEN com.taller.model.enums.RepairStatusEnum.RECIBIDA THEN 1
-                WHEN com.taller.model.enums.RepairStatusEnum.PRESUPUESTADA_ESPERANDO_RESPUESTA THEN 2
-                WHEN com.taller.model.enums.RepairStatusEnum.HACIENDO THEN 3
-                WHEN com.taller.model.enums.RepairStatusEnum.ESPERANDO_RETIRO THEN 4
-                WHEN com.taller.model.enums.RepairStatusEnum.RETIRADA THEN 5
-                ELSE 6
-              END ASC,
-              COALESCE(r.receiveDateTime, r.returnDateTime) DESC,
-              r.orderNumber DESC
             """,
             countQuery = """
             SELECT COUNT(r)
@@ -259,18 +235,6 @@ public interface RepairRepository extends JpaRepository<Repair, String> {
                OR lower(d.model) LIKE lower(concat('%', :term, '%'))
                OR lower(d.deviceType.name) LIKE lower(concat('%', :term, '%')))
               AND r.receiveDateTime <= :to
-            ORDER BY
-              CASE r.status
-                WHEN com.taller.model.enums.RepairStatusEnum.POR_RECIBIR THEN 0
-                WHEN com.taller.model.enums.RepairStatusEnum.RECIBIDA THEN 1
-                WHEN com.taller.model.enums.RepairStatusEnum.PRESUPUESTADA_ESPERANDO_RESPUESTA THEN 2
-                WHEN com.taller.model.enums.RepairStatusEnum.HACIENDO THEN 3
-                WHEN com.taller.model.enums.RepairStatusEnum.ESPERANDO_RETIRO THEN 4
-                WHEN com.taller.model.enums.RepairStatusEnum.RETIRADA THEN 5
-                ELSE 6
-              END ASC,
-              COALESCE(r.receiveDateTime, r.returnDateTime) DESC,
-              r.orderNumber DESC
             """,
             countQuery = """
             SELECT COUNT(r)
@@ -328,18 +292,6 @@ public interface RepairRepository extends JpaRepository<Repair, String> {
                OR lower(d.deviceType.name) LIKE lower(concat('%', :term, '%')))
               AND r.receiveDateTime >= :from
               AND r.receiveDateTime <= :to
-            ORDER BY
-              CASE r.status
-                WHEN com.taller.model.enums.RepairStatusEnum.POR_RECIBIR THEN 0
-                WHEN com.taller.model.enums.RepairStatusEnum.RECIBIDA THEN 1
-                WHEN com.taller.model.enums.RepairStatusEnum.PRESUPUESTADA_ESPERANDO_RESPUESTA THEN 2
-                WHEN com.taller.model.enums.RepairStatusEnum.HACIENDO THEN 3
-                WHEN com.taller.model.enums.RepairStatusEnum.ESPERANDO_RETIRO THEN 4
-                WHEN com.taller.model.enums.RepairStatusEnum.RETIRADA THEN 5
-                ELSE 6
-              END ASC,
-              COALESCE(r.receiveDateTime, r.returnDateTime) DESC,
-              r.orderNumber DESC
             """,
             countQuery = """
             SELECT COUNT(r)

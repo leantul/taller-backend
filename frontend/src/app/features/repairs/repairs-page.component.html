@@ -110,6 +110,9 @@
               <td>{{ row.quotedAmountLabel }}</td>
               <td class="cell-actions">
                 <div class="action-buttons">
+                  @if (canOpenDeliveryReport(row.repair)) {
+                    <button class="icon-action report-action" type="button" aria-label="Emitir informe" (click)="onRowActionClick($event); openDeliveryReport($event, row.repair)"><i class="pi pi-file-pdf"></i></button>
+                  }
                   <button
                     class="icon-action whatsapp-action"
                     type="button"
@@ -121,9 +124,6 @@
                   </button>
                   <button class="icon-action" type="button" aria-label="Cambiar estado" (click)="onRowActionClick($event); openStatusModal(row.repair)"><i class="pi pi-sync"></i></button>
                   <button class="icon-action" type="button" aria-label="Editar reparación" (click)="onRowActionClick($event); openEditModal(row.repair)"><i class="pi pi-pencil"></i></button>
-                  @if (row.repair.status === 'ESPERANDO_RETIRO') {
-                    <button class="icon-action" type="button" aria-label="Emitir informe" (click)="onRowActionClick($event); openDeliveryReport($event, row.repair)"><i class="pi pi-file-pdf"></i></button>
-                  }
                   <button class="icon-action danger" type="button" aria-label="Eliminar reparación" [disabled]="isDeleting" (click)="onRowActionClick($event); confirmDeleteRepair(row.repair)"><i class="pi pi-trash"></i></button>
                 </div>
               </td>

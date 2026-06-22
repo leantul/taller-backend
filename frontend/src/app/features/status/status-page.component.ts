@@ -73,6 +73,10 @@ export class StatusPageComponent implements OnInit {
     this.deliveryReportDialog?.open(repair);
   }
 
+  canOpenDeliveryReport(repair: Repair): boolean {
+    return repair.status === 'ESPERANDO_RETIRO' || repair.status === 'RETIRADA';
+  }
+
   saveDetailStatus(): void {
     if (!this.selectedRepair) return;
     this.isSavingStatus = true;

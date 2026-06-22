@@ -1321,7 +1321,13 @@ textarea.p-inputtext {
 .action-buttons {
   display: inline-flex;
   align-items: center;
+  justify-content: flex-end;
   gap: .28rem;
+  width: 100%;
+}
+
+.report-action {
+  color: #d14a62;
 }
 
 .icon-action,
@@ -1804,6 +1810,20 @@ textarea.p-inputtext {
 
 .centered-cell {
   text-align: center;
+}
+
+.inline-label {
+  display: inline-flex;
+  align-items: center;
+  gap: .45rem;
+}
+
+.inline-label i.pi-whatsapp {
+  color: #18a957;
+}
+
+.inline-label i.pi-instagram {
+  color: #c13584;
 }
 
 .report-total-field {

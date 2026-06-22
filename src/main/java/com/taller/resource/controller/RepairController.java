@@ -36,8 +36,10 @@ public class RepairController {
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "") String term,
             @RequestParam(required = false) LocalDateTime from,
-            @RequestParam(required = false) LocalDateTime to) {
-        return repairService.findPage(page, size, term, from, to);
+            @RequestParam(required = false) LocalDateTime to,
+            @RequestParam(required = false) String sortField,
+            @RequestParam(required = false) String sortOrder) {
+        return repairService.findPage(page, size, term, from, to, sortField, sortOrder);
     }
 
     @GetMapping("/status-board")

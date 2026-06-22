@@ -22,7 +22,7 @@ import { Repair } from '../models/repair.model';
       [draggable]="false"
       [resizable]="false"
       [style]="{ width: '74rem', maxWidth: '96vw' }"
-      [contentStyle]="{ overflow: 'hidden', padding: '0.75rem 0.75rem 0.5rem' }">
+      [contentStyle]="{ overflow: 'auto', padding: '0.75rem 0.75rem 0.5rem', maxHeight: '86vh' }">
       @if (report) {
         <div class="report-dialog-shell">
           <section class="report-dialog-banner">
@@ -257,43 +257,61 @@ export class DeliveryReportDialogComponent {
   }
 
   previewPdf(): void {
-    this.saveAndGenerate('preview');
+    const previewWindow = window.open('', '_blank');
+    if (!previewWindow) {
+      this.messages.add({ severity: 'warn', summary: 'Ventana bloqueada', detail: 'Permití ventanas emergentes para previsualizar el PDF.' });
+      return;
+    }
+    previewWindow.document.title = 'Generando reporte...';
+    previewWindow.document.body.innerHTML = '<p style="font-family:Arial,sans-serif;padding:16px;">Generando PDF...</p>';
+    this.saveAndGenerate('preview', previewWindow);
   }
 
   downloadPdf(): void {
     this.saveAndGenerate('download');
   }
 
-  private saveAndGenerate(mode: 'preview' | 'download'): void {
+  private saveAndGenerate(mode: 'preview' | 'download', previewWindow?: Window | null): void {
     if (!this.report) {
       return;
     }
     this.isGenerating = true;
     this.api.saveDeliveryReport(this.currentRepairId, this.report).subscribe({
       next: (saved) => {
-        this.report = saved;
+        this.report = {
+          ...saved,
+          hardwareItems: (saved.hardwareItems || []).map((item) => ({ ...item, includePrice: item.includePrice !== false })),
+          softwareItems: (saved.softwareItems || []).map((item) => ({ ...item }))
+        };
         this.api.getDeliveryReportPdf(this.currentRepairId).subscribe({
           next: (blob) => {
             this.isGenerating = false;
-            this.openBlob(blob, mode);
+            this.openBlob(blob, mode, previewWindow);
           },
           error: () => {
             this.isGenerating = false;
+            previewWindow?.close();
             this.messages.add({ severity: 'error', summary: 'Error', detail: 'No se pudo generar el PDF.' });
           }
         });
       },
       error: () => {
         this.isGenerating = false;
+        previewWindow?.close();
         this.messages.add({ severity: 'error', summary: 'Error', detail: 'No se pudo guardar el reporte antes de generar el PDF.' });
       }
     });
   }
 
-  private openBlob(blob: Blob, mode: 'preview' | 'download'): void {
+  private openBlob(blob: Blob, mode: 'preview' | 'download', previewWindow?: Window | null): void {
     const url = URL.createObjectURL(blob);
     if (mode === 'preview') {
-      window.open(url, '_blank', 'noopener');
+      if (previewWindow) {
+        previewWindow.location.href = url;
+        previewWindow.focus();
+      } else {
+        window.open(url, '_blank', 'noopener');
+      }
       setTimeout(() => URL.revokeObjectURL(url), 60_000);
       return;
     }

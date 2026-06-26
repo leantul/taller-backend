@@ -1457,6 +1457,22 @@ textarea.p-inputtext {
   padding-right: 0;
 }
 
+.client-detail-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.client-detail-name {
+  grid-column: 1;
+}
+
+.client-detail-phone {
+  grid-column: 2;
+}
+
+.client-detail-reference {
+  grid-column: 1 / -1;
+}
+
 .detail-dialog-body {
   max-height: min(78vh, 54rem);
   overflow-y: auto;
@@ -1931,6 +1947,13 @@ textarea.p-inputtext {
 
   .repair-detail-grid {
     grid-template-columns: 1fr;
+  }
+
+  .client-detail-grid,
+  .client-detail-name,
+  .client-detail-phone,
+  .client-detail-reference {
+    grid-column: 1;
   }
 
   .placeholder-panel {

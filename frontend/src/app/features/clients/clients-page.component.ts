@@ -119,10 +119,10 @@ type ClientTableColumn = {
     <p-dialog [header]="showClientData ? 'Detalle del cliente' : 'Reparaciones del cliente'" [(visible)]="historyVisible" [modal]="true" [style]="{width:'70rem', maxWidth:'95vw'}">
       @if (showClientData && selectedClient) {
         <div class="detail-grid client-detail-grid">
-          @if (fullName) { <div class="detail-item"><label>Nombre</label><strong>{{ fullName }}</strong></div> }
-          @if (selectedClient.reference) { <div class="detail-item detail-wide"><label>Referencia</label><div>{{ selectedClient.reference }}</div></div> }
-          @if (selectedClient.email) { <div class="detail-item"><label>Email</label><strong>{{ selectedClient.email }}</strong></div> }
-          @if (selectedClient.phone) { <div class="detail-item"><label>Teléfono</label><strong>{{ selectedClient.phone }}</strong></div> }
+          @if (fullName) { <div class="detail-item client-detail-name"><label>Nombre</label><strong>{{ fullName }}</strong></div> }
+          @if (selectedClient.phone) { <div class="detail-item client-detail-phone"><label>Teléfono</label><strong>{{ selectedClient.phone }}</strong></div> }
+          @if (selectedClient.reference) { <div class="detail-item detail-wide client-detail-reference"><label>Referencia</label><div>{{ selectedClient.reference }}</div></div> }
+          @if (selectedClient.email) { <div class="detail-item client-detail-email"><label>Email</label><strong>{{ selectedClient.email }}</strong></div> }
           @if (selectedClient.address) { <div class="detail-item"><label>Dirección</label><strong>{{ selectedClient.address }}</strong></div> }
           @if (selectedClient.birthDate) { <div class="detail-item"><label>Nacimiento</label><strong>{{ selectedClient.birthDate | date:'dd/MM/yyyy' }}</strong></div> }
           @if (selectedClient.phones?.length) { <div class="detail-item"><label>Otros teléfonos</label><strong>{{ selectedClient.phones?.join(', ') }}</strong></div> }

@@ -55,7 +55,6 @@ public class DeliveryReportService {
         report.setClientLastName(normalizeOptional(dto.getClientLastName()));
         report.setClientPhone(normalizeOptional(dto.getClientPhone()));
         report.setClientEmail(normalizeOptional(dto.getClientEmail()));
-        report.setClientDni(normalizeOptional(dto.getClientDni()));
         report.setDeviceTypeName(normalizeOptional(dto.getDeviceTypeName()));
         report.setDeviceBrand(normalizeOptional(dto.getDeviceBrand()));
         report.setDeviceModel(normalizeOptional(dto.getDeviceModel()));
@@ -122,7 +121,6 @@ public class DeliveryReportService {
         dto.setClientLastName(repair.getClientLastName());
         dto.setClientPhone(repair.getClientPhone());
         dto.setClientEmail(repair.getClientEmail());
-        dto.setClientDni(repair.getClientDni());
         dto.setDeviceTypeName(repair.getDeviceTypeName());
         dto.setDeviceBrand(repair.getDeviceBrand());
         dto.setDeviceModel(repair.getDeviceModel());
@@ -151,7 +149,6 @@ public class DeliveryReportService {
         dto.setClientLastName(report.getClientLastName());
         dto.setClientPhone(report.getClientPhone());
         dto.setClientEmail(report.getClientEmail());
-        dto.setClientDni(report.getClientDni());
         dto.setDeviceTypeName(report.getDeviceTypeName());
         dto.setDeviceBrand(report.getDeviceBrand());
         dto.setDeviceModel(report.getDeviceModel());

@@ -21,8 +21,8 @@ public class Client extends BasicEntity {
     @Column(name = "last_name")
     private String lastName;
 
-    @Column(name = "dni")
-    private String dni;
+    @Column(name = "reference", columnDefinition = "TEXT")
+    private String reference;
 
     @Column(name = "email")
     private String email;

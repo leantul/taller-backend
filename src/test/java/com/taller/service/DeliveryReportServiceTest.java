@@ -107,7 +107,6 @@ class DeliveryReportServiceTest {
         dto.setClientLastName("Lovelace");
         dto.setClientPhone("1133445566");
         dto.setClientEmail("ada@example.com");
-        dto.setClientDni("30111222");
         dto.setDeviceTypeName("Notebook");
         dto.setDeviceBrand("Lenovo");
         dto.setDeviceModel("T14");
@@ -157,7 +156,6 @@ class DeliveryReportServiceTest {
         when(source.getClientLastName()).thenReturn("Lovelace");
         when(source.getClientPhone()).thenReturn("1133445566");
         when(source.getClientEmail()).thenReturn("ada@example.com");
-        when(source.getClientDni()).thenReturn("30111222");
         when(source.getDeviceTypeName()).thenReturn("Notebook");
         when(source.getDeviceBrand()).thenReturn("Lenovo");
         when(source.getDeviceModel()).thenReturn("T14");
@@ -184,7 +182,6 @@ class DeliveryReportServiceTest {
         when(view.getClientLastName()).thenReturn("Lovelace");
         when(view.getClientPhone()).thenReturn("1133445566");
         when(view.getClientEmail()).thenReturn("ada@example.com");
-        when(view.getClientDni()).thenReturn("30111222");
         when(view.getDeviceTypeName()).thenReturn("Notebook");
         when(view.getDeviceBrand()).thenReturn("Lenovo");
         when(view.getDeviceModel()).thenReturn("T14");

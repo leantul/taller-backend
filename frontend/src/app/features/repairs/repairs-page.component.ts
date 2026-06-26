@@ -29,12 +29,12 @@ type RepairTableRow = {
   deviceLabel: string;
   statusLabel: string;
   statusClass: string;
-  quotedAmountLabel: string;
+  finalAmountLabel: string;
   clientPhone: string;
 };
 
-type RepairTableColumnKey = 'orderLabel' | 'clientLabel' | 'deviceLabel' | 'statusLabel' | 'quotedAmountValue' | 'actions';
-type RepairSortField = 'orderNumber' | 'clientName' | 'deviceLabel' | 'status' | 'quotedAmount';
+type RepairTableColumnKey = 'orderLabel' | 'clientLabel' | 'deviceLabel' | 'statusLabel' | 'finalAmountValue' | 'actions';
+type RepairSortField = 'orderNumber' | 'clientName' | 'deviceLabel' | 'status' | 'price';
 
 type RepairTableColumn = {
   key: RepairTableColumnKey;
@@ -83,9 +83,9 @@ export class RepairsPageComponent implements OnInit {
   clientSearch = '';
   selectedClientName = '';
   clientSuggestions: { label: string; value: string }[] = [];
-  draft: Repair = { idDevice: '', idClient: '', orderNumber: '', description: '', status: 'POR_RECIBIR', price: 0, quotedAmount: 0, quoteNotes: '', parts: [], observations: [] };
+  draft: Repair = { idDevice: '', idClient: '', orderNumber: '', description: '', status: 'POR_RECIBIR', price: 0, quotedAmount: 0, quoteNotes: '', repairNotes: '', parts: [], observations: [] };
   editingRepair: Repair = { idDevice: '', idClient: '', orderNumber: '', description: '', status: 'POR_RECIBIR', price: 0, quotedAmount: 0, quoteNotes: '', parts: [], observations: [] };
-  draftClient: Client = { name: '', lastName: '', dni: '', email: '', phone: '' };
+  draftClient: Client = { name: '', lastName: '', reference: '', email: '', phone: '' };
   statusEditingRepair: Repair | null = null;
   searchTerm = '';
   currentPage = 1;
@@ -105,7 +105,7 @@ export class RepairsPageComponent implements OnInit {
     { key: 'clientLabel', label: 'Cliente', width: '16rem', sortable: true },
     { key: 'deviceLabel', label: 'Dispositivo', width: '16rem', sortable: true },
     { key: 'statusLabel', label: 'Estado', width: '12rem', sortable: true },
-    { key: 'quotedAmountValue', label: 'Presupuesto', width: '11rem', sortable: true },
+    { key: 'finalAmountValue', label: 'Monto final', width: '11rem', sortable: true },
     { key: 'actions', label: 'Acción', width: '14rem', sortable: false }
   ];
   sortColumn: Exclude<RepairTableColumnKey, 'actions'> = 'orderLabel';
@@ -113,9 +113,11 @@ export class RepairsPageComponent implements OnInit {
   private resizingColumnKey: RepairTableColumnKey | null = null;
   private resizeStartX = 0;
   private resizeStartWidth = 0;
+  private readonly columnWidthStorageKey = 'taller.repairs.columnWidths';
 
   constructor(private readonly api: ApiService, private readonly messageService: MessageService, private readonly route: ActivatedRoute, private readonly confirmationService: ConfirmationService, private readonly changeDetector: ChangeDetectorRef) {}
   ngOnInit(): void {
+    this.restoreColumnWidths();
     forkJoin({ clients: this.api.getClients(), devices: this.api.getDevices(), deviceTypes: this.api.getDeviceTypes() }).subscribe(({ clients, devices, deviceTypes }) => {
       this.clients = clients;
       this.clientsById = new Map(clients.filter(item => !!item.id).map(item => [item.id!, item]));
@@ -177,7 +179,7 @@ export class RepairsPageComponent implements OnInit {
       next: () => {
         this.isSaving = false;
         this.messageService.add({ severity: 'success', summary: 'Reparación guardada', detail: 'Alta creada correctamente.' });
-      this.draft = { idDevice: '', idClient: '', orderNumber: '', description: '', status: 'POR_RECIBIR', price: 0, quotedAmount: 0, quoteNotes: '', parts: [], observations: [] };
+      this.draft = { idDevice: '', idClient: '', orderNumber: '', description: '', status: 'POR_RECIBIR', price: 0, quotedAmount: 0, quoteNotes: '', repairNotes: '', parts: [], observations: [] };
         this.selectedClientName='';
         this.clientDevices=[];
         this.rebuildClientDeviceOptions();
@@ -222,7 +224,7 @@ export class RepairsPageComponent implements OnInit {
         this.rebuildStaticOptions();
         this.updateFilteredClients();
         this.selectClient(client);
-        this.draftClient = { name: '', lastName: '', dni: '', email: '', phone: '' };
+        this.draftClient = { name: '', lastName: '', reference: '', email: '', phone: '' };
         this.showNewClientModal = false;
         this.changeDetector.detectChanges();
       },
@@ -529,7 +531,7 @@ export class RepairsPageComponent implements OnInit {
       deviceLabel: this.deviceLabel(repair),
       statusLabel: this.statusLabel(repair.status),
       statusClass: this.statusClass(repair.status),
-      quotedAmountLabel: this.formatMoney(repair.quotedAmount),
+      finalAmountLabel: this.formatMoney(repair.price),
       clientPhone: this.clientPhone(repair)
     };
   }
@@ -542,7 +544,7 @@ export class RepairsPageComponent implements OnInit {
       this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
     } else {
       this.sortColumn = column;
-      this.sortDirection = column === 'orderLabel' || column === 'quotedAmountValue' ? 'desc' : 'asc';
+      this.sortDirection = column === 'orderLabel' || column === 'finalAmountValue' ? 'desc' : 'asc';
     }
     this.currentPage = 1;
     this.reload();
@@ -582,6 +584,7 @@ export class RepairsPageComponent implements OnInit {
       const column = this.repairColumns.find((item) => item.key === this.resizingColumnKey);
       if (column) {
         column.width = `${nextWidth}px`;
+        this.persistColumnWidths();
         this.changeDetector.detectChanges();
       }
     };
@@ -617,7 +620,7 @@ export class RepairsPageComponent implements OnInit {
     const term = this.clientSearch.trim().toLowerCase();
     this.filteredClientsList = !term
       ? this.clients
-      : this.clients.filter((c) => `${c.name} ${c.lastName} ${c.phone} ${c.email}`.toLowerCase().includes(term));
+      : this.clients.filter((c) => `${c.name} ${c.lastName} ${c.reference || ''} ${c.phone} ${c.email}`.toLowerCase().includes(term));
   }
 
   private rebuildStaticOptions(): void {
@@ -703,11 +706,31 @@ export class RepairsPageComponent implements OnInit {
         return 'deviceLabel';
       case 'statusLabel':
         return 'status';
-      case 'quotedAmountValue':
-        return 'quotedAmount';
+      case 'finalAmountValue':
+        return 'price';
       case 'orderLabel':
       default:
         return 'orderNumber';
     }
+  }
+
+  private restoreColumnWidths(): void {
+    const stored = localStorage.getItem(this.columnWidthStorageKey);
+    if (!stored) return;
+    try {
+      const widths = JSON.parse(stored) as Partial<Record<RepairTableColumnKey, string>>;
+      this.repairColumns.forEach((column) => {
+        if (widths[column.key]) column.width = widths[column.key]!;
+      });
+    } catch {
+      localStorage.removeItem(this.columnWidthStorageKey);
+    }
+  }
+
+  private persistColumnWidths(): void {
+    localStorage.setItem(
+      this.columnWidthStorageKey,
+      JSON.stringify(Object.fromEntries(this.repairColumns.map((column) => [column.key, column.width])))
+    );
   }
 }

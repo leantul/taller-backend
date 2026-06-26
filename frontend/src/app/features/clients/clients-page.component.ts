@@ -14,6 +14,15 @@ import { Repair } from '../../shared/models/repair.model';
 import { RepairDetailDialogComponent } from '../../shared/components/repair-detail-dialog.component';
 import { repairStatusClass, repairStatusLabel } from '../../shared/utils/repair-status.util';
 
+type ClientTableColumnKey = 'name' | 'deviceCount' | 'repairCount' | 'phone' | 'actions';
+type ClientSortColumn = Exclude<ClientTableColumnKey, 'actions'>;
+type ClientTableColumn = {
+  key: ClientTableColumnKey;
+  label: string;
+  width: string;
+  sortable: boolean;
+};
+
 @Component({
   selector: 'app-clients-page',
   standalone: true,
@@ -31,7 +40,7 @@ import { repairStatusClass, repairStatusLabel } from '../../shared/utils/repair-
         <form class="p-fluid" (ngSubmit)="save()">
           <div class="field"><label>Nombre</label><input pInputText [(ngModel)]="draft.name" name="name" required /></div>
           <div class="field"><label>Apellido</label><input pInputText [(ngModel)]="draft.lastName" name="lastName" required /></div>
-          <div class="field"><label>DNI</label><input pInputText [(ngModel)]="draft.dni" name="dni" pattern="^[0-9]+$" required /></div>
+          <div class="field"><label>Referencia</label><textarea class="p-inputtext" rows="3" [(ngModel)]="draft.reference" name="reference" placeholder="Amigo de..., hermano de..."></textarea></div>
           <div class="field"><label>Email</label><input pInputText [(ngModel)]="draft.email" name="email" type="email" required /></div>
           <div class="field"><label>Celular</label><input pInputText [(ngModel)]="draft.phone" name="phone" required /></div>
           <button pButton type="submit" label="Guardar cliente" icon="pi pi-check"></button>
@@ -40,17 +49,32 @@ import { repairStatusClass, repairStatusLabel } from '../../shared/utils/repair-
 
       <p-card header="Clientes">
         <div class="table-toolbar">
-          <span class="p-input-icon-left filter-search"><i class="pi pi-search"></i><input pInputText [(ngModel)]="searchTerm" (ngModelChange)="onSearch($event)" placeholder="Buscar por nombre, DNI, teléfono o email" /></span>
+          <span class="p-input-icon-left filter-search"><i class="pi pi-search"></i><input pInputText [(ngModel)]="searchTerm" (ngModelChange)="onSearch($event)" placeholder="Buscar por nombre, referencia, teléfono o email" /></span>
         </div>
         <div class="native-table-wrap">
-          <table class="native-table">
+          <table class="native-table resizable-table clients-table">
             <thead>
               <tr>
-                <th><button class="sortable-th" type="button" (click)="sortByColumn('name')">Nombre <i [ngClass]="sortIcon('name')"></i></button></th>
-                <th><button class="sortable-th" type="button" (click)="sortByColumn('deviceCount')">Cantidad de dispositivos <i [ngClass]="sortIcon('deviceCount')"></i></button></th>
-                <th><button class="sortable-th" type="button" (click)="sortByColumn('repairCount')">Reparaciones <i [ngClass]="sortIcon('repairCount')"></i></button></th>
-                <th><button class="sortable-th" type="button" (click)="sortByColumn('phone')">Teléfono <i [ngClass]="sortIcon('phone')"></i></button></th>
-                <th>Acciones</th>
+                @for (column of clientColumns; track column.key) {
+                  <th [style.width]="columnWidth(column.key)">
+                    @if (column.sortable) {
+                      <button class="sortable-th" type="button" (click)="sortByColumn(column.key)">
+                        <span>{{ column.label }}</span>
+                        <i [ngClass]="sortIcon(column.key)"></i>
+                      </button>
+                    } @else {
+                      <span class="table-head-label">{{ column.label }}</span>
+                    }
+                    <button
+                      class="column-resize-handle"
+                      type="button"
+                      tabindex="-1"
+                      aria-hidden="true"
+                      (click)="$event.stopPropagation()"
+                      (mousedown)="startColumnResize($event, column.key)">
+                    </button>
+                  </th>
+                }
               </tr>
             </thead>
             <tbody>
@@ -86,7 +110,7 @@ import { repairStatusClass, repairStatusLabel } from '../../shared/utils/repair-
     <p-dialog header="Editar cliente" [(visible)]="editVisible" [modal]="true" [style]="{width:'32rem'}">
       <div class="field"><label>Nombre</label><input pInputText [(ngModel)]="editing.name" /></div>
       <div class="field"><label>Apellido</label><input pInputText [(ngModel)]="editing.lastName" /></div>
-      <div class="field"><label>DNI</label><input pInputText [(ngModel)]="editing.dni" /></div>
+      <div class="field"><label>Referencia</label><textarea class="p-inputtext" rows="3" [(ngModel)]="editing.reference" placeholder="Amigo de..., hermano de..."></textarea></div>
       <div class="field"><label>Email</label><input pInputText [(ngModel)]="editing.email" /></div>
       <div class="field"><label>Celular</label><input pInputText [(ngModel)]="editing.phone" /></div>
       <button pButton type="button" label="Guardar cambios" icon="pi pi-check" (click)="updateClient()"></button>
@@ -96,7 +120,7 @@ import { repairStatusClass, repairStatusLabel } from '../../shared/utils/repair-
       @if (showClientData && selectedClient) {
         <div class="detail-grid client-detail-grid">
           @if (fullName) { <div class="detail-item"><label>Nombre</label><strong>{{ fullName }}</strong></div> }
-          @if (selectedClient.dni) { <div class="detail-item"><label>DNI</label><strong>{{ selectedClient.dni }}</strong></div> }
+          @if (selectedClient.reference) { <div class="detail-item detail-wide"><label>Referencia</label><div>{{ selectedClient.reference }}</div></div> }
           @if (selectedClient.email) { <div class="detail-item"><label>Email</label><strong>{{ selectedClient.email }}</strong></div> }
           @if (selectedClient.phone) { <div class="detail-item"><label>Teléfono</label><strong>{{ selectedClient.phone }}</strong></div> }
           @if (selectedClient.address) { <div class="detail-item"><label>Dirección</label><strong>{{ selectedClient.address }}</strong></div> }
@@ -144,7 +168,7 @@ export class ClientsPageComponent implements OnInit, OnDestroy {
   editing: Client = this.emptyClient();
   editVisible = false;
   searchTerm = '';
-  sortBy: 'createdAt' | 'name' | 'deviceCount' | 'repairCount' | 'phone' = 'createdAt';
+  sortBy: 'createdAt' | ClientSortColumn = 'createdAt';
   sortDir: 'asc' | 'desc' = 'desc';
   currentPage = 0;
   pageSize = 10;
@@ -159,10 +183,22 @@ export class ClientsPageComponent implements OnInit, OnDestroy {
   historyPageSize = 5;
   historyTotalElements = 0;
   historyTotalPages = 0;
+  readonly clientColumns: ClientTableColumn[] = [
+    { key: 'name', label: 'Nombre', width: '16rem', sortable: true },
+    { key: 'deviceCount', label: 'Cantidad de dispositivos', width: '13rem', sortable: true },
+    { key: 'repairCount', label: 'Reparaciones', width: '10rem', sortable: true },
+    { key: 'phone', label: 'Teléfono', width: '12rem', sortable: true },
+    { key: 'actions', label: 'Acciones', width: '11rem', sortable: false }
+  ];
+  private readonly columnWidthStorageKey = 'taller.clients.columnWidths';
+  private resizingColumnKey: ClientTableColumnKey | null = null;
+  private resizeStartX = 0;
+  private resizeStartWidth = 0;
 
   constructor(private readonly api: ApiService, private readonly messages: MessageService, private readonly confirmations: ConfirmationService, private readonly changeDetector: ChangeDetectorRef) {}
 
   ngOnInit(): void {
+    this.restoreColumnWidths();
     this.search$.pipe(debounceTime(300), distinctUntilChanged(), takeUntil(this.destroy$)).subscribe(() => { this.currentPage = 0; this.reload(); });
     this.reload();
   }
@@ -186,7 +222,7 @@ export class ClientsPageComponent implements OnInit, OnDestroy {
   openClientDialog(client: ClientListItem, includeClient: boolean): void {
     this.selectedClientId = client.id;
     this.showClientData = includeClient;
-    this.selectedClient = { id: client.id, name: client.name, lastName: client.lastName, dni: '', email: '', phone: client.phone || '' };
+    this.selectedClient = { id: client.id, name: client.name, lastName: client.lastName, reference: '', email: '', phone: client.phone || '' };
     this.historyPage = 0;
     this.loadHistory();
   }
@@ -200,7 +236,8 @@ export class ClientsPageComponent implements OnInit, OnDestroy {
     this.api.deleteClient(id).subscribe({ next: () => { this.messages.add({ severity: 'success', summary: 'Cliente eliminado', detail: 'Se eliminó correctamente.' }); this.reload(); }, error: () => this.messages.add({ severity: 'error', summary: 'Error', detail: 'No se pudo eliminar el cliente.' }) });
   }
   onSearch(term: string): void { this.search$.next(term.trim()); }
-  sortByColumn(column: 'name' | 'deviceCount' | 'repairCount' | 'phone'): void {
+  sortByColumn(column: ClientTableColumnKey): void {
+    if (column === 'actions') return;
     if (this.sortBy === column) {
       this.sortDir = this.sortDir === 'asc' ? 'desc' : 'asc';
     } else {
@@ -210,8 +247,8 @@ export class ClientsPageComponent implements OnInit, OnDestroy {
     this.currentPage = 0;
     this.reload();
   }
-  sortIcon(column: 'name' | 'deviceCount' | 'repairCount' | 'phone'): string {
-    if (this.sortBy !== column) return 'pi pi-sort-alt';
+  sortIcon(column: ClientTableColumnKey): string {
+    if (column === 'actions' || this.sortBy !== column) return 'pi pi-sort-alt';
     return this.sortDir === 'asc' ? 'pi pi-sort-amount-up-alt' : 'pi pi-sort-amount-down';
   }
   previousPage(): void { if (this.currentPage > 0) { this.currentPage--; this.reload(); } }
@@ -229,6 +266,41 @@ export class ClientsPageComponent implements OnInit, OnDestroy {
   get paginationLabel(): string { if (!this.totalElements) return '0 clientes'; const start = this.currentPage * this.pageSize + 1; return `${start}-${Math.min(start + this.clients.length - 1, this.totalElements)} de ${this.totalElements} clientes`; }
   get historyPaginationLabel(): string { if (!this.historyTotalElements) return '0 reparaciones'; const start = this.historyPage * this.historyPageSize + 1; return `${start}-${Math.min(start + this.clientRepairs.length - 1, this.historyTotalElements)} de ${this.historyTotalElements} reparaciones`; }
 
+  columnWidth(columnKey: ClientTableColumnKey): string {
+    return this.clientColumns.find((column) => column.key === columnKey)?.width || 'auto';
+  }
+
+  startColumnResize(event: MouseEvent, columnKey: ClientTableColumnKey): void {
+    event.preventDefault();
+    event.stopPropagation();
+    const header = (event.currentTarget as HTMLElement).closest('th');
+    if (!header) return;
+
+    this.resizingColumnKey = columnKey;
+    this.resizeStartX = event.clientX;
+    this.resizeStartWidth = header.getBoundingClientRect().width;
+
+    const onMouseMove = (moveEvent: MouseEvent) => {
+      if (!this.resizingColumnKey) return;
+      const nextWidth = Math.max(96, Math.round(this.resizeStartWidth + (moveEvent.clientX - this.resizeStartX)));
+      const column = this.clientColumns.find((item) => item.key === this.resizingColumnKey);
+      if (column) {
+        column.width = `${nextWidth}px`;
+        this.persistColumnWidths();
+        this.changeDetector.detectChanges();
+      }
+    };
+
+    const onMouseUp = () => {
+      this.resizingColumnKey = null;
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+    };
+
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+  }
+
   private reload(): void {
     this.api.getClientPage(this.currentPage, this.pageSize, this.searchTerm.trim(), this.sortBy, this.sortDir).subscribe((page) => {
       this.clients = page.content; this.currentPage = page.page; this.totalElements = page.totalElements; this.totalPages = page.totalPages; this.changeDetector.detectChanges();
@@ -245,5 +317,25 @@ export class ClientsPageComponent implements OnInit, OnDestroy {
       this.changeDetector.detectChanges();
     });
   }
-  private emptyClient(): Client { return { name: '', lastName: '', dni: '', email: '', phone: '' }; }
+  private restoreColumnWidths(): void {
+    const stored = localStorage.getItem(this.columnWidthStorageKey);
+    if (!stored) return;
+    try {
+      const widths = JSON.parse(stored) as Partial<Record<ClientTableColumnKey, string>>;
+      this.clientColumns.forEach((column) => {
+        if (widths[column.key]) column.width = widths[column.key]!;
+      });
+    } catch {
+      localStorage.removeItem(this.columnWidthStorageKey);
+    }
+  }
+
+  private persistColumnWidths(): void {
+    localStorage.setItem(
+      this.columnWidthStorageKey,
+      JSON.stringify(Object.fromEntries(this.clientColumns.map((column) => [column.key, column.width])))
+    );
+  }
+
+  private emptyClient(): Client { return { name: '', lastName: '', reference: '', email: '', phone: '' }; }
 }

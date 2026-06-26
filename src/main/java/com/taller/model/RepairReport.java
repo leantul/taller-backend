@@ -43,9 +43,6 @@ public class RepairReport extends BasicEntity {
     @Column(name = "client_email")
     private String clientEmail;
 
-    @Column(name = "client_dni")
-    private String clientDni;
-
     @Column(name = "device_type_name")
     private String deviceTypeName;
 

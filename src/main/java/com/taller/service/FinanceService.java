@@ -54,6 +54,12 @@ public class FinanceService {
         BigDecimal totalQuoted = deliveredRepairs.stream()
                 .map(repair -> safeMoney(repair.getQuotedAmount()))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
+        long zeroFinalAmountCount = deliveredRepairs.stream()
+                .filter(repair -> safeMoney(repair.getPrice()).compareTo(BigDecimal.ZERO) == 0)
+                .count();
+        long positiveFinalAmountCount = deliveredRepairs.stream()
+                .filter(repair -> safeMoney(repair.getPrice()).compareTo(BigDecimal.ZERO) > 0)
+                .count();
         BigDecimal netIncome = rows.stream()
                 .map(FinanceRowDTO::getNet)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
@@ -66,6 +72,8 @@ public class FinanceService {
         summary.setTotalPartsCost(totalPartsCost);
         summary.setTotalLabor(totalLabor);
         summary.setTotalQuoted(totalQuoted);
+        summary.setZeroFinalAmountCount(zeroFinalAmountCount);
+        summary.setPositiveFinalAmountCount(positiveFinalAmountCount);
         summary.setNetIncome(netIncome);
         summary.setAverageNet(rows.isEmpty() ? BigDecimal.ZERO : netIncome.divide(BigDecimal.valueOf(rows.size()), 2, java.math.RoundingMode.HALF_UP));
         summary.setDeliveredCount(rows.size());

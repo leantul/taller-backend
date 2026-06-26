@@ -26,6 +26,15 @@ const HISTORY_DATE_FORMATTER = new Intl.DateTimeFormat('es-AR', {
   hour12: false
 });
 
+type DeviceTableColumnKey = 'deviceType' | 'brand' | 'model' | 'client' | 'observations' | 'password' | 'actions';
+type DeviceSortColumn = Exclude<DeviceTableColumnKey, 'actions'>;
+type DeviceTableColumn = {
+  key: DeviceTableColumnKey;
+  label: string;
+  width: string;
+  sortable: boolean;
+};
+
 @Component({
   selector: 'app-devices-page',
   standalone: true,
@@ -84,8 +93,31 @@ const HISTORY_DATE_FORMATTER = new Intl.DateTimeFormat('es-AR', {
             appendTo="body"></p-autoComplete>
         </div>
         <div class="native-table-wrap">
-          <table class="native-table">
-            <thead><tr><th>Tipo</th><th>Marca</th><th>Modelo</th><th>Cliente</th><th>Observaciones</th><th>Contraseña actual</th><th>Acciones</th></tr></thead>
+          <table class="native-table resizable-table devices-table">
+            <thead>
+              <tr>
+                @for (column of deviceColumns; track column.key) {
+                  <th [style.width]="columnWidth(column.key)">
+                    @if (column.sortable) {
+                      <button class="sortable-th" type="button" (click)="sortByColumn(column.key)">
+                        <span>{{ column.label }}</span>
+                        <i [ngClass]="sortIcon(column.key)"></i>
+                      </button>
+                    } @else {
+                      <span class="table-head-label">{{ column.label }}</span>
+                    }
+                    <button
+                      class="column-resize-handle"
+                      type="button"
+                      tabindex="-1"
+                      aria-hidden="true"
+                      (click)="$event.stopPropagation()"
+                      (mousedown)="startColumnResize($event, column.key)">
+                    </button>
+                  </th>
+                }
+              </tr>
+            </thead>
             <tbody>
               @for (d of visibleDevices; track d.id || d.serialNumber) {
                 <tr>
@@ -293,7 +325,7 @@ const HISTORY_DATE_FORMATTER = new Intl.DateTimeFormat('es-AR', {
     <p-dialog header="Nuevo cliente" [(visible)]="showNewClientModal" [modal]="true" [style]="{width:'34rem'}">
       <div class="field"><label>Nombre</label><input pInputText [(ngModel)]="draftClient.name" autocomplete="off" /></div>
       <div class="field"><label>Apellido</label><input pInputText [(ngModel)]="draftClient.lastName" autocomplete="off" /></div>
-      <div class="field"><label>DNI</label><input pInputText [(ngModel)]="draftClient.dni" autocomplete="off" /></div>
+      <div class="field"><label>Referencia</label><textarea class="p-inputtext" rows="3" [(ngModel)]="draftClient.reference" placeholder="Amigo de..., hermano de..."></textarea></div>
       <div class="field"><label>Email</label><input pInputText [(ngModel)]="draftClient.email" autocomplete="off" /></div>
       <div class="field"><label>Celular</label><input pInputText [(ngModel)]="draftClient.phone" autocomplete="off" /></div>
       <button pButton type="button" label="Guardar cliente" icon="pi pi-check" (click)="createClientInline()"></button>
@@ -306,7 +338,7 @@ export class DevicesPageComponent implements OnInit {
   clients: Client[] = [];
   draft: Device = { brand: '', model: '', serialNumber: '', clientId: '', deviceTypeId: '', technicalDetails: '', currentPassword: '' };
   editing: Device = { brand: '', model: '', serialNumber: '', clientId: '', deviceTypeId: '', technicalDetails: '', currentPassword: '', passwordHistory: [] };
-  draftClient: Client = { name: '', lastName: '', dni: '', email: '', phone: '' };
+  draftClient: Client = { name: '', lastName: '', reference: '', email: '', phone: '' };
   editVisible = false;
   passwordVisible = false;
   observationVisible = false;
@@ -318,6 +350,8 @@ export class DevicesPageComponent implements OnInit {
   pageSize = 10;
   totalPages = 1;
   totalElements = 0;
+  sortBy: 'createdAt' | DeviceSortColumn = 'createdAt';
+  sortDir: 'asc' | 'desc' = 'desc';
   showDraftPassword = false;
   showEditPassword = false;
   showCurrentPassword = false;
@@ -335,6 +369,19 @@ export class DevicesPageComponent implements OnInit {
   clientFilterSuggestions: { label: string; value: string }[] = [];
   private newClientTarget: 'draft' | 'edit' = 'draft';
   typeOptions: DeviceType[] = [];
+  readonly deviceColumns: DeviceTableColumn[] = [
+    { key: 'deviceType', label: 'Tipo', width: '10rem', sortable: true },
+    { key: 'brand', label: 'Marca', width: '10rem', sortable: true },
+    { key: 'model', label: 'Modelo', width: '12rem', sortable: true },
+    { key: 'client', label: 'Cliente', width: '16rem', sortable: true },
+    { key: 'observations', label: 'Observaciones', width: '14rem', sortable: true },
+    { key: 'password', label: 'Contraseña actual', width: '14rem', sortable: true },
+    { key: 'actions', label: 'Acciones', width: '13rem', sortable: false }
+  ];
+  private readonly columnWidthStorageKey = 'taller.devices.columnWidths';
+  private resizingColumnKey: DeviceTableColumnKey | null = null;
+  private resizeStartX = 0;
+  private resizeStartWidth = 0;
 
   constructor(
     private readonly api: ApiService,
@@ -344,6 +391,7 @@ export class DevicesPageComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
+    this.restoreColumnWidths();
     forkJoin({ clients: this.api.getClients(), deviceTypes: this.api.getDeviceTypes() }).subscribe(({ clients, deviceTypes }) => {
       this.clients = clients;
       this.typeOptions = deviceTypes;
@@ -411,7 +459,7 @@ export class DevicesPageComponent implements OnInit {
 
   openNewClientModal(target: 'draft' | 'edit'): void {
     this.newClientTarget = target;
-    this.draftClient = { name: '', lastName: '', dni: '', email: '', phone: '' };
+    this.draftClient = { name: '', lastName: '', reference: '', email: '', phone: '' };
     this.showNewClientModal = true;
   }
 
@@ -429,7 +477,7 @@ export class DevicesPageComponent implements OnInit {
         } else {
           this.editing.clientId = client.id || '';
         }
-        this.draftClient = { name: '', lastName: '', dni: '', email: '', phone: '' };
+        this.draftClient = { name: '', lastName: '', reference: '', email: '', phone: '' };
         this.showNewClientModal = false;
         this.applyFilters();
         this.changeDetector.detectChanges();
@@ -576,6 +624,23 @@ export class DevicesPageComponent implements OnInit {
     this.reload();
   }
 
+  sortByColumn(column: DeviceTableColumnKey): void {
+    if (column === 'actions') return;
+    if (this.sortBy === column) {
+      this.sortDir = this.sortDir === 'asc' ? 'desc' : 'asc';
+    } else {
+      this.sortBy = column;
+      this.sortDir = ['deviceType', 'brand', 'model', 'client'].includes(column) ? 'asc' : 'desc';
+    }
+    this.currentPage = 1;
+    this.reload();
+  }
+
+  sortIcon(column: DeviceTableColumnKey): string {
+    if (column === 'actions' || this.sortBy !== column) return 'pi pi-sort-alt';
+    return this.sortDir === 'asc' ? 'pi pi-sort-amount-up-alt' : 'pi pi-sort-amount-down';
+  }
+
   getClientName(clientId: string): string {
     const client = this.clients.find((c) => c.id === clientId);
     return client ? `${client.name} ${client.lastName}` : clientId;
@@ -640,6 +705,41 @@ export class DevicesPageComponent implements OnInit {
     return `${start}-${end} de ${this.totalElements} dispositivos`;
   }
 
+  columnWidth(columnKey: DeviceTableColumnKey): string {
+    return this.deviceColumns.find((column) => column.key === columnKey)?.width || 'auto';
+  }
+
+  startColumnResize(event: MouseEvent, columnKey: DeviceTableColumnKey): void {
+    event.preventDefault();
+    event.stopPropagation();
+    const header = (event.currentTarget as HTMLElement).closest('th');
+    if (!header) return;
+
+    this.resizingColumnKey = columnKey;
+    this.resizeStartX = event.clientX;
+    this.resizeStartWidth = header.getBoundingClientRect().width;
+
+    const onMouseMove = (moveEvent: MouseEvent) => {
+      if (!this.resizingColumnKey) return;
+      const nextWidth = Math.max(96, Math.round(this.resizeStartWidth + (moveEvent.clientX - this.resizeStartX)));
+      const column = this.deviceColumns.find((item) => item.key === this.resizingColumnKey);
+      if (column) {
+        column.width = `${nextWidth}px`;
+        this.persistColumnWidths();
+        this.changeDetector.detectChanges();
+      }
+    };
+
+    const onMouseUp = () => {
+      this.resizingColumnKey = null;
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+    };
+
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+  }
+
   previousPage(): void {
     if (this.currentPage > 1) {
       this.currentPage--;
@@ -660,7 +760,9 @@ export class DevicesPageComponent implements OnInit {
       this.pageSize,
       this.searchTerm.trim(),
       this.selectedClientId || '',
-      this.selectedClientId ? '' : this.selectedClientSearchText()
+      this.selectedClientId ? '' : this.selectedClientSearchText(),
+      this.sortBy,
+      this.sortDir
     ).subscribe((page) => {
       this.devices = page.content.map((device) => this.normalizeDevice(device));
       this.filteredDevices = this.devices;
@@ -686,6 +788,26 @@ export class DevicesPageComponent implements OnInit {
 
   private historyTimestamp(value: string | undefined): number {
     return this.parseHistoryDate(value)?.getTime() || 0;
+  }
+
+  private restoreColumnWidths(): void {
+    const stored = localStorage.getItem(this.columnWidthStorageKey);
+    if (!stored) return;
+    try {
+      const widths = JSON.parse(stored) as Partial<Record<DeviceTableColumnKey, string>>;
+      this.deviceColumns.forEach((column) => {
+        if (widths[column.key]) column.width = widths[column.key]!;
+      });
+    } catch {
+      localStorage.removeItem(this.columnWidthStorageKey);
+    }
+  }
+
+  private persistColumnWidths(): void {
+    localStorage.setItem(
+      this.columnWidthStorageKey,
+      JSON.stringify(Object.fromEntries(this.deviceColumns.map((column) => [column.key, column.width])))
+    );
   }
 
   private parseHistoryDate(value: string | undefined): Date | null {

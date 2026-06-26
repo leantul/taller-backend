@@ -37,5 +37,5 @@ export interface StatusBoardRepair extends Repair {
 }
 
 
-export type RepairCreateDTO = Omit<Repair, "id" | "returnDateTime" | "repairNotes"> & { orderNumber?: string };
+export type RepairCreateDTO = Omit<Repair, "id" | "returnDateTime"> & { orderNumber?: string };
 export type RepairUpdateDTO = Partial<Repair> & Pick<Repair, "id">;

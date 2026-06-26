@@ -75,11 +75,13 @@ public class DeviceService {
     }
 
     @Transactional(readOnly = true)
-    public PageDTO<DeviceDTO> findPage(int page, int size, String term, String clientId, String clientTerm) {
+    public PageDTO<DeviceDTO> findPage(int page, int size, String term, String clientId, String clientTerm, String sortBy, String sortDir) {
         Page<DeviceListView> result = deviceRepository.findPage(
                 normalizeTerm(term),
                 normalizeTerm(clientId),
                 normalizeTerm(clientTerm),
+                normalizeDeviceSortBy(sortBy),
+                normalizeSortDir(sortDir),
                 pageRequest(page, size, 100));
         Map<String, List<DeviceObservation>> observationsByDeviceId = observationsByDeviceId(result.getContent().stream().map(DeviceListView::getId).toList());
         return toPage(result, result.getContent().stream()
@@ -327,6 +329,17 @@ public class DeviceService {
 
     private String normalizeTerm(String term) {
         return term == null ? "" : term.trim();
+    }
+
+    private String normalizeDeviceSortBy(String sortBy) {
+        return switch (sortBy == null ? "" : sortBy.trim()) {
+            case "deviceType", "brand", "model", "client", "observations", "password" -> sortBy.trim();
+            default -> "createdAt";
+        };
+    }
+
+    private String normalizeSortDir(String sortDir) {
+        return "asc".equalsIgnoreCase(sortDir) ? "asc" : "desc";
     }
 
     private PageRequest pageRequest(int page, int size, int maximumSize) {

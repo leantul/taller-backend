@@ -135,7 +135,7 @@ class RepairServiceTest {
     }
 
     @Test
-    void save_newRepair_ignoresRepairNotes() {
+    void save_newRepair_trimsRepairNotes() {
         stubSavedRepair();
         when(repairRepository.nextOrderValue()).thenReturn(3L);
 
@@ -144,11 +144,11 @@ class RepairServiceTest {
         dto.setIdDevice("d1");
         dto.setDescription("Test");
         dto.setStatus(RepairStatusEnum.POR_RECIBIR);
-        dto.setRepairNotes("No debe guardarse durante el alta");
+        dto.setRepairNotes("  Observación cargada durante el alta  ");
 
         RepairDTO saved = repairService.save(dto);
 
-        assertNull(saved.getRepairNotes());
+        assertEquals("Observación cargada durante el alta", saved.getRepairNotes());
     }
 
     @Test

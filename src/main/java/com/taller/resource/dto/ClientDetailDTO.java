@@ -7,7 +7,7 @@ public record ClientDetailDTO(
         String id,
         String name,
         String lastName,
-        String dni,
+        String reference,
         String email,
         String address,
         String phone,

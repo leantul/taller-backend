@@ -64,6 +64,7 @@ class ClientServiceTest {
         ClientDetailView client = mock(ClientDetailView.class);
         when(client.getId()).thenReturn("c1");
         when(client.getName()).thenReturn("Ada");
+        when(client.getReference()).thenReturn("Hermana de Grace");
         when(clientRepository.findDetailById("c1")).thenReturn(Optional.of(client));
         when(clientRepository.findAdditionalPhonesById("c1")).thenReturn(List.of("222"));
         when(clientRepository.findAdditionalEmailsById("c1")).thenReturn(List.of());
@@ -78,6 +79,7 @@ class ClientServiceTest {
         ClientHistoryDTO result = service.findHistory("c1", 0, 5, true);
 
         assertEquals("Ada", result.client().name());
+        assertEquals("Hermana de Grace", result.client().reference());
         assertEquals("r1", result.repairs().content().getFirst().id());
     }
 

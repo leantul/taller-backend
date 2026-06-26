@@ -45,7 +45,6 @@ import { Repair } from '../models/repair.model';
                 <label class="field"><span>Apellido</span><input class="control" [(ngModel)]="report.clientLastName" /></label>
                 <label class="field"><span>Teléfono</span><input class="control" [(ngModel)]="report.clientPhone" /></label>
                 <label class="field"><span>Email</span><input class="control" [(ngModel)]="report.clientEmail" /></label>
-                <label class="field"><span>DNI</span><input class="control" [(ngModel)]="report.clientDni" /></label>
               </div>
             </section>
 

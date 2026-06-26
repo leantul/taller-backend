@@ -125,7 +125,6 @@ public class DeliveryReportPdfService {
                         <div class="meta-row"><strong>Nombre</strong>%s %s</div>
                         <div class="meta-row"><strong>Telefono</strong>%s</div>
                         <div class="meta-row"><strong>Email</strong>%s</div>
-                        <div class="meta-row"><strong>DNI</strong>%s</div>
                       </div>
                       <div class="meta-box">
                         <div class="section-title">Equipo</div>
@@ -159,7 +158,6 @@ public class DeliveryReportPdfService {
                 escapeText(blankFallback(report.getClientLastName())),
                 escapeText(blankFallback(report.getClientPhone())),
                 escapeText(blankFallback(report.getClientEmail())),
-                escapeText(blankFallback(report.getClientDni())),
                 escapeText(blankFallback(report.getDeviceTypeName())),
                 escapeText(blankFallback(report.getDeviceBrand())),
                 escapeText(blankFallback(report.getDeviceModel())),

@@ -61,7 +61,28 @@ public interface DeviceRepository extends JpaRepository<Device, String> {
               AND (:clientTerm = ''
                OR lower(c.name) LIKE lower(concat('%', :clientTerm, '%'))
                OR lower(c.lastName) LIKE lower(concat('%', :clientTerm, '%')))
-            ORDER BY d.creationDateTime DESC
+            ORDER BY
+              CASE WHEN :sortBy = 'deviceType' AND :sortDir = 'asc' THEN lower(d.deviceType.name) END ASC,
+              CASE WHEN :sortBy = 'deviceType' AND :sortDir = 'desc' THEN lower(d.deviceType.name) END DESC,
+              CASE WHEN :sortBy = 'brand' AND :sortDir = 'asc' THEN lower(d.brand) END ASC,
+              CASE WHEN :sortBy = 'brand' AND :sortDir = 'desc' THEN lower(d.brand) END DESC,
+              CASE WHEN :sortBy = 'model' AND :sortDir = 'asc' THEN lower(d.model) END ASC,
+              CASE WHEN :sortBy = 'model' AND :sortDir = 'desc' THEN lower(d.model) END DESC,
+              CASE WHEN :sortBy = 'client' AND :sortDir = 'asc' THEN lower(concat(c.name, ' ', c.lastName)) END ASC,
+              CASE WHEN :sortBy = 'client' AND :sortDir = 'desc' THEN lower(concat(c.name, ' ', c.lastName)) END DESC,
+              CASE WHEN :sortBy = 'observations' AND :sortDir = 'asc' THEN (
+                  SELECT COUNT(o.id) FROM DeviceObservation o WHERE o.deviceId = d.id AND o.resolvedAt IS NULL
+              ) END ASC,
+              CASE WHEN :sortBy = 'observations' AND :sortDir = 'desc' THEN (
+                  SELECT COUNT(o.id) FROM DeviceObservation o WHERE o.deviceId = d.id AND o.resolvedAt IS NULL
+              ) END DESC,
+              CASE WHEN :sortBy = 'password' AND :sortDir = 'asc' THEN (
+                  SELECT h.passwordValue FROM DevicePasswordHistory h WHERE h.deviceId = d.id AND h.isCurrent = true
+              ) END ASC,
+              CASE WHEN :sortBy = 'password' AND :sortDir = 'desc' THEN (
+                  SELECT h.passwordValue FROM DevicePasswordHistory h WHERE h.deviceId = d.id AND h.isCurrent = true
+              ) END DESC,
+              d.creationDateTime DESC
             """,
             countQuery = """
             SELECT COUNT(d)
@@ -90,6 +111,8 @@ public interface DeviceRepository extends JpaRepository<Device, String> {
             @Param("term") String term,
             @Param("clientId") String clientId,
             @Param("clientTerm") String clientTerm,
+            @Param("sortBy") String sortBy,
+            @Param("sortDir") String sortDir,
             Pageable pageable);
 
     @Query("""

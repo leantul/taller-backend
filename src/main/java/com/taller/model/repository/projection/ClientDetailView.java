@@ -6,7 +6,7 @@ public interface ClientDetailView {
     String getId();
     String getName();
     String getLastName();
-    String getDni();
+    String getReference();
     String getEmail();
     String getAddress();
     String getPhone();

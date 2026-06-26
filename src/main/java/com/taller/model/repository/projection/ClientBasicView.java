@@ -4,7 +4,7 @@ public interface ClientBasicView {
     String getId();
     String getName();
     String getLastName();
-    String getDni();
+    String getReference();
     String getEmail();
     String getPhone();
 }

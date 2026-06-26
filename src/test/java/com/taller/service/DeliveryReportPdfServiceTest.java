@@ -77,7 +77,6 @@ class DeliveryReportPdfServiceTest {
         report.setClientLastName("Lovelace");
         report.setClientPhone("1133445566");
         report.setClientEmail("ada@example.com");
-        report.setClientDni("30111222");
         report.setDeviceTypeName("Notebook");
         report.setDeviceBrand("Lenovo");
         report.setDeviceModel("T14");

@@ -1159,7 +1159,8 @@ textarea.p-inputtext {
   line-height: 1.26;
 }
 
-.repairs-table th {
+.repairs-table th,
+.resizable-table th {
   padding: .5rem .58rem;
   font-size: .68rem;
   position: relative;
@@ -1230,6 +1231,7 @@ textarea.p-inputtext {
   transition: opacity .18s ease, background .18s ease;
 }
 
+.resizable-table th:hover .column-resize-handle::after,
 .repairs-table th:hover .column-resize-handle::after,
 .column-resize-handle:hover::after {
   opacity: 1;

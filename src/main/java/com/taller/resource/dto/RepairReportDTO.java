@@ -17,7 +17,6 @@ public class RepairReportDTO {
     private String clientLastName;
     private String clientPhone;
     private String clientEmail;
-    private String clientDni;
     private String deviceTypeName;
     private String deviceBrand;
     private String deviceModel;

@@ -29,7 +29,7 @@ public interface ClientRepository extends JpaRepository<Client, String> {
             WHERE :term = ''
                OR lower(c.name) LIKE lower(concat('%', :term, '%'))
                OR lower(c.lastName) LIKE lower(concat('%', :term, '%'))
-               OR lower(c.dni) LIKE lower(concat('%', :term, '%'))
+               OR lower(c.reference) LIKE lower(concat('%', :term, '%'))
                OR lower(c.phone) LIKE lower(concat('%', :term, '%'))
                OR lower(c.email) LIKE lower(concat('%', :term, '%'))
             ORDER BY
@@ -49,7 +49,7 @@ public interface ClientRepository extends JpaRepository<Client, String> {
             WHERE :term = ''
                OR lower(c.name) LIKE lower(concat('%', :term, '%'))
                OR lower(c.lastName) LIKE lower(concat('%', :term, '%'))
-               OR lower(c.dni) LIKE lower(concat('%', :term, '%'))
+               OR lower(c.reference) LIKE lower(concat('%', :term, '%'))
                OR lower(c.phone) LIKE lower(concat('%', :term, '%'))
                OR lower(c.email) LIKE lower(concat('%', :term, '%'))
             """)
@@ -63,7 +63,7 @@ public interface ClientRepository extends JpaRepository<Client, String> {
             SELECT c.id AS id,
                    c.name AS name,
                    c.lastName AS lastName,
-                   c.dni AS dni,
+                   c.reference AS reference,
                    c.email AS email,
                    c.address AS address,
                    c.phone AS phone,
@@ -84,7 +84,7 @@ public interface ClientRepository extends JpaRepository<Client, String> {
             SELECT c FROM Client c
             WHERE lower(c.name) LIKE lower(concat('%', ?1, '%'))
                OR lower(c.lastName) LIKE lower(concat('%', ?1, '%'))
-               OR lower(c.dni) LIKE lower(concat('%', ?1, '%'))
+               OR lower(c.reference) LIKE lower(concat('%', ?1, '%'))
                OR lower(c.phone) LIKE lower(concat('%', ?1, '%'))
                OR lower(c.email) LIKE lower(concat('%', ?1, '%'))
             """)
@@ -94,7 +94,7 @@ public interface ClientRepository extends JpaRepository<Client, String> {
             SELECT c.id AS id,
                    c.name AS name,
                    c.lastName AS lastName,
-                   c.dni AS dni,
+                   c.reference AS reference,
                    c.email AS email,
                    c.phone AS phone
             FROM Client c
@@ -107,7 +107,7 @@ public interface ClientRepository extends JpaRepository<Client, String> {
             SELECT c.id AS id,
                    c.name AS name,
                    c.lastName AS lastName,
-                   c.dni AS dni,
+                   c.reference AS reference,
                    c.email AS email,
                    c.phone AS phone
             FROM Client c

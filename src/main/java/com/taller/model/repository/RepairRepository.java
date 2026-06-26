@@ -376,7 +376,6 @@ public interface RepairRepository extends JpaRepository<Repair, String> {
                    c.lastName AS clientLastName,
                    c.phone AS clientPhone,
                    c.email AS clientEmail,
-                   c.dni AS clientDni,
                    d.deviceType.name AS deviceTypeName,
                    d.brand AS deviceBrand,
                    d.model AS deviceModel,

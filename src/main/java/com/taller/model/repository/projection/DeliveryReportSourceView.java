@@ -9,7 +9,6 @@ public interface DeliveryReportSourceView {
     String getClientLastName();
     String getClientPhone();
     String getClientEmail();
-    String getClientDni();
     String getDeviceTypeName();
     String getDeviceBrand();
     String getDeviceModel();

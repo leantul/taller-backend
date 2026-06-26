@@ -46,8 +46,10 @@ public class DeviceController {
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "") String term,
             @RequestParam(defaultValue = "") String clientId,
-            @RequestParam(defaultValue = "") String clientTerm) {
-        return deviceService.findPage(page, size, term, clientId, clientTerm);
+            @RequestParam(defaultValue = "") String clientTerm,
+            @RequestParam(defaultValue = "createdAt") String sortBy,
+            @RequestParam(defaultValue = "desc") String sortDir) {
+        return deviceService.findPage(page, size, term, clientId, clientTerm, sortBy, sortDir);
     }
 
     @GetMapping("/{id}")

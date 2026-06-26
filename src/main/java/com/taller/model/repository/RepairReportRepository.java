@@ -19,7 +19,6 @@ public interface RepairReportRepository extends JpaRepository<RepairReport, Stri
                    r.clientLastName AS clientLastName,
                    r.clientPhone AS clientPhone,
                    r.clientEmail AS clientEmail,
-                   r.clientDni AS clientDni,
                    r.deviceTypeName AS deviceTypeName,
                    r.deviceBrand AS deviceBrand,
                    r.deviceModel AS deviceModel,

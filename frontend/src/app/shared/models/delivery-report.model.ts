@@ -22,7 +22,6 @@ export interface DeliveryReport {
   clientLastName: string;
   clientPhone: string;
   clientEmail: string;
-  clientDni: string;
   deviceTypeName: string;
   deviceBrand: string;
   deviceModel: string;

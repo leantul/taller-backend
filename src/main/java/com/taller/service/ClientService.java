@@ -57,7 +57,7 @@ public class ClientService {
         Client client = new Client();
         client.setName(clientDTO.getName());
         client.setLastName(clientDTO.getLastName());
-        client.setDni(clientDTO.getDni());
+        client.setReference(clientDTO.getReference());
         client.setEmail(clientDTO.getEmail());
         client.setAddress(clientDTO.getAddress());
         client.setPhone(clientDTO.getPhone());
@@ -89,7 +89,7 @@ public class ClientService {
             return null;
         }
         return new ClientDetailDTO(
-                client.getId(), client.getName(), client.getLastName(), client.getDni(), client.getEmail(),
+                client.getId(), client.getName(), client.getLastName(), client.getReference(), client.getEmail(),
                 client.getAddress(), client.getPhone(), client.getNotes(),
                 List.copyOf(clientRepository.findAdditionalPhonesById(id)),
                 List.copyOf(clientRepository.findAdditionalEmailsById(id)),
@@ -107,7 +107,7 @@ public class ClientService {
         dto.setId(client.getId());
         dto.setName(client.getName());
         dto.setLastName(client.getLastName());
-        dto.setDni(client.getDni());
+        dto.setReference(client.getReference());
         dto.setEmail(client.getEmail());
         dto.setAddress(client.getAddress());
         dto.setPhone(client.getPhone());

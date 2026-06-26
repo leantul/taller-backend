@@ -65,7 +65,7 @@ public class DashboardService {
     public List<ClientDTO> latestClientsWithDevices() {
         return clientRepository.findTop5WithDevicesBasic(PageRequest.of(0, 5)).stream().map(c -> {
             ClientDTO dto = new ClientDTO();
-            dto.setId(c.getId()); dto.setName(c.getName()); dto.setLastName(c.getLastName()); dto.setDni(c.getDni()); dto.setEmail(c.getEmail()); dto.setPhone(c.getPhone());
+            dto.setId(c.getId()); dto.setName(c.getName()); dto.setLastName(c.getLastName()); dto.setReference(c.getReference()); dto.setEmail(c.getEmail()); dto.setPhone(c.getPhone());
             return dto;
         }).toList();
     }

@@ -100,7 +100,7 @@ public class RepairService {
         repair.setExtraAmount(repairDTO.getExtraAmount());
         repair.setQuotedAmount(repairDTO.getQuotedAmount());
         repair.setQuoteNotes(repairDTO.getQuoteNotes());
-        if (!isNew && repairDTO.getRepairNotes() != null) {
+        if (repairDTO.getRepairNotes() != null) {
             repair.setRepairNotes(normalizeOptionalText(repairDTO.getRepairNotes()));
         }
         repair.setApproved(repairDTO.getApproved());
@@ -387,8 +387,8 @@ public class RepairService {
                     new Sort.Order(direction, "device.model").ignoreCase(),
                     new Sort.Order(Sort.Direction.DESC, "orderNumber")
             );
-            case "quotedAmount" -> Sort.by(
-                    new Sort.Order(direction, "quotedAmount"),
+            case "price" -> Sort.by(
+                    new Sort.Order(direction, "price"),
                     new Sort.Order(Sort.Direction.DESC, "orderNumber")
             );
             case "status" -> workflowStatusSort(direction)

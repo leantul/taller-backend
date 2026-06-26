@@ -57,6 +57,7 @@
       }
       <div class="field"><label>Presupuesto enviado</label><p-inputNumber [(ngModel)]="draft.quotedAmount" name="quotedAmount" mode="currency" currency="ARS" locale="es-AR" [min]="0"></p-inputNumber></div>
       <div class="field"><label>Detalle del presupuesto</label><textarea class="p-inputtext" rows="5" [(ngModel)]="draft.quoteNotes" name="quoteNotes" placeholder="Detalle completo del trabajo"></textarea></div>
+      <div class="field"><label>Observaciones de la reparación</label><textarea class="p-inputtext" rows="5" [(ngModel)]="draft.repairNotes" name="repairNotes" placeholder="Observaciones propias de esta reparación"></textarea></div>
       <div class="field"><label>Monto final</label><p-inputNumber [(ngModel)]="draft.price" name="price" mode="currency" currency="ARS" locale="es-AR" [min]="0"></p-inputNumber></div>
       <button pButton type="submit" label="Guardar reparación" icon="pi pi-check" [disabled]="isSaving" [loading]="isSaving"></button>
     </form>
@@ -107,7 +108,7 @@
               <td>{{ row.clientLabel }}</td>
               <td>{{ row.deviceLabel }}</td>
               <td><span class="status-pill" [ngClass]="row.statusClass">{{ row.statusLabel }}</span></td>
-              <td>{{ row.quotedAmountLabel }}</td>
+              <td>{{ row.finalAmountLabel }}</td>
               <td class="cell-actions">
                 <div class="action-buttons">
                   @if (canOpenDeliveryReport(row.repair)) {
@@ -251,7 +252,7 @@
     <table class="native-table">
       <thead><tr><th>Nombre</th><th>Apellido</th><th>Teléfono</th><th>Email</th><th></th></tr></thead>
       <tbody>
-        @for (c of filteredClients; track c.id || (c.dni + c.email)) {
+        @for (c of filteredClients; track c.id || c.email) {
           <tr>
             <td>{{ c.name }}</td>
             <td>{{ c.lastName }}</td>
@@ -288,7 +289,7 @@
 <p-dialog header="Nuevo cliente" [(visible)]="showNewClientModal" [modal]="true" [style]="{width:'34rem'}">
   <div class="field"><label>Nombre</label><input pInputText [(ngModel)]="draftClient.name" /></div>
   <div class="field"><label>Apellido</label><input pInputText [(ngModel)]="draftClient.lastName" /></div>
-  <div class="field"><label>DNI</label><input pInputText [(ngModel)]="draftClient.dni" /></div>
+  <div class="field"><label>Referencia</label><textarea class="p-inputtext" rows="3" [(ngModel)]="draftClient.reference" placeholder="Amigo de..., hermano de..."></textarea></div>
   <div class="field"><label>Email</label><input pInputText [(ngModel)]="draftClient.email" /></div>
   <div class="field"><label>Celular</label><input pInputText [(ngModel)]="draftClient.phone" /></div>
   <button pButton type="button" label="Guardar cliente" icon="pi pi-check" (click)="createClientInline()"></button>

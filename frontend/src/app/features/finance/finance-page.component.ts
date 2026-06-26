@@ -9,6 +9,13 @@ import { ApiService } from '../../core/services/api.service';
 import { FinanceRow, FinanceSummary } from '../../shared/models/finance.model';
 import { ThemeMode, ThemeService } from '../../core/services/theme.service';
 
+type FinanceTableColumnKey = 'clientName' | 'date' | 'income' | 'partsCost' | 'net';
+type FinanceTableColumn = {
+  key: FinanceTableColumnKey;
+  label: string;
+  width: string;
+};
+
 @Component({
   selector: 'app-finance-page',
   standalone: true,
@@ -59,14 +66,35 @@ import { ThemeMode, ThemeService } from '../../core/services/theme.service';
           <div class="ops-item"><span>Mano de obra cargada</span><strong>{{ formatMoney(totalLabor) }}</strong></div>
           <div class="ops-item"><span>Presupuestos emitidos</span><strong>{{ formatMoney(totalQuoted) }}</strong></div>
           <div class="ops-item"><span>Ordenes entregadas</span><strong>{{ deliveredCount }}</strong></div>
+          <div class="ops-item"><span>Ordenes con monto final 0</span><strong>{{ zeroFinalAmountCount }}</strong></div>
+          <div class="ops-item"><span>Ordenes con monto final mayor a 0</span><strong>{{ positiveFinalAmountCount }}</strong></div>
           <div class="ops-item"><span>Margen promedio</span><strong>{{ formatMoney(averageNet) }}</strong></div>
         </div>
       </p-card>
 
       <p-card header="Detalle por reparación">
         <div class="native-table-wrap">
-          <table class="native-table finance-table">
-            <thead><tr><th>Cliente</th><th>Fecha</th><th>Ingreso</th><th>Repuestos</th><th>Neto</th></tr></thead>
+          <table class="native-table resizable-table finance-table">
+            <thead>
+              <tr>
+                @for (column of financeColumns; track column.key) {
+                  <th [style.width]="columnWidth(column.key)">
+                    <button class="sortable-th" type="button" (click)="sortByColumn(column.key)">
+                      <span>{{ column.label }}</span>
+                      <i [class]="sortIcon(column.key)"></i>
+                    </button>
+                    <button
+                      class="column-resize-handle"
+                      type="button"
+                      tabindex="-1"
+                      aria-hidden="true"
+                      (click)="$event.stopPropagation()"
+                      (mousedown)="startColumnResize($event, column.key)">
+                    </button>
+                  </th>
+                }
+              </tr>
+            </thead>
             <tbody>
               @for (row of deliveredFinanceRows; track row.repairId + row.date) {
                 <tr>
@@ -95,6 +123,8 @@ export class FinancePageComponent implements OnInit, OnDestroy {
   totalPartsCost = 0;
   totalLabor = 0;
   totalQuoted = 0;
+  zeroFinalAmountCount = 0;
+  positiveFinalAmountCount = 0;
   netIncome = 0;
   averageNet = 0;
   deliveredCount = 0;
@@ -102,7 +132,20 @@ export class FinancePageComponent implements OnInit, OnDestroy {
   chartVisible = false;
   monthlyNetChartData: any = { labels: [], datasets: [] };
   barChartOptions: any = {};
+  readonly financeColumns: FinanceTableColumn[] = [
+    { key: 'clientName', label: 'Cliente', width: '16rem' },
+    { key: 'date', label: 'Fecha', width: '10rem' },
+    { key: 'income', label: 'Ingreso', width: '10rem' },
+    { key: 'partsCost', label: 'Repuestos', width: '10rem' },
+    { key: 'net', label: 'Neto', width: '10rem' }
+  ];
+  sortColumn: FinanceTableColumnKey = 'date';
+  sortDirection: 'asc' | 'desc' = 'desc';
   private readonly subscriptions = new Subscription();
+  private readonly columnWidthStorageKey = 'taller.finance.columnWidths';
+  private resizingColumnKey: FinanceTableColumnKey | null = null;
+  private resizeStartX = 0;
+  private resizeStartWidth = 0;
 
   constructor(
     private readonly api: ApiService,
@@ -115,6 +158,7 @@ export class FinancePageComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
+    this.restoreColumnWidths();
     this.subscriptions.add(
       this.themeService.mode$.subscribe((mode) => {
         this.zone.run(() => {
@@ -211,13 +255,67 @@ export class FinancePageComponent implements OnInit, OnDestroy {
     this.totalPartsCost = this.asMoney(summary.totalPartsCost);
     this.totalLabor = this.asMoney(summary.totalLabor);
     this.totalQuoted = this.asMoney(summary.totalQuoted);
+    this.zeroFinalAmountCount = summary.zeroFinalAmountCount || 0;
+    this.positiveFinalAmountCount = summary.positiveFinalAmountCount || 0;
     this.netIncome = this.asMoney(summary.netIncome);
     this.averageNet = this.asMoney(summary.averageNet);
     this.deliveredCount = summary.deliveredCount || 0;
   }
 
   get deliveredFinanceRows(): FinanceRow[] {
-    return this.financeRows;
+    return [...this.financeRows].sort((left, right) => {
+      const direction = this.sortDirection === 'asc' ? 1 : -1;
+      return this.compareFinanceRows(left, right, this.sortColumn) * direction;
+    });
+  }
+
+  sortByColumn(column: FinanceTableColumnKey): void {
+    if (this.sortColumn === column) {
+      this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
+    } else {
+      this.sortColumn = column;
+      this.sortDirection = column === 'clientName' ? 'asc' : 'desc';
+    }
+  }
+
+  sortIcon(column: FinanceTableColumnKey): string {
+    if (this.sortColumn !== column) return 'pi pi-sort-alt';
+    return this.sortDirection === 'asc' ? 'pi pi-sort-amount-up-alt' : 'pi pi-sort-amount-down';
+  }
+
+  columnWidth(columnKey: FinanceTableColumnKey): string {
+    return this.financeColumns.find((column) => column.key === columnKey)?.width || 'auto';
+  }
+
+  startColumnResize(event: MouseEvent, columnKey: FinanceTableColumnKey): void {
+    event.preventDefault();
+    event.stopPropagation();
+    const header = (event.currentTarget as HTMLElement).closest('th');
+    if (!header) return;
+
+    this.resizingColumnKey = columnKey;
+    this.resizeStartX = event.clientX;
+    this.resizeStartWidth = header.getBoundingClientRect().width;
+
+    const onMouseMove = (moveEvent: MouseEvent) => {
+      if (!this.resizingColumnKey) return;
+      const nextWidth = Math.max(96, Math.round(this.resizeStartWidth + (moveEvent.clientX - this.resizeStartX)));
+      const column = this.financeColumns.find((item) => item.key === this.resizingColumnKey);
+      if (column) {
+        column.width = `${nextWidth}px`;
+        this.persistColumnWidths();
+        this.changeDetector.detectChanges();
+      }
+    };
+
+    const onMouseUp = () => {
+      this.resizingColumnKey = null;
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+    };
+
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
   }
 
   private buildMonthlyNetChart(summary: FinanceSummary): void {
@@ -276,6 +374,48 @@ export class FinancePageComponent implements OnInit, OnDestroy {
         });
       });
     });
+  }
+
+  private compareFinanceRows(left: FinanceRow, right: FinanceRow, column: FinanceTableColumnKey): number {
+    switch (column) {
+      case 'clientName':
+        return (left.clientName || '').localeCompare(right.clientName || '', 'es', { sensitivity: 'base' });
+      case 'date':
+        return this.dateTimestamp(left.date) - this.dateTimestamp(right.date);
+      case 'income':
+        return this.asMoney(left.income) - this.asMoney(right.income);
+      case 'partsCost':
+        return this.asMoney(left.partsCost) - this.asMoney(right.partsCost);
+      case 'net':
+      default:
+        return this.asMoney(left.net) - this.asMoney(right.net);
+    }
+  }
+
+  private dateTimestamp(value: string | null): number {
+    if (!value) return 0;
+    const timestamp = new Date(value).getTime();
+    return Number.isFinite(timestamp) ? timestamp : 0;
+  }
+
+  private restoreColumnWidths(): void {
+    const stored = localStorage.getItem(this.columnWidthStorageKey);
+    if (!stored) return;
+    try {
+      const widths = JSON.parse(stored) as Partial<Record<FinanceTableColumnKey, string>>;
+      this.financeColumns.forEach((column) => {
+        if (widths[column.key]) column.width = widths[column.key]!;
+      });
+    } catch {
+      localStorage.removeItem(this.columnWidthStorageKey);
+    }
+  }
+
+  private persistColumnWidths(): void {
+    localStorage.setItem(
+      this.columnWidthStorageKey,
+      JSON.stringify(Object.fromEntries(this.financeColumns.map((column) => [column.key, column.width])))
+    );
   }
 
   private setCurrentMonthRange(): void {

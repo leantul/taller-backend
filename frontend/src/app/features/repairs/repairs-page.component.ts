@@ -287,13 +287,31 @@ export class RepairsPageComponent implements OnInit {
 
   openStatusModal(repair: Repair): void {
     this.statusEditingRepair = { ...repair };
+    this.onStatusModalStatusChange();
     this.showStatusModal = true;
+  }
+
+  onStatusModalStatusChange(): void {
+    if (!this.statusEditingRepair) return;
+    if (this.statusEditingRepair.status === 'RECIBIDA' && !this.statusEditingRepair.receiveDateTime) {
+      this.statusEditingRepair.receiveDateTime = fromDateTimeLocal(toDateTimeLocal());
+    }
+    if (this.statusEditingRepair.status === 'RETIRADA' && !this.statusEditingRepair.returnDateTime) {
+      this.statusEditingRepair.returnDateTime = fromDateTimeLocal(toDateTimeLocal());
+    }
+    if (this.statusEditingRepair.status !== 'RETIRADA') {
+      this.statusEditingRepair.returnDateTime = undefined;
+    }
   }
 
   saveStatus(): void {
     if (!this.statusEditingRepair?.id) return;
     this.isUpdating = true;
-    this.api.updateRepairStatus(this.statusEditingRepair.id, this.statusEditingRepair.status).subscribe({
+    this.api.updateRepairStatus(this.statusEditingRepair.id, {
+      status: this.statusEditingRepair.status,
+      receiveDateTime: this.statusEditingRepair.status === 'RECIBIDA' ? this.statusEditingRepair.receiveDateTime : undefined,
+      returnDateTime: this.statusEditingRepair.status === 'RETIRADA' ? this.statusEditingRepair.returnDateTime : undefined
+    }).subscribe({
       next: () => {
         this.isUpdating = false; this.messageService.add({ severity: 'success', summary: 'Estado actualizado', detail: 'Se actualizó el estado.' }); this.showStatusModal = false; this.statusEditingRepair = null; this.reload(); },
       error: (error) => { this.isUpdating = false; this.messageService.add({ severity: 'error', summary: 'Error', detail: this.errorDetail(error, 'No se pudo actualizar el estado.') }); }
@@ -485,6 +503,22 @@ export class RepairsPageComponent implements OnInit {
 
   set draftReceiveDateTimeLocal(value: string) {
     this.draft.receiveDateTime = fromDateTimeLocal(value);
+  }
+
+  get statusReceiveDateTimeLocal(): string {
+    return this.statusEditingRepair?.receiveDateTime ? toDateTimeLocal(this.statusEditingRepair.receiveDateTime) : '';
+  }
+
+  set statusReceiveDateTimeLocal(value: string) {
+    if (this.statusEditingRepair) this.statusEditingRepair.receiveDateTime = fromDateTimeLocal(value);
+  }
+
+  get statusReturnDateTimeLocal(): string {
+    return this.statusEditingRepair?.returnDateTime ? toDateTimeLocal(this.statusEditingRepair.returnDateTime) : '';
+  }
+
+  set statusReturnDateTimeLocal(value: string) {
+    if (this.statusEditingRepair) this.statusEditingRepair.returnDateTime = fromDateTimeLocal(value);
   }
 
   get editReturnDateTimeLocal(): string {

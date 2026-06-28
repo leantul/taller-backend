@@ -260,6 +260,33 @@ class RepairServiceTest {
     }
 
     @Test
+    void updateStatus_toRecibidaUsesSelectedReceiveDate() {
+        Repair existing = existingRepair(null);
+        existing.setReceiveDateTime(LocalDateTime.of(2026, 6, 19, 8, 0));
+        LocalDateTime selectedReceiveDate = LocalDateTime.of(2026, 6, 20, 9, 15);
+        when(repairRepository.findById("id-1")).thenReturn(Optional.of(existing));
+        when(repairRepository.save(existing)).thenReturn(existing);
+
+        repairService.updateStatus("id-1", RepairStatusEnum.RECIBIDA, selectedReceiveDate, null);
+
+        assertEquals(RepairStatusEnum.RECIBIDA, existing.getStatus());
+        assertEquals(selectedReceiveDate, existing.getReceiveDateTime());
+    }
+
+    @Test
+    void updateStatus_toRetiradaUsesSelectedReturnDate() {
+        Repair existing = existingRepair(null);
+        LocalDateTime selectedReturnDate = LocalDateTime.of(2026, 6, 21, 18, 30);
+        when(repairRepository.findById("id-1")).thenReturn(Optional.of(existing));
+        when(repairRepository.save(existing)).thenReturn(existing);
+
+        repairService.updateStatus("id-1", RepairStatusEnum.RETIRADA, null, selectedReturnDate);
+
+        assertEquals(RepairStatusEnum.RETIRADA, existing.getStatus());
+        assertEquals(selectedReturnDate, existing.getReturnDateTime());
+    }
+
+    @Test
     void findPage_usesRequestedSortAcrossWholeQuery() {
         Page<RepairListView> page = new PageImpl<>(List.of());
         when(repairRepository.findPage(any(), any(Pageable.class))).thenReturn(page);
@@ -270,7 +297,7 @@ class RepairServiceTest {
         verify(repairRepository).findPage(any(), pageableCaptor.capture());
         Pageable pageable = pageableCaptor.getValue();
 
-        assertEquals("client.lastName: ASC, ignoring case,client.name: ASC, ignoring case,orderNumber: DESC", pageable.getSort().toString());
+        assertEquals("client.name: ASC, ignoring case,client.lastName: ASC, ignoring case,orderNumber: DESC", pageable.getSort().toString());
     }
 
     private RepairDTO updateDto(String repairNotes) {

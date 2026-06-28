@@ -147,10 +147,20 @@ public class RepairService {
 
     @Transactional
     public void updateStatus(String id, RepairStatusEnum status) {
+        updateStatus(id, status, null, null);
+    }
+
+    @Transactional
+    public void updateStatus(String id, RepairStatusEnum status, LocalDateTime receiveDateTime, LocalDateTime returnDateTime) {
         Repair repair = repairRepository.findById(id).orElseThrow();
         repair.setStatus(status);
-        if (status == RepairStatusEnum.RETIRADA && repair.getReturnDateTime() == null) {
-            repair.setReturnDateTime(LocalDateTime.now());
+        if (status == RepairStatusEnum.RECIBIDA) {
+            repair.setReceiveDateTime(receiveDateTime != null ? receiveDateTime : (repair.getReceiveDateTime() != null ? repair.getReceiveDateTime() : LocalDateTime.now()));
+        }
+        if (status == RepairStatusEnum.RETIRADA) {
+            repair.setReturnDateTime(returnDateTime != null ? returnDateTime : (repair.getReturnDateTime() != null ? repair.getReturnDateTime() : LocalDateTime.now()));
+        } else {
+            repair.setReturnDateTime(null);
         }
         repairRepository.save(repair);
     }
@@ -378,8 +388,8 @@ public class RepairService {
         Sort.Direction direction = "asc".equalsIgnoreCase(sortOrder) ? Sort.Direction.ASC : Sort.Direction.DESC;
         return switch (sortField == null ? "" : sortField.trim()) {
             case "clientName" -> Sort.by(
-                    new Sort.Order(direction, "client.lastName").ignoreCase(),
                     new Sort.Order(direction, "client.name").ignoreCase(),
+                    new Sort.Order(direction, "client.lastName").ignoreCase(),
                     new Sort.Order(Sort.Direction.DESC, "orderNumber")
             );
             case "deviceLabel" -> Sort.by(
@@ -408,7 +418,7 @@ public class RepairService {
         return JpaSort.unsafe(
                 direction,
                 """
-                CASE r.status
+                (CASE r.status
                   WHEN com.taller.model.enums.RepairStatusEnum.POR_RECIBIR THEN 0
                   WHEN com.taller.model.enums.RepairStatusEnum.RECIBIDA THEN 1
                   WHEN com.taller.model.enums.RepairStatusEnum.PRESUPUESTADA_ESPERANDO_RESPUESTA THEN 2
@@ -416,7 +426,7 @@ public class RepairService {
                   WHEN com.taller.model.enums.RepairStatusEnum.ESPERANDO_RETIRO THEN 4
                   WHEN com.taller.model.enums.RepairStatusEnum.RETIRADA THEN 5
                   ELSE 6
-                END
+                END)
                 """
         );
     }

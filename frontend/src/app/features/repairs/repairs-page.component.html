@@ -154,12 +154,18 @@
   @if (statusEditingRepair) {
     <div class="field">
       <label>Estado</label>
-      <select class="control" [(ngModel)]="statusEditingRepair.status">
+      <select class="control" [(ngModel)]="statusEditingRepair.status" (ngModelChange)="onStatusModalStatusChange()">
         @for (option of statusOptions; track option.value) {
           <option [value]="option.value">{{ option.label }}</option>
         }
       </select>
     </div>
+    @if (statusEditingRepair.status === 'RECIBIDA') {
+      <div class="field"><label>Fecha y hora de ingreso</label><input class="control" type="datetime-local" [(ngModel)]="statusReceiveDateTimeLocal" /></div>
+    }
+    @if (statusEditingRepair.status === 'RETIRADA') {
+      <div class="field"><label>Fecha y hora de retiro</label><input class="control" type="datetime-local" [(ngModel)]="statusReturnDateTimeLocal" /></div>
+    }
     <button pButton type="button" label="Guardar" icon="pi pi-check" [disabled]="isUpdating" [loading]="isUpdating" (click)="saveStatus()"></button>
   }
 </p-dialog>

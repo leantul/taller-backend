@@ -25,6 +25,8 @@ export class RepairApiService {
   search(term: string): Observable<Repair[]> { return this.http.get<Repair[]>(`${this.url}/search?term=${encodeURIComponent(term)}`); }
   create(payload: RepairCreateDTO): Observable<Repair> { return this.http.post<Repair>(this.url, payload); }
   update(payload: RepairUpdateDTO): Observable<Repair> { return this.http.put<Repair>(this.url, payload); }
-  updateStatus(id: string, status: Repair['status']): Observable<void> { return this.http.patch<void>(`${this.url}/${id}/status`, { status }); }
+  updateStatus(id: string, payload: Repair['status'] | (Pick<Repair, 'status'> & Pick<Partial<Repair>, 'receiveDateTime' | 'returnDateTime'>)): Observable<void> {
+    return this.http.patch<void>(`${this.url}/${id}/status`, typeof payload === 'string' ? { status: payload } : payload);
+  }
   delete(id: string): Observable<void> { return this.http.delete<void>(`${this.url}/${id}`); }
 }

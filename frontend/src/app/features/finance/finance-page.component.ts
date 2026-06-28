@@ -66,8 +66,8 @@ type FinanceTableColumn = {
           <div class="ops-item"><span>Mano de obra cargada</span><strong>{{ formatMoney(totalLabor) }}</strong></div>
           <div class="ops-item"><span>Presupuestos emitidos</span><strong>{{ formatMoney(totalQuoted) }}</strong></div>
           <div class="ops-item"><span>Ordenes entregadas</span><strong>{{ deliveredCount }}</strong></div>
-          <div class="ops-item"><span>Ordenes con monto final 0</span><strong>{{ zeroFinalAmountCount }}</strong></div>
-          <div class="ops-item"><span>Ordenes con monto final mayor a 0</span><strong>{{ positiveFinalAmountCount }}</strong></div>
+          <div class="ops-item"><span>Órdenes sin cargo</span><strong>{{ zeroFinalAmountCount }}</strong></div>
+          <div class="ops-item"><span>Órdenes cobradas</span><strong>{{ positiveFinalAmountCount }}</strong></div>
           <div class="ops-item"><span>Margen promedio</span><strong>{{ formatMoney(averageNet) }}</strong></div>
         </div>
       </p-card>

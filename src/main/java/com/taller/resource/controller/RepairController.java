@@ -69,7 +69,7 @@ public class RepairController {
 
     @PatchMapping("/{id}/status")
     public ResponseEntity<Void> updateStatus(@PathVariable String id, @RequestBody RepairStatusUpdateDTO request) {
-        repairService.updateStatus(id, request.status());
+        repairService.updateStatus(id, request.status(), request.receiveDateTime(), request.returnDateTime());
         return ResponseEntity.ok().build();
     }
 

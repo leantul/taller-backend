@@ -62,7 +62,7 @@ public class DeliveryReportService {
         report.setReportedIssue(normalizeOptional(dto.getReportedIssue()));
         report.setWorkPerformed(normalizeOptional(dto.getWorkPerformed()));
         report.setFinalObservations(normalizeOptional(dto.getFinalObservations()));
-        report.setShowPartPrices(Boolean.TRUE.equals(dto.getShowPartPrices()));
+        report.setShowPartPrices(shouldShowPartPrices(dto.getHardwareItems()));
         report.setFinalAmount(dto.getFinalAmount());
 
         RepairReport saved = repairReportRepository.save(report);
@@ -203,5 +203,11 @@ public class DeliveryReportService {
 
     private <T> List<T> defaultList(List<T> value) {
         return value == null ? List.of() : value;
+    }
+
+    private boolean shouldShowPartPrices(List<RepairReportHardwareItemDTO> items) {
+        return defaultList(items).stream()
+                .filter(item -> item.getPartName() != null && !item.getPartName().isBlank())
+                .anyMatch(item -> !Boolean.FALSE.equals(item.getIncludePrice()));
     }
 }

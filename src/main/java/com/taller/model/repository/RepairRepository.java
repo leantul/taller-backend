@@ -125,6 +125,68 @@ public interface RepairRepository extends JpaRepository<Repair, String> {
                OR lower(d.brand) LIKE lower(concat('%', :term, '%'))
                OR lower(d.model) LIKE lower(concat('%', :term, '%'))
                OR lower(d.deviceType.name) LIKE lower(concat('%', :term, '%')))
+              AND (:status IS NULL OR r.status = :status)
+              AND (:from IS NULL OR r.receiveDateTime >= :from)
+              AND (:to IS NULL OR r.receiveDateTime <= :to)
+            """,
+            countQuery = """
+            SELECT COUNT(r)
+            FROM Repair r
+            LEFT JOIN r.client c
+            LEFT JOIN r.device d
+            WHERE (:term = ''
+               OR lower(r.orderNumber) LIKE lower(concat('%', :term, '%'))
+               OR lower(r.description) LIKE lower(concat('%', :term, '%'))
+               OR lower(c.name) LIKE lower(concat('%', :term, '%'))
+               OR lower(c.lastName) LIKE lower(concat('%', :term, '%'))
+               OR lower(d.brand) LIKE lower(concat('%', :term, '%'))
+               OR lower(d.model) LIKE lower(concat('%', :term, '%'))
+               OR lower(d.deviceType.name) LIKE lower(concat('%', :term, '%')))
+              AND (:status IS NULL OR r.status = :status)
+              AND (:from IS NULL OR r.receiveDateTime >= :from)
+              AND (:to IS NULL OR r.receiveDateTime <= :to)
+            """)
+    Page<RepairListView> findPageFiltered(
+            @Param("term") String term,
+            @Param("status") RepairStatusEnum status,
+            @Param("from") LocalDateTime from,
+            @Param("to") LocalDateTime to,
+            Pageable pageable);
+
+    @Query(value = """
+            SELECT r.id AS id,
+                   r.idDevice AS idDevice,
+                   r.idClient AS idClient,
+                   r.description AS description,
+                   r.orderNumber AS orderNumber,
+                   r.status AS status,
+                   r.receiveDateTime AS receiveDateTime,
+                   r.returnDateTime AS returnDateTime,
+                   r.price AS price,
+                   r.laborAmount AS laborAmount,
+                   r.extraAmount AS extraAmount,
+                   r.quotedAmount AS quotedAmount,
+                   r.quoteNotes AS quoteNotes,
+                   r.approved AS approved,
+                   r.rejected AS rejected,
+                   r.readyNotifiedAt AS readyNotifiedAt,
+                   c.name AS clientName,
+                   c.lastName AS clientLastName,
+                   c.phone AS clientPhone,
+                   d.deviceType.name AS deviceTypeName,
+                   d.brand AS deviceBrand,
+                   d.model AS deviceModel
+            FROM Repair r
+            LEFT JOIN r.client c
+            LEFT JOIN r.device d
+            WHERE (:term = ''
+               OR lower(r.orderNumber) LIKE lower(concat('%', :term, '%'))
+               OR lower(r.description) LIKE lower(concat('%', :term, '%'))
+               OR lower(c.name) LIKE lower(concat('%', :term, '%'))
+               OR lower(c.lastName) LIKE lower(concat('%', :term, '%'))
+               OR lower(d.brand) LIKE lower(concat('%', :term, '%'))
+               OR lower(d.model) LIKE lower(concat('%', :term, '%'))
+               OR lower(d.deviceType.name) LIKE lower(concat('%', :term, '%')))
             """,
             countQuery = """
             SELECT COUNT(r)

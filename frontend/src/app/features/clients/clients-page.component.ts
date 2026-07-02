@@ -35,7 +35,8 @@ type ClientTableColumn = {
       <p>Alta, edición y consulta del historial de reparaciones de cada cliente.</p>
     </section>
 
-    <div class="page-grid">
+    <div class="page-grid" [class.create-panel-hidden]="!showCreatePanel">
+      @if (showCreatePanel) {
       <p-card header="Nuevo cliente">
         <form class="p-fluid" (ngSubmit)="save()">
           <div class="field"><label>Nombre</label><input pInputText [(ngModel)]="draft.name" name="name" required /></div>
@@ -46,10 +47,15 @@ type ClientTableColumn = {
           <button pButton type="submit" label="Guardar cliente" icon="pi pi-check"></button>
         </form>
       </p-card>
+      }
 
       <p-card header="Clientes">
         <div class="table-toolbar">
           <span class="p-input-icon-left filter-search"><i class="pi pi-search"></i><input pInputText [(ngModel)]="searchTerm" (ngModelChange)="onSearch($event)" placeholder="Buscar por nombre, referencia, teléfono o email" /></span>
+          <button class="secondary-button form-toggle-button" type="button" (click)="showCreatePanel = !showCreatePanel">
+            <i [class]="showCreatePanel ? 'pi pi-eye-slash' : 'pi pi-eye'"></i>
+            <span>{{ showCreatePanel ? 'Ocultar formulario' : 'Mostrar formulario' }}</span>
+          </button>
         </div>
         <div class="native-table-wrap">
           <table class="native-table resizable-table clients-table">
@@ -167,6 +173,7 @@ export class ClientsPageComponent implements OnInit, OnDestroy {
   draft: Client = this.emptyClient();
   editing: Client = this.emptyClient();
   editVisible = false;
+  showCreatePanel = true;
   searchTerm = '';
   sortBy: 'createdAt' | ClientSortColumn = 'createdAt';
   sortDir: 'asc' | 'desc' = 'desc';

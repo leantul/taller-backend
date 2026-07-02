@@ -5,6 +5,7 @@ import com.taller.resource.dto.RepairReportDTO;
 import com.taller.resource.dto.RepairDTO;
 import com.taller.resource.dto.RepairStatusUpdateDTO;
 import com.taller.resource.dto.StatusBoardRepairDTO;
+import com.taller.model.enums.RepairStatusEnum;
 import com.taller.service.DeliveryReportService;
 import com.taller.service.RepairService;
 import lombok.RequiredArgsConstructor;
@@ -37,9 +38,10 @@ public class RepairController {
             @RequestParam(defaultValue = "") String term,
             @RequestParam(required = false) LocalDateTime from,
             @RequestParam(required = false) LocalDateTime to,
+            @RequestParam(required = false) RepairStatusEnum status,
             @RequestParam(required = false) String sortField,
             @RequestParam(required = false) String sortOrder) {
-        return repairService.findPage(page, size, term, from, to, sortField, sortOrder);
+        return repairService.findPage(page, size, term, from, to, status, sortField, sortOrder);
     }
 
     @GetMapping("/status-board")

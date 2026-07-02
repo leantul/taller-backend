@@ -48,8 +48,8 @@ public class RepairService {
     }
 
     @Transactional(readOnly = true)
-    public PageDTO<RepairDTO> findPage(int page, int size, String term, LocalDateTime from, LocalDateTime to, String sortField, String sortOrder) {
-        Page<RepairListView> result = findRepairPage(normalizeTerm(term), from, to, pageRequest(page, size, 100, sortField, sortOrder));
+    public PageDTO<RepairDTO> findPage(int page, int size, String term, LocalDateTime from, LocalDateTime to, RepairStatusEnum status, String sortField, String sortOrder) {
+        Page<RepairListView> result = findRepairPage(normalizeTerm(term), status, from, to, pageRequest(page, size, 100, sortField, sortOrder));
         return toPage(result, result.getContent().stream().map(this::toListDto).toList());
     }
 
@@ -371,17 +371,8 @@ public class RepairService {
         );
     }
 
-    private Page<RepairListView> findRepairPage(String term, LocalDateTime from, LocalDateTime to, PageRequest pageRequest) {
-        if (from != null && to != null) {
-            return repairRepository.findPageBetween(term, from, to, pageRequest);
-        }
-        if (from != null) {
-            return repairRepository.findPageFrom(term, from, pageRequest);
-        }
-        if (to != null) {
-            return repairRepository.findPageTo(term, to, pageRequest);
-        }
-        return repairRepository.findPage(term, pageRequest);
+    private Page<RepairListView> findRepairPage(String term, RepairStatusEnum status, LocalDateTime from, LocalDateTime to, PageRequest pageRequest) {
+        return repairRepository.findPageFiltered(term, status, from, to, pageRequest);
     }
 
     private Sort resolveSort(String sortField, String sortOrder) {
@@ -419,11 +410,11 @@ public class RepairService {
                 direction,
                 """
                 (CASE r.status
-                  WHEN com.taller.model.enums.RepairStatusEnum.POR_RECIBIR THEN 0
-                  WHEN com.taller.model.enums.RepairStatusEnum.RECIBIDA THEN 1
-                  WHEN com.taller.model.enums.RepairStatusEnum.PRESUPUESTADA_ESPERANDO_RESPUESTA THEN 2
-                  WHEN com.taller.model.enums.RepairStatusEnum.HACIENDO THEN 3
-                  WHEN com.taller.model.enums.RepairStatusEnum.ESPERANDO_RETIRO THEN 4
+                  WHEN com.taller.model.enums.RepairStatusEnum.RECIBIDA THEN 0
+                  WHEN com.taller.model.enums.RepairStatusEnum.PRESUPUESTADA_ESPERANDO_RESPUESTA THEN 1
+                  WHEN com.taller.model.enums.RepairStatusEnum.HACIENDO THEN 2
+                  WHEN com.taller.model.enums.RepairStatusEnum.ESPERANDO_RETIRO THEN 3
+                  WHEN com.taller.model.enums.RepairStatusEnum.POR_RECIBIR THEN 4
                   WHEN com.taller.model.enums.RepairStatusEnum.RETIRADA THEN 5
                   ELSE 6
                 END)

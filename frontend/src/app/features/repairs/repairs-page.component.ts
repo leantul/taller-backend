@@ -35,6 +35,7 @@ type RepairTableRow = {
 
 type RepairTableColumnKey = 'orderLabel' | 'clientLabel' | 'deviceLabel' | 'statusLabel' | 'finalAmountValue' | 'actions';
 type RepairSortField = 'orderNumber' | 'clientName' | 'deviceLabel' | 'status' | 'price';
+type RepairStatusFilter = Repair['status'] | '';
 
 type RepairTableColumn = {
   key: RepairTableColumnKey;
@@ -98,8 +99,14 @@ export class RepairsPageComponent implements OnInit {
   isDeleting = false;
   fromDate: Date | null = null;
   toDate: Date | null = null;
+  selectedStatusFilter: RepairStatusFilter = '';
   statusOptions = [...REPAIR_STATUS_OPTIONS];
+  statusFilterOptions: { label: string; value: RepairStatusFilter }[] = [
+    { label: 'Todas', value: '' },
+    ...REPAIR_STATUS_OPTIONS
+  ];
   typeOptions: DeviceType[] = [];
+  showCreatePanel = true;
   readonly repairColumns: RepairTableColumn[] = [
     { key: 'orderLabel', label: 'Orden', width: '9rem', sortable: true },
     { key: 'clientLabel', label: 'Cliente', width: '16rem', sortable: true },
@@ -108,7 +115,7 @@ export class RepairsPageComponent implements OnInit {
     { key: 'finalAmountValue', label: 'Monto final', width: '11rem', sortable: true },
     { key: 'actions', label: 'Acción', width: '14rem', sortable: false }
   ];
-  sortColumn: Exclude<RepairTableColumnKey, 'actions'> = 'orderLabel';
+  sortColumn: Exclude<RepairTableColumnKey, 'actions'> | null = null;
   sortDirection: 'asc' | 'desc' = 'desc';
   private resizingColumnKey: RepairTableColumnKey | null = null;
   private resizeStartX = 0;
@@ -422,6 +429,7 @@ export class RepairsPageComponent implements OnInit {
       this.searchTerm.trim(),
       this.toApiDateTime(this.fromDate),
       this.toApiDateTime(this.toDate, true),
+      this.selectedStatusFilter,
       this.currentSortField(),
       this.sortDirection
     ).subscribe((page) => {
@@ -732,7 +740,7 @@ export class RepairsPageComponent implements OnInit {
     return 0;
   }
 
-  private currentSortField(): RepairSortField {
+  private currentSortField(): RepairSortField | undefined {
     switch (this.sortColumn) {
       case 'clientLabel':
         return 'clientName';
@@ -743,8 +751,9 @@ export class RepairsPageComponent implements OnInit {
       case 'finalAmountValue':
         return 'price';
       case 'orderLabel':
-      default:
         return 'orderNumber';
+      default:
+        return undefined;
     }
   }
 

@@ -323,6 +323,10 @@ a { color: inherit; }
   align-items: start;
 }
 
+.page-grid.create-panel-hidden {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .dashboard-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
@@ -939,6 +943,10 @@ textarea.p-inputtext {
   gap: .9rem;
 }
 
+.repairs-heading + .page-grid.modern-grid.create-panel-hidden {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .repairs-heading + .page-grid .p-card .p-card-body {
   padding: .82rem !important;
 }
@@ -1010,6 +1018,11 @@ textarea.p-inputtext {
 .repairs-heading + .page-grid .repairs-filters .compact-filter {
   width: 12rem;
   min-width: 12rem;
+}
+
+.form-toggle-button {
+  margin-left: auto;
+  white-space: nowrap;
 }
 
 .selection-summary {

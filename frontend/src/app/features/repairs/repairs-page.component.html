@@ -6,7 +6,8 @@
   </div>
   <p>Alta de ordenes, seguimiento de estado y control de importes.</p>
 </section>
-<div class="page-grid modern-grid">
+<div class="page-grid modern-grid" [class.create-panel-hidden]="!showCreatePanel">
+  @if (showCreatePanel) {
   <p-card header="Nueva reparación" styleClass="workbench-card">
     <form class="p-fluid" (ngSubmit)="save()">
       <div class="field">
@@ -62,12 +63,18 @@
       <button pButton type="submit" label="Guardar reparación" icon="pi pi-check" [disabled]="isSaving" [loading]="isSaving"></button>
     </form>
   </p-card>
+  }
 
   <p-card header="Historial de reparaciones" styleClass="workbench-card history-card">
     <div class="table-toolbar multi repairs-filters">
       <span class="p-input-icon-left filter-search"><i class="pi pi-search"></i><input pInputText [(ngModel)]="searchTerm" (ngModelChange)="applyFilters()" placeholder="Buscar por cliente, orden, dispositivo" /></span>
+      <p-select styleClass="compact-filter" [options]="statusFilterOptions" optionLabel="label" optionValue="value" [(ngModel)]="selectedStatusFilter" (ngModelChange)="applyFilters()" placeholder="Estado"></p-select>
       <p-datepicker styleClass="compact-filter" [(ngModel)]="fromDate" (ngModelChange)="applyFilters()" dateFormat="dd-mm-yy" placeholder="Desde" [showIcon]="true" iconDisplay="input" appendTo="body"></p-datepicker>
       <p-datepicker styleClass="compact-filter" [(ngModel)]="toDate" (ngModelChange)="applyFilters()" dateFormat="dd-mm-yy" placeholder="Hasta" [showIcon]="true" iconDisplay="input" appendTo="body"></p-datepicker>
+      <button class="secondary-button form-toggle-button" type="button" (click)="showCreatePanel = !showCreatePanel">
+        <i [class]="showCreatePanel ? 'pi pi-eye-slash' : 'pi pi-eye'"></i>
+        <span>{{ showCreatePanel ? 'Ocultar formulario' : 'Mostrar formulario' }}</span>
+      </button>
     </div>
 
     <div class="native-table-wrap">

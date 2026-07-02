@@ -50,7 +50,8 @@ type DeviceTableColumn = {
       <p>Relacion entre clientes y equipos, con acceso rapido a la clave actual y su historial.</p>
     </section>
 
-    <div class="page-grid">
+    <div class="page-grid" [class.create-panel-hidden]="!showCreatePanel">
+      @if (showCreatePanel) {
       <p-card header="Nuevo dispositivo">
         <form class="p-fluid" autocomplete="off" (ngSubmit)="save()">
           <div class="field">
@@ -77,6 +78,7 @@ type DeviceTableColumn = {
           <button pButton type="submit" label="Guardar dispositivo" icon="pi pi-check"></button>
         </form>
       </p-card>
+      }
 
       <p-card header="Dispositivos">
         <div class="table-toolbar multi repairs-filters">
@@ -91,6 +93,10 @@ type DeviceTableColumn = {
             placeholder="Filtrar por cliente"
             styleClass="compact-filter client-filter-autocomplete"
             appendTo="body"></p-autoComplete>
+          <button class="secondary-button form-toggle-button" type="button" (click)="showCreatePanel = !showCreatePanel">
+            <i [class]="showCreatePanel ? 'pi pi-eye-slash' : 'pi pi-eye'"></i>
+            <span>{{ showCreatePanel ? 'Ocultar formulario' : 'Mostrar formulario' }}</span>
+          </button>
         </div>
         <div class="native-table-wrap">
           <table class="native-table resizable-table devices-table">
@@ -350,6 +356,7 @@ export class DevicesPageComponent implements OnInit {
   pageSize = 10;
   totalPages = 1;
   totalElements = 0;
+  showCreatePanel = true;
   sortBy: 'createdAt' | DeviceSortColumn = 'createdAt';
   sortDir: 'asc' | 'desc' = 'desc';
   showDraftPassword = false;

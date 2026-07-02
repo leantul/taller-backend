@@ -27,6 +27,7 @@ import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -86,18 +87,7 @@ class DeliveryReportServiceTest {
 
     @Test
     void save_persistsSnapshotAndNestedItems() {
-        DeliveryReportSourceView source = repairSourceFixtureForSave();
-        RepairReportView savedView = savedReportView();
-        when(repairRepository.findDeliveryReportSourceById("repair-1")).thenReturn(Optional.of(source));
-        when(repairReportRepository.findIdViewByRepairId("repair-1")).thenReturn(Optional.empty());
-        when(repairReportRepository.save(any(RepairReport.class))).thenAnswer(invocation -> {
-            RepairReport report = invocation.getArgument(0);
-            report.setId("report-1");
-            return report;
-        });
-        when(repairReportRepository.findViewByRepairId("repair-1")).thenReturn(Optional.of(savedView));
-        when(repairReportHardwareItemRepository.findViewByRepairReportIdOrderByCreationDateTimeAsc("report-1")).thenReturn(List.of());
-        when(repairReportSoftwareItemRepository.findViewByRepairReportIdOrderByCreationDateTimeAsc("report-1")).thenReturn(List.of());
+        stubReportSave();
 
         RepairReportDTO dto = new RepairReportDTO();
         dto.setRepairId("repair-1");
@@ -114,18 +104,38 @@ class DeliveryReportServiceTest {
         dto.setReportedIssue("No enciende");
         dto.setWorkPerformed("Cambio de pantalla");
         dto.setFinalObservations("Lista para entregar");
-        dto.setShowPartPrices(true);
+        dto.setShowPartPrices(false);
         dto.setFinalAmount(BigDecimal.valueOf(58000));
-        dto.setHardwareItems(List.of(hardwareItem()));
+        dto.setHardwareItems(List.of(hardwareItem(true)));
         dto.setSoftwareItems(List.of(softwareItem()));
 
         RepairReportDTO saved = deliveryReportService.save("repair-1", dto);
 
         assertEquals("report-1", saved.getId());
+        ArgumentCaptor<RepairReport> reportCaptor = ArgumentCaptor.forClass(RepairReport.class);
+        verify(repairReportRepository).save(reportCaptor.capture());
+        assertEquals(true, reportCaptor.getValue().getShowPartPrices());
         verify(repairReportHardwareItemRepository).deleteAllByRepairReportId("report-1");
         verify(repairReportSoftwareItemRepository).deleteAllByRepairReportId("report-1");
         verify(repairReportHardwareItemRepository).saveAll(any());
         verify(repairReportSoftwareItemRepository).saveAll(any());
+    }
+
+    @Test
+    void save_derivesShowPartPricesFalseWhenNoHardwareItemIncludesPrice() {
+        stubReportSave();
+
+        RepairReportDTO dto = new RepairReportDTO();
+        dto.setRepairId("repair-1");
+        dto.setShowPartPrices(true);
+        dto.setHardwareItems(List.of(hardwareItem(false)));
+        dto.setSoftwareItems(List.of());
+
+        deliveryReportService.save("repair-1", dto);
+
+        ArgumentCaptor<RepairReport> reportCaptor = ArgumentCaptor.forClass(RepairReport.class);
+        verify(repairReportRepository).save(reportCaptor.capture());
+        assertEquals(false, reportCaptor.getValue().getShowPartPrices());
     }
 
     @Test
@@ -172,6 +182,19 @@ class DeliveryReportServiceTest {
         return source;
     }
 
+    private void stubReportSave() {
+        when(repairRepository.findDeliveryReportSourceById("repair-1")).thenReturn(Optional.of(repairSourceFixtureForSave()));
+        when(repairReportRepository.findIdViewByRepairId("repair-1")).thenReturn(Optional.empty());
+        when(repairReportRepository.save(any(RepairReport.class))).thenAnswer(invocation -> {
+            RepairReport report = invocation.getArgument(0);
+            report.setId("report-1");
+            return report;
+        });
+        when(repairReportRepository.findViewByRepairId("repair-1")).thenReturn(Optional.of(savedReportView()));
+        when(repairReportHardwareItemRepository.findViewByRepairReportIdOrderByCreationDateTimeAsc("report-1")).thenReturn(List.of());
+        when(repairReportSoftwareItemRepository.findViewByRepairReportIdOrderByCreationDateTimeAsc("report-1")).thenReturn(List.of());
+    }
+
     private RepairReportView savedReportView() {
         RepairReportView view = mock(RepairReportView.class);
         when(view.getId()).thenReturn("report-1");
@@ -203,13 +226,13 @@ class DeliveryReportServiceTest {
                 .build();
     }
 
-    private com.taller.resource.dto.RepairReportHardwareItemDTO hardwareItem() {
+    private com.taller.resource.dto.RepairReportHardwareItemDTO hardwareItem(boolean includePrice) {
         com.taller.resource.dto.RepairReportHardwareItemDTO item = new com.taller.resource.dto.RepairReportHardwareItemDTO();
         item.setPartName("Pantalla");
         item.setQuantity(1);
         item.setDetail("IPS full HD");
         item.setUnitPrice(BigDecimal.valueOf(25000));
-        item.setIncludePrice(true);
+        item.setIncludePrice(includePrice);
         return item;
     }
 

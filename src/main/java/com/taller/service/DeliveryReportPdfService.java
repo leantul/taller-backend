@@ -45,8 +45,7 @@ public class DeliveryReportPdfService {
         String instagramIcon = toDataUri(INSTAGRAM_ICON_ASSET_PATH);
         List<RepairReportHardwareItemDTO> hardwareItems = visibleHardwareItems(report.getHardwareItems());
         List<RepairReportSoftwareItemDTO> softwareItems = visibleSoftwareItems(report.getSoftwareItems());
-        boolean showPriceColumn = Boolean.TRUE.equals(report.getShowPartPrices())
-                && hardwareItems.stream().anyMatch(item -> Boolean.TRUE.equals(item.getIncludePrice()));
+        boolean showPriceColumn = hardwareItems.stream().anyMatch(item -> Boolean.TRUE.equals(item.getIncludePrice()));
         String hardwareSection = hardwareItems.isEmpty()
                 ? ""
                 : """

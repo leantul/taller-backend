@@ -19,8 +19,8 @@ class DeliveryReportPdfServiceTest {
     private final DeliveryReportPdfService deliveryReportPdfService = new DeliveryReportPdfService();
 
     @Test
-    void generate_createsPdfWithoutPartPriceWhenDisabled() throws Exception {
-        byte[] pdf = deliveryReportPdfService.generate(report(false, false), settings());
+    void generate_hidesPriceColumnWhenNoHardwareItemIncludesPrice() throws Exception {
+        byte[] pdf = deliveryReportPdfService.generate(reportWithHardwareItems(hardwareItem("Pantalla", 25000, false)), settings());
 
         String text = extractText(pdf);
 
@@ -35,8 +35,8 @@ class DeliveryReportPdfServiceTest {
     }
 
     @Test
-    void generate_includesPartPriceWhenEnabled() throws Exception {
-        byte[] pdf = deliveryReportPdfService.generate(report(true, true), settings());
+    void generate_includesPartPriceWhenItemIncludesPriceEvenIfGlobalFlagIsFalse() throws Exception {
+        byte[] pdf = deliveryReportPdfService.generate(reportWithHardwareItems(hardwareItem("Pantalla", 25000, true)), settings());
 
         String text = extractText(pdf);
 
@@ -45,8 +45,21 @@ class DeliveryReportPdfServiceTest {
     }
 
     @Test
+    void generate_hidesUnselectedItemPricesWhenAnyOtherItemIncludesPrice() throws Exception {
+        byte[] pdf = deliveryReportPdfService.generate(reportWithHardwareItems(
+                hardwareItem("Pantalla", 25000, true),
+                hardwareItem("Bateria", 30000, false)
+        ), settings());
+
+        String text = extractText(pdf);
+
+        assertTrue(text.contains("25.000"));
+        assertFalse(text.contains("30.000"));
+    }
+
+    @Test
     void generate_hidesEmptyHardwareAndSoftwareSections() throws Exception {
-        RepairReportDTO report = report(false, false);
+        RepairReportDTO report = reportWithHardwareItems(hardwareItem("Pantalla", 25000, false));
         report.setHardwareItems(List.of());
         report.setSoftwareItems(List.of());
 
@@ -57,14 +70,7 @@ class DeliveryReportPdfServiceTest {
         assertFalse(text.contains("Software instalado"));
     }
 
-    private RepairReportDTO report(boolean showPartPrices, boolean includePrice) {
-        RepairReportHardwareItemDTO hardwareItem = new RepairReportHardwareItemDTO();
-        hardwareItem.setPartName("Pantalla");
-        hardwareItem.setQuantity(1);
-        hardwareItem.setDetail("IPS Full HD");
-        hardwareItem.setUnitPrice(BigDecimal.valueOf(25000));
-        hardwareItem.setIncludePrice(includePrice);
-
+    private RepairReportDTO reportWithHardwareItems(RepairReportHardwareItemDTO... hardwareItems) {
         RepairReportSoftwareItemDTO softwareItem = new RepairReportSoftwareItemDTO();
         softwareItem.setSoftwareName("Google Chrome");
         softwareItem.setDetail("Última versión estable");
@@ -84,11 +90,21 @@ class DeliveryReportPdfServiceTest {
         report.setReportedIssue("No enciende");
         report.setWorkPerformed("Cambio de pantalla");
         report.setFinalObservations("Pruebas completadas");
-        report.setShowPartPrices(showPartPrices);
+        report.setShowPartPrices(false);
         report.setFinalAmount(BigDecimal.valueOf(58000));
-        report.setHardwareItems(List.of(hardwareItem));
+        report.setHardwareItems(List.of(hardwareItems));
         report.setSoftwareItems(List.of(softwareItem));
         return report;
+    }
+
+    private RepairReportHardwareItemDTO hardwareItem(String partName, int unitPrice, boolean includePrice) {
+        RepairReportHardwareItemDTO hardwareItem = new RepairReportHardwareItemDTO();
+        hardwareItem.setPartName(partName);
+        hardwareItem.setQuantity(1);
+        hardwareItem.setDetail("IPS Full HD");
+        hardwareItem.setUnitPrice(BigDecimal.valueOf(unitPrice));
+        hardwareItem.setIncludePrice(includePrice);
+        return hardwareItem;
     }
 
     private WorkshopSettings settings() {

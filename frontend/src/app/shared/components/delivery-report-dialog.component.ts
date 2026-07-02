@@ -76,10 +76,6 @@ import { Repair } from '../models/repair.model';
                 <div class="section-title">Hardware</div>
                 <small>Los repuestos se precargan desde la reparación y siguen siendo editables.</small>
               </div>
-              <label class="inline-checkbox">
-                <input type="checkbox" [(ngModel)]="report.showPartPrices" />
-                <span>Mostrar columna de precios</span>
-              </label>
             </div>
             <div class="native-table-wrap compact-table-wrap">
               <table class="native-table compact-native-table">

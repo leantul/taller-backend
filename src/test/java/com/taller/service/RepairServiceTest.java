@@ -32,7 +32,6 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -292,12 +291,12 @@ class RepairServiceTest {
     @Test
     void findPage_usesRequestedSortAcrossWholeQuery() {
         Page<RepairListView> page = new PageImpl<>(List.of());
-        when(repairRepository.findPageFiltered(any(), any(), any(), any(), any(Pageable.class))).thenReturn(page);
+        when(repairRepository.findPage(any(), any(Pageable.class))).thenReturn(page);
 
         repairService.findPage(0, 10, "", null, null, null, "clientName", "asc");
 
         ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
-        verify(repairRepository).findPageFiltered(any(), any(), any(), any(), pageableCaptor.capture());
+        verify(repairRepository).findPage(any(), pageableCaptor.capture());
         Pageable pageable = pageableCaptor.getValue();
 
         assertEquals("client.name: ASC, ignoring case,client.lastName: ASC, ignoring case,orderNumber: DESC", pageable.getSort().toString());
@@ -306,27 +305,39 @@ class RepairServiceTest {
     @Test
     void findPage_passesStatusFilterToRepository() {
         Page<RepairListView> page = new PageImpl<>(List.of());
-        when(repairRepository.findPageFiltered(any(), any(), any(), any(), any(Pageable.class))).thenReturn(page);
+        when(repairRepository.findPageByStatus(any(), any(), any(Pageable.class))).thenReturn(page);
 
         repairService.findPage(0, 10, "ada", null, null, RepairStatusEnum.RECIBIDA, null, null);
 
-        verify(repairRepository).findPageFiltered(eq("ada"), eq(RepairStatusEnum.RECIBIDA), isNull(), isNull(), any(Pageable.class));
+        verify(repairRepository).findPageByStatus(eq("ada"), eq(RepairStatusEnum.RECIBIDA), any(Pageable.class));
     }
 
     @Test
     void findPage_defaultSortStartsWithReceivedStatusOrder() {
         Page<RepairListView> page = new PageImpl<>(List.of());
-        when(repairRepository.findPageFiltered(any(), any(), any(), any(), any(Pageable.class))).thenReturn(page);
+        when(repairRepository.findPage(any(), any(Pageable.class))).thenReturn(page);
 
         repairService.findPage(0, 10, "", null, null, null, null, null);
 
         ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
-        verify(repairRepository).findPageFiltered(any(), any(), any(), any(), pageableCaptor.capture());
+        verify(repairRepository).findPage(any(), pageableCaptor.capture());
         String sort = pageableCaptor.getValue().getSort().toString();
 
         assertTrue(sort.contains("RepairStatusEnum.RECIBIDA THEN 0"));
         assertTrue(sort.contains("RepairStatusEnum.POR_RECIBIR THEN 4"));
         assertTrue(sort.contains("RepairStatusEnum.RETIRADA THEN 5"));
+    }
+
+    @Test
+    void findPage_withDateRangeAndStatusUsesDedicatedRepositoryQuery() {
+        Page<RepairListView> page = new PageImpl<>(List.of());
+        LocalDateTime from = LocalDateTime.of(2026, 7, 1, 0, 0);
+        LocalDateTime to = LocalDateTime.of(2026, 7, 2, 23, 59);
+        when(repairRepository.findPageByStatusBetween(any(), any(), any(), any(), any(Pageable.class))).thenReturn(page);
+
+        repairService.findPage(0, 10, "", from, to, RepairStatusEnum.HACIENDO, null, null);
+
+        verify(repairRepository).findPageByStatusBetween(eq(""), eq(RepairStatusEnum.HACIENDO), eq(from), eq(to), any(Pageable.class));
     }
 
     private RepairDTO updateDto(String repairNotes) {

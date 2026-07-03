@@ -19,6 +19,50 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
 public interface RepairRepository extends JpaRepository<Repair, String> {
+    String REPAIR_PAGE_SELECT = """
+            SELECT r.id AS id,
+                   r.idDevice AS idDevice,
+                   r.idClient AS idClient,
+                   r.description AS description,
+                   r.orderNumber AS orderNumber,
+                   r.status AS status,
+                   r.receiveDateTime AS receiveDateTime,
+                   r.returnDateTime AS returnDateTime,
+                   r.price AS price,
+                   r.laborAmount AS laborAmount,
+                   r.extraAmount AS extraAmount,
+                   r.quotedAmount AS quotedAmount,
+                   r.quoteNotes AS quoteNotes,
+                   r.approved AS approved,
+                   r.rejected AS rejected,
+                   r.readyNotifiedAt AS readyNotifiedAt,
+                   c.name AS clientName,
+                   c.lastName AS clientLastName,
+                   c.phone AS clientPhone,
+                   d.deviceType.name AS deviceTypeName,
+                   d.brand AS deviceBrand,
+                   d.model AS deviceModel
+            FROM Repair r
+            LEFT JOIN r.client c
+            LEFT JOIN r.device d
+            """;
+    String REPAIR_PAGE_COUNT = """
+            SELECT COUNT(r)
+            FROM Repair r
+            LEFT JOIN r.client c
+            LEFT JOIN r.device d
+            """;
+    String REPAIR_PAGE_TERM_FILTER = """
+            (:term = ''
+               OR lower(r.orderNumber) LIKE lower(concat('%', :term, '%'))
+               OR lower(r.description) LIKE lower(concat('%', :term, '%'))
+               OR lower(c.name) LIKE lower(concat('%', :term, '%'))
+               OR lower(c.lastName) LIKE lower(concat('%', :term, '%'))
+               OR lower(d.brand) LIKE lower(concat('%', :term, '%'))
+               OR lower(d.model) LIKE lower(concat('%', :term, '%'))
+               OR lower(d.deviceType.name) LIKE lower(concat('%', :term, '%')))
+            """;
+
     @Query("""
             SELECT r.id AS id,
                    r.idDevice AS idDevice,
@@ -90,68 +134,6 @@ public interface RepairRepository extends JpaRepository<Repair, String> {
             ORDER BY r.creationDateTime DESC
             """)
     List<RepairListView> findListRows();
-
-    @Query(value = """
-            SELECT r.id AS id,
-                   r.idDevice AS idDevice,
-                   r.idClient AS idClient,
-                   r.description AS description,
-                   r.orderNumber AS orderNumber,
-                   r.status AS status,
-                   r.receiveDateTime AS receiveDateTime,
-                   r.returnDateTime AS returnDateTime,
-                   r.price AS price,
-                   r.laborAmount AS laborAmount,
-                   r.extraAmount AS extraAmount,
-                   r.quotedAmount AS quotedAmount,
-                   r.quoteNotes AS quoteNotes,
-                   r.approved AS approved,
-                   r.rejected AS rejected,
-                   r.readyNotifiedAt AS readyNotifiedAt,
-                   c.name AS clientName,
-                   c.lastName AS clientLastName,
-                   c.phone AS clientPhone,
-                   d.deviceType.name AS deviceTypeName,
-                   d.brand AS deviceBrand,
-                   d.model AS deviceModel
-            FROM Repair r
-            LEFT JOIN r.client c
-            LEFT JOIN r.device d
-            WHERE (:term = ''
-               OR lower(r.orderNumber) LIKE lower(concat('%', :term, '%'))
-               OR lower(r.description) LIKE lower(concat('%', :term, '%'))
-               OR lower(c.name) LIKE lower(concat('%', :term, '%'))
-               OR lower(c.lastName) LIKE lower(concat('%', :term, '%'))
-               OR lower(d.brand) LIKE lower(concat('%', :term, '%'))
-               OR lower(d.model) LIKE lower(concat('%', :term, '%'))
-               OR lower(d.deviceType.name) LIKE lower(concat('%', :term, '%')))
-              AND (:status IS NULL OR r.status = :status)
-              AND (:from IS NULL OR r.receiveDateTime >= :from)
-              AND (:to IS NULL OR r.receiveDateTime <= :to)
-            """,
-            countQuery = """
-            SELECT COUNT(r)
-            FROM Repair r
-            LEFT JOIN r.client c
-            LEFT JOIN r.device d
-            WHERE (:term = ''
-               OR lower(r.orderNumber) LIKE lower(concat('%', :term, '%'))
-               OR lower(r.description) LIKE lower(concat('%', :term, '%'))
-               OR lower(c.name) LIKE lower(concat('%', :term, '%'))
-               OR lower(c.lastName) LIKE lower(concat('%', :term, '%'))
-               OR lower(d.brand) LIKE lower(concat('%', :term, '%'))
-               OR lower(d.model) LIKE lower(concat('%', :term, '%'))
-               OR lower(d.deviceType.name) LIKE lower(concat('%', :term, '%')))
-              AND (:status IS NULL OR r.status = :status)
-              AND (:from IS NULL OR r.receiveDateTime >= :from)
-              AND (:to IS NULL OR r.receiveDateTime <= :to)
-            """)
-    Page<RepairListView> findPageFiltered(
-            @Param("term") String term,
-            @Param("status") RepairStatusEnum status,
-            @Param("from") LocalDateTime from,
-            @Param("to") LocalDateTime to,
-            Pageable pageable);
 
     @Query(value = """
             SELECT r.id AS id,
@@ -373,6 +355,66 @@ public interface RepairRepository extends JpaRepository<Repair, String> {
             """)
     Page<RepairListView> findPageBetween(
             @Param("term") String term,
+            @Param("from") LocalDateTime from,
+            @Param("to") LocalDateTime to,
+            Pageable pageable);
+
+    @Query(
+            value = REPAIR_PAGE_SELECT
+                    + "WHERE " + REPAIR_PAGE_TERM_FILTER
+                    + "  AND r.status = :status",
+            countQuery = REPAIR_PAGE_COUNT
+                    + "WHERE " + REPAIR_PAGE_TERM_FILTER
+                    + "  AND r.status = :status")
+    Page<RepairListView> findPageByStatus(
+            @Param("term") String term,
+            @Param("status") RepairStatusEnum status,
+            Pageable pageable);
+
+    @Query(
+            value = REPAIR_PAGE_SELECT
+                    + "WHERE " + REPAIR_PAGE_TERM_FILTER
+                    + "  AND r.status = :status"
+                    + "  AND r.receiveDateTime >= :from",
+            countQuery = REPAIR_PAGE_COUNT
+                    + "WHERE " + REPAIR_PAGE_TERM_FILTER
+                    + "  AND r.status = :status"
+                    + "  AND r.receiveDateTime >= :from")
+    Page<RepairListView> findPageByStatusFrom(
+            @Param("term") String term,
+            @Param("status") RepairStatusEnum status,
+            @Param("from") LocalDateTime from,
+            Pageable pageable);
+
+    @Query(
+            value = REPAIR_PAGE_SELECT
+                    + "WHERE " + REPAIR_PAGE_TERM_FILTER
+                    + "  AND r.status = :status"
+                    + "  AND r.receiveDateTime <= :to",
+            countQuery = REPAIR_PAGE_COUNT
+                    + "WHERE " + REPAIR_PAGE_TERM_FILTER
+                    + "  AND r.status = :status"
+                    + "  AND r.receiveDateTime <= :to")
+    Page<RepairListView> findPageByStatusTo(
+            @Param("term") String term,
+            @Param("status") RepairStatusEnum status,
+            @Param("to") LocalDateTime to,
+            Pageable pageable);
+
+    @Query(
+            value = REPAIR_PAGE_SELECT
+                    + "WHERE " + REPAIR_PAGE_TERM_FILTER
+                    + "  AND r.status = :status"
+                    + "  AND r.receiveDateTime >= :from"
+                    + "  AND r.receiveDateTime <= :to",
+            countQuery = REPAIR_PAGE_COUNT
+                    + "WHERE " + REPAIR_PAGE_TERM_FILTER
+                    + "  AND r.status = :status"
+                    + "  AND r.receiveDateTime >= :from"
+                    + "  AND r.receiveDateTime <= :to")
+    Page<RepairListView> findPageByStatusBetween(
+            @Param("term") String term,
+            @Param("status") RepairStatusEnum status,
             @Param("from") LocalDateTime from,
             @Param("to") LocalDateTime to,
             Pageable pageable);

@@ -327,6 +327,18 @@ a { color: inherit; }
   grid-template-columns: minmax(0, 1fr);
 }
 
+.create-panel-shell {
+  position: relative;
+  min-width: 0;
+}
+
+.create-panel-toggle {
+  position: absolute;
+  top: .72rem;
+  right: .72rem;
+  z-index: 2;
+}
+
 .dashboard-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
@@ -1022,7 +1034,18 @@ textarea.p-inputtext {
 
 .form-toggle-button {
   margin-left: auto;
-  white-space: nowrap;
+  flex: 0 0 auto;
+  width: 2.35rem;
+  height: 2.35rem;
+  display: inline-grid;
+  place-items: center;
+  color: var(--brand-500);
+  background: color-mix(in srgb, var(--brand-500), transparent 90%);
+}
+
+.form-toggle-button:hover {
+  background: color-mix(in srgb, var(--brand-500), transparent 82%);
+  color: var(--brand-700);
 }
 
 .selection-summary {

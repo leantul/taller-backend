@@ -37,25 +37,31 @@ type ClientTableColumn = {
 
     <div class="page-grid" [class.create-panel-hidden]="!showCreatePanel">
       @if (showCreatePanel) {
-      <p-card header="Nuevo cliente">
-        <form class="p-fluid" (ngSubmit)="save()">
-          <div class="field"><label>Nombre</label><input pInputText [(ngModel)]="draft.name" name="name" required /></div>
-          <div class="field"><label>Apellido</label><input pInputText [(ngModel)]="draft.lastName" name="lastName" required /></div>
-          <div class="field"><label>Referencia</label><textarea class="p-inputtext" rows="3" [(ngModel)]="draft.reference" name="reference" placeholder="Amigo de..., hermano de..."></textarea></div>
-          <div class="field"><label>Email</label><input pInputText [(ngModel)]="draft.email" name="email" type="email" required /></div>
-          <div class="field"><label>Celular</label><input pInputText [(ngModel)]="draft.phone" name="phone" required /></div>
-          <button pButton type="submit" label="Guardar cliente" icon="pi pi-check"></button>
-        </form>
-      </p-card>
+      <div class="create-panel-shell">
+        <button class="icon-action form-toggle-button create-panel-toggle" type="button" aria-label="Ocultar formulario de nuevo cliente" title="Ocultar formulario" (click)="showCreatePanel = false">
+          <i class="pi pi-eye-slash"></i>
+        </button>
+        <p-card header="Nuevo cliente">
+          <form class="p-fluid" (ngSubmit)="save()">
+            <div class="field"><label>Nombre</label><input pInputText [(ngModel)]="draft.name" name="name" required /></div>
+            <div class="field"><label>Apellido</label><input pInputText [(ngModel)]="draft.lastName" name="lastName" required /></div>
+            <div class="field"><label>Referencia</label><textarea class="p-inputtext" rows="3" [(ngModel)]="draft.reference" name="reference" placeholder="Amigo de..., hermano de..."></textarea></div>
+            <div class="field"><label>Email</label><input pInputText [(ngModel)]="draft.email" name="email" type="email" required /></div>
+            <div class="field"><label>Celular</label><input pInputText [(ngModel)]="draft.phone" name="phone" required /></div>
+            <button pButton type="submit" label="Guardar cliente" icon="pi pi-check"></button>
+          </form>
+        </p-card>
+      </div>
       }
 
       <p-card header="Clientes">
         <div class="table-toolbar">
           <span class="p-input-icon-left filter-search"><i class="pi pi-search"></i><input pInputText [(ngModel)]="searchTerm" (ngModelChange)="onSearch($event)" placeholder="Buscar por nombre, referencia, teléfono o email" /></span>
-          <button class="secondary-button form-toggle-button" type="button" (click)="showCreatePanel = !showCreatePanel">
-            <i [class]="showCreatePanel ? 'pi pi-eye-slash' : 'pi pi-eye'"></i>
-            <span>{{ showCreatePanel ? 'Ocultar formulario' : 'Mostrar formulario' }}</span>
-          </button>
+          @if (!showCreatePanel) {
+            <button class="icon-action form-toggle-button" type="button" aria-label="Mostrar formulario de nuevo cliente" title="Mostrar formulario" (click)="showCreatePanel = true">
+              <i class="pi pi-eye"></i>
+            </button>
+          }
         </div>
         <div class="native-table-wrap">
           <table class="native-table resizable-table clients-table">

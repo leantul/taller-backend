@@ -52,32 +52,37 @@ type DeviceTableColumn = {
 
     <div class="page-grid" [class.create-panel-hidden]="!showCreatePanel">
       @if (showCreatePanel) {
-      <p-card header="Nuevo dispositivo">
-        <form class="p-fluid" autocomplete="off" (ngSubmit)="save()">
-          <div class="field">
-            <label>Cliente</label>
-            <div class="inline-row">
-              <p-select [options]="clientOptions" optionLabel="label" optionValue="value" [(ngModel)]="draft.clientId" name="deviceClientId" [filter]="true" filterBy="label" required></p-select>
-              <button pButton type="button" size="small" class="p-button-sm" icon="pi pi-user-plus" [rounded]="true" [text]="true" (click)="openNewClientModal('draft')"></button>
+      <div class="create-panel-shell">
+        <button class="icon-action form-toggle-button create-panel-toggle" type="button" aria-label="Ocultar formulario de nuevo dispositivo" title="Ocultar formulario" (click)="showCreatePanel = false">
+          <i class="pi pi-eye-slash"></i>
+        </button>
+        <p-card header="Nuevo dispositivo">
+          <form class="p-fluid" autocomplete="off" (ngSubmit)="save()">
+            <div class="field">
+              <label>Cliente</label>
+              <div class="inline-row">
+                <p-select [options]="clientOptions" optionLabel="label" optionValue="value" [(ngModel)]="draft.clientId" name="deviceClientId" [filter]="true" filterBy="label" required></p-select>
+                <button pButton type="button" size="small" class="p-button-sm" icon="pi pi-user-plus" [rounded]="true" [text]="true" (click)="openNewClientModal('draft')"></button>
+              </div>
             </div>
-          </div>
-          <div class="field"><label>Marca</label><input pInputText [(ngModel)]="draft.brand" name="deviceBrand" autocomplete="off" required /></div>
-          <div class="field"><label>Modelo</label><input pInputText [(ngModel)]="draft.model" name="deviceModel" autocomplete="off" required /></div>
-          <div class="field"><label>Serie / IMEI</label><input pInputText [(ngModel)]="draft.serialNumber" name="deviceSerialNumber" autocomplete="off" required /></div>
-          <div class="field"><label>Tipo</label><p-select [options]="typeOptions" optionLabel="name" optionValue="id" [(ngModel)]="draft.deviceTypeId" name="deviceTypeId"></p-select></div>
-          <div class="field"><label>Características</label><textarea class="p-inputtext" rows="5" [(ngModel)]="draft.technicalDetails" name="deviceTechnicalDetails" placeholder="Memoria, disco, procesador, placa, detalles internos"></textarea></div>
-          <div class="field">
-            <label>Contraseña inicial</label>
-            <div class="inline-row">
-              <input class="control" [type]="showDraftPassword ? 'text' : 'password'" [(ngModel)]="draft.currentPassword" name="deviceCurrentPassword" autocomplete="new-password" placeholder="Opcional" />
-              <button class="icon-button" type="button" [attr.aria-label]="showDraftPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'" (click)="showDraftPassword = !showDraftPassword">
-                <i [class]="showDraftPassword ? 'pi pi-eye-slash' : 'pi pi-eye'"></i>
-              </button>
+            <div class="field"><label>Marca</label><input pInputText [(ngModel)]="draft.brand" name="deviceBrand" autocomplete="off" required /></div>
+            <div class="field"><label>Modelo</label><input pInputText [(ngModel)]="draft.model" name="deviceModel" autocomplete="off" required /></div>
+            <div class="field"><label>Serie / IMEI</label><input pInputText [(ngModel)]="draft.serialNumber" name="deviceSerialNumber" autocomplete="off" required /></div>
+            <div class="field"><label>Tipo</label><p-select [options]="typeOptions" optionLabel="name" optionValue="id" [(ngModel)]="draft.deviceTypeId" name="deviceTypeId"></p-select></div>
+            <div class="field"><label>Características</label><textarea class="p-inputtext" rows="5" [(ngModel)]="draft.technicalDetails" name="deviceTechnicalDetails" placeholder="Memoria, disco, procesador, placa, detalles internos"></textarea></div>
+            <div class="field">
+              <label>Contraseña inicial</label>
+              <div class="inline-row">
+                <input class="control" [type]="showDraftPassword ? 'text' : 'password'" [(ngModel)]="draft.currentPassword" name="deviceCurrentPassword" autocomplete="new-password" placeholder="Opcional" />
+                <button class="icon-button" type="button" [attr.aria-label]="showDraftPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'" (click)="showDraftPassword = !showDraftPassword">
+                  <i [class]="showDraftPassword ? 'pi pi-eye-slash' : 'pi pi-eye'"></i>
+                </button>
+              </div>
             </div>
-          </div>
-          <button pButton type="submit" label="Guardar dispositivo" icon="pi pi-check"></button>
-        </form>
-      </p-card>
+            <button pButton type="submit" label="Guardar dispositivo" icon="pi pi-check"></button>
+          </form>
+        </p-card>
+      </div>
       }
 
       <p-card header="Dispositivos">
@@ -93,10 +98,11 @@ type DeviceTableColumn = {
             placeholder="Filtrar por cliente"
             styleClass="compact-filter client-filter-autocomplete"
             appendTo="body"></p-autoComplete>
-          <button class="secondary-button form-toggle-button" type="button" (click)="showCreatePanel = !showCreatePanel">
-            <i [class]="showCreatePanel ? 'pi pi-eye-slash' : 'pi pi-eye'"></i>
-            <span>{{ showCreatePanel ? 'Ocultar formulario' : 'Mostrar formulario' }}</span>
-          </button>
+          @if (!showCreatePanel) {
+            <button class="icon-action form-toggle-button" type="button" aria-label="Mostrar formulario de nuevo dispositivo" title="Mostrar formulario" (click)="showCreatePanel = true">
+              <i class="pi pi-eye"></i>
+            </button>
+          }
         </div>
         <div class="native-table-wrap">
           <table class="native-table resizable-table devices-table">

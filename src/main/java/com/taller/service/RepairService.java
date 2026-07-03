@@ -372,7 +372,28 @@ public class RepairService {
     }
 
     private Page<RepairListView> findRepairPage(String term, RepairStatusEnum status, LocalDateTime from, LocalDateTime to, PageRequest pageRequest) {
-        return repairRepository.findPageFiltered(term, status, from, to, pageRequest);
+        if (status != null) {
+            if (from != null && to != null) {
+                return repairRepository.findPageByStatusBetween(term, status, from, to, pageRequest);
+            }
+            if (from != null) {
+                return repairRepository.findPageByStatusFrom(term, status, from, pageRequest);
+            }
+            if (to != null) {
+                return repairRepository.findPageByStatusTo(term, status, to, pageRequest);
+            }
+            return repairRepository.findPageByStatus(term, status, pageRequest);
+        }
+        if (from != null && to != null) {
+            return repairRepository.findPageBetween(term, from, to, pageRequest);
+        }
+        if (from != null) {
+            return repairRepository.findPageFrom(term, from, pageRequest);
+        }
+        if (to != null) {
+            return repairRepository.findPageTo(term, to, pageRequest);
+        }
+        return repairRepository.findPage(term, pageRequest);
     }
 
     private Sort resolveSort(String sortField, String sortOrder) {

@@ -9,15 +9,18 @@
 <div class="page-grid modern-grid" [class.create-panel-hidden]="!showCreatePanel">
   @if (showCreatePanel) {
   <div class="create-panel-shell">
-    <button
-      class="icon-action form-toggle-button create-panel-toggle"
-      type="button"
-      aria-label="Ocultar formulario de nueva reparación"
-      title="Ocultar formulario"
-      (click)="showCreatePanel = false">
-      <i class="pi pi-eye-slash"></i>
-    </button>
-    <p-card header="Nueva reparación" styleClass="workbench-card">
+    <p-card styleClass="workbench-card create-panel-card">
+      <div class="create-panel-header">
+        <h2>Nueva reparación</h2>
+        <button
+          class="icon-action form-toggle-button"
+          type="button"
+          aria-label="Ocultar formulario de nueva reparación"
+          title="Ocultar formulario"
+          (click)="showCreatePanel = false">
+          <i class="pi pi-eye-slash"></i>
+        </button>
+      </div>
       <form class="p-fluid" (ngSubmit)="save()">
         <div class="field">
           <label>Cliente</label>

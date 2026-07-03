@@ -38,10 +38,13 @@ type ClientTableColumn = {
     <div class="page-grid" [class.create-panel-hidden]="!showCreatePanel">
       @if (showCreatePanel) {
       <div class="create-panel-shell">
-        <button class="icon-action form-toggle-button create-panel-toggle" type="button" aria-label="Ocultar formulario de nuevo cliente" title="Ocultar formulario" (click)="showCreatePanel = false">
-          <i class="pi pi-eye-slash"></i>
-        </button>
-        <p-card header="Nuevo cliente">
+        <p-card styleClass="create-panel-card">
+          <div class="create-panel-header">
+            <h2>Nuevo cliente</h2>
+            <button class="icon-action form-toggle-button" type="button" aria-label="Ocultar formulario de nuevo cliente" title="Ocultar formulario" (click)="showCreatePanel = false">
+              <i class="pi pi-eye-slash"></i>
+            </button>
+          </div>
           <form class="p-fluid" (ngSubmit)="save()">
             <div class="field"><label>Nombre</label><input pInputText [(ngModel)]="draft.name" name="name" required /></div>
             <div class="field"><label>Apellido</label><input pInputText [(ngModel)]="draft.lastName" name="lastName" required /></div>

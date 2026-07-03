@@ -328,15 +328,23 @@ a { color: inherit; }
 }
 
 .create-panel-shell {
-  position: relative;
   min-width: 0;
 }
 
-.create-panel-toggle {
-  position: absolute;
-  top: .72rem;
-  right: .72rem;
-  z-index: 2;
+.create-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .75rem;
+  margin-bottom: 1rem;
+}
+
+.create-panel-header h2 {
+  margin: 0;
+  color: var(--text);
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: 0;
 }
 
 .dashboard-grid {

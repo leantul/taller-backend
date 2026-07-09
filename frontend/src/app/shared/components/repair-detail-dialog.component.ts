@@ -6,6 +6,11 @@ import { ApiService } from '../../core/services/api.service';
 import { Repair } from '../models/repair.model';
 import { repairStatusClass, repairStatusLabel } from '../utils/repair-status.util';
 
+interface StatusTimelineItem {
+  status: Repair['status'];
+  changedAt?: string;
+}
+
 @Component({
   selector: 'app-repair-detail-dialog',
   standalone: true,
@@ -24,8 +29,17 @@ import { repairStatusClass, repairStatusLabel } from '../utils/repair-status.uti
             <div class="detail-item"><label>Estado</label><span class="status-pill" [ngClass]="statusClass(repair.status)">{{ statusLabel(repair.status) }}</span></div>
             <div class="detail-item"><label>Cliente</label><strong>{{ clientLabel }}</strong></div>
             <div class="detail-item"><label>Dispositivo</label><strong>{{ deviceLabel }}</strong></div>
-            <div class="detail-item"><label>Ingreso</label><strong>{{ formatDateTime(repair.receiveDateTime) }}</strong></div>
-            <div class="detail-item"><label>Retiro</label><strong>{{ formatDateTime(repair.returnDateTime) }}</strong></div>
+            <div class="detail-item detail-wide">
+              <label>Horarios por estado</label>
+              <div class="status-timeline-list">
+                @for (item of statusTimelineItems(); track item.status + '-' + (item.changedAt || $index)) {
+                  <div class="status-timeline-row">
+                    <span class="status-pill" [ngClass]="statusClass(item.status)">{{ statusLabel(item.status) }}</span>
+                    <strong>{{ formatDateTime(item.changedAt) }}</strong>
+                  </div>
+                }
+              </div>
+            </div>
             <div class="detail-item"><label>Presupuesto</label><strong>{{ repair.quotedAmount || 0 | currency:'ARS':'symbol':'1.2-2':'es-AR' }}</strong></div>
             <div class="detail-item"><label>Mano de obra</label><strong>{{ repair.laborAmount || 0 | currency:'ARS':'symbol':'1.2-2':'es-AR' }}</strong></div>
             <div class="detail-item detail-wide"><label>Monto final</label><strong>{{ repair.price || 0 | currency:'ARS':'symbol':'1.2-2':'es-AR' }}</strong></div>
@@ -90,6 +104,24 @@ export class RepairDetailDialogComponent {
 
   statusClass(status: Repair['status']): string {
     return repairStatusClass(status);
+  }
+
+  statusTimelineItems(): StatusTimelineItem[] {
+    if (!this.repair) return [];
+
+    const items = (this.repair.statusHistory || [])
+      .filter((history) => !!history.changedAt)
+      .map((history) => ({ status: history.status, changedAt: history.changedAt }));
+
+    if (!items.some((item) => item.status === 'RECIBIDA') && this.repair.receiveDateTime) {
+      items.unshift({ status: 'RECIBIDA', changedAt: this.repair.receiveDateTime });
+    }
+
+    if (!items.some((item) => item.status === 'RETIRADA')) {
+      items.push({ status: 'RETIRADA', changedAt: this.repair.returnDateTime });
+    }
+
+    return items;
   }
 
   formatDateTime(value?: string): string {

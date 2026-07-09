@@ -1555,6 +1555,30 @@ textarea.p-inputtext {
   padding-right: .2rem;
 }
 
+.status-timeline-list {
+  display: grid;
+  gap: .45rem;
+}
+
+.status-timeline-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: .75rem;
+  min-width: 0;
+  padding: .35rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.status-timeline-row:last-child {
+  border-bottom: 0;
+}
+
+.status-timeline-row strong {
+  text-align: right;
+}
+
 .repair-detail-grid .compact-table-wrap {
   overflow-x: hidden;
   overflow-y: hidden;

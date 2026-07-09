@@ -35,6 +35,8 @@ public class RepairDTO {
     private List<RepairPartDTO> parts;
     private List<RepairPaymentDTO> payments;
     private List<DeviceObservationDTO> observations;
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    private List<RepairStatusHistoryDTO> statusHistory;
     private String clientName;
     private String clientPhone;
     private String deviceLabel;

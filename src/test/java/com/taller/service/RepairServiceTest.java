@@ -3,12 +3,15 @@ package com.taller.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.taller.model.Repair;
+import com.taller.model.RepairStatusHistory;
 import com.taller.model.enums.RepairStatusEnum;
 import com.taller.model.repository.DeviceObservationRepository;
 import com.taller.model.repository.RepairPartRepository;
 import com.taller.model.repository.RepairPaymentRepository;
 import com.taller.model.repository.RepairRepository;
+import com.taller.model.repository.RepairStatusHistoryRepository;
 import com.taller.model.repository.projection.RepairListView;
+import com.taller.model.repository.projection.RepairStatusHistoryView;
 import com.taller.model.repository.projection.StatusBoardRepairView;
 import com.taller.resource.dto.RepairDTO;
 import org.junit.jupiter.api.BeforeEach;
@@ -33,6 +36,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -47,12 +51,14 @@ class RepairServiceTest {
     private RepairPaymentRepository repairPaymentRepository;
     @Mock
     private DeviceObservationRepository deviceObservationRepository;
+    @Mock
+    private RepairStatusHistoryRepository repairStatusHistoryRepository;
 
     private RepairService repairService;
 
     @BeforeEach
     void setUp() {
-        repairService = new RepairService(repairRepository, repairPartRepository, repairPaymentRepository, deviceObservationRepository);
+        repairService = new RepairService(repairRepository, repairPartRepository, repairPaymentRepository, deviceObservationRepository, repairStatusHistoryRepository);
     }
 
     @Test
@@ -66,6 +72,7 @@ class RepairServiceTest {
         when(repairPartRepository.findByRepairId(any())).thenReturn(List.of());
         when(repairPaymentRepository.findByRepairId(any())).thenReturn(List.of());
         when(deviceObservationRepository.findByRepairIdOrderByObservedAtDesc(any())).thenReturn(List.of());
+        when(repairStatusHistoryRepository.findByRepairIdOrderByChangedAtAscCreationDateTimeAsc(any())).thenReturn(List.of());
 
         RepairDTO dto = new RepairDTO();
         dto.setIdClient("c1");
@@ -124,6 +131,7 @@ class RepairServiceTest {
         when(repairPartRepository.findByRepairId(any())).thenReturn(List.of());
         when(repairPaymentRepository.findByRepairId(any())).thenReturn(List.of());
         when(deviceObservationRepository.findByRepairIdOrderByObservedAtDesc(any())).thenReturn(List.of());
+        when(repairStatusHistoryRepository.findByRepairIdOrderByChangedAtAscCreationDateTimeAsc(any())).thenReturn(List.of());
 
         RepairDTO dto = new RepairDTO();
         dto.setIdClient("c1");
@@ -186,6 +194,17 @@ class RepairServiceTest {
         RepairDTO saved = repairService.save(updateDto(null));
 
         assertEquals("Observación anterior", saved.getRepairNotes());
+    }
+
+    @Test
+    void save_existingRepairWithSameStatusDoesNotStoreHistory() {
+        Repair existing = existingRepair("Observación anterior");
+        when(repairRepository.findById("id-1")).thenReturn(Optional.of(existing));
+        stubSavedRepair();
+
+        repairService.save(updateDto("Trabajo realizado"));
+
+        verify(repairStatusHistoryRepository, never()).save(any());
     }
 
     @Test
@@ -289,6 +308,87 @@ class RepairServiceTest {
     }
 
     @Test
+    void updateStatus_toIntermediateStatusStoresHistoryWithCurrentDate() {
+        Repair existing = existingRepair(null);
+        existing.setStatus(RepairStatusEnum.RECIBIDA);
+        when(repairRepository.findById("id-1")).thenReturn(Optional.of(existing));
+        when(repairRepository.save(existing)).thenReturn(existing);
+
+        repairService.updateStatus("id-1", RepairStatusEnum.HACIENDO);
+
+        ArgumentCaptor<RepairStatusHistory> historyCaptor = ArgumentCaptor.forClass(RepairStatusHistory.class);
+        verify(repairStatusHistoryRepository).save(historyCaptor.capture());
+        RepairStatusHistory history = historyCaptor.getValue();
+
+        assertEquals("id-1", history.getRepairId());
+        assertEquals(RepairStatusEnum.HACIENDO, history.getStatus());
+        assertNotNull(history.getChangedAt());
+    }
+
+    @Test
+    void updateStatus_toRecibidaStoresSelectedReceiveDateInHistory() {
+        Repair existing = existingRepair(null);
+        existing.setStatus(RepairStatusEnum.POR_RECIBIR);
+        LocalDateTime selectedReceiveDate = LocalDateTime.of(2026, 6, 20, 9, 15);
+        when(repairRepository.findById("id-1")).thenReturn(Optional.of(existing));
+        when(repairRepository.save(existing)).thenReturn(existing);
+
+        repairService.updateStatus("id-1", RepairStatusEnum.RECIBIDA, selectedReceiveDate, null);
+
+        ArgumentCaptor<RepairStatusHistory> historyCaptor = ArgumentCaptor.forClass(RepairStatusHistory.class);
+        verify(repairStatusHistoryRepository).save(historyCaptor.capture());
+
+        assertEquals(RepairStatusEnum.RECIBIDA, historyCaptor.getValue().getStatus());
+        assertEquals(selectedReceiveDate, historyCaptor.getValue().getChangedAt());
+    }
+
+    @Test
+    void updateStatus_sameStatusDoesNotStoreHistory() {
+        Repair existing = existingRepair(null);
+        existing.setStatus(RepairStatusEnum.HACIENDO);
+        when(repairRepository.findById("id-1")).thenReturn(Optional.of(existing));
+        when(repairRepository.save(existing)).thenReturn(existing);
+
+        repairService.updateStatus("id-1", RepairStatusEnum.HACIENDO);
+
+        verify(repairStatusHistoryRepository, never()).save(any());
+    }
+
+    @Test
+    void getRepairById_returnsStatusHistoryInRepositoryOrder() {
+        Repair existing = existingRepair(null);
+        existing.setStatus(RepairStatusEnum.RETIRADA);
+        when(repairRepository.findById("id-1")).thenReturn(Optional.of(existing));
+        when(repairPartRepository.findByRepairId("id-1")).thenReturn(List.of());
+        when(repairPaymentRepository.findByRepairId("id-1")).thenReturn(List.of());
+        when(deviceObservationRepository.findByRepairIdOrderByObservedAtDesc("id-1")).thenReturn(List.of());
+
+        RepairStatusHistoryView received = mock(RepairStatusHistoryView.class);
+        LocalDateTime receivedAt = LocalDateTime.of(2026, 6, 20, 9, 15);
+        when(received.getId()).thenReturn("h1");
+        when(received.getRepairId()).thenReturn("id-1");
+        when(received.getStatus()).thenReturn(RepairStatusEnum.RECIBIDA);
+        when(received.getChangedAt()).thenReturn(receivedAt);
+
+        RepairStatusHistoryView doing = mock(RepairStatusHistoryView.class);
+        LocalDateTime doingAt = LocalDateTime.of(2026, 6, 20, 11, 0);
+        when(doing.getId()).thenReturn("h2");
+        when(doing.getRepairId()).thenReturn("id-1");
+        when(doing.getStatus()).thenReturn(RepairStatusEnum.HACIENDO);
+        when(doing.getChangedAt()).thenReturn(doingAt);
+
+        when(repairStatusHistoryRepository.findByRepairIdOrderByChangedAtAscCreationDateTimeAsc("id-1")).thenReturn(List.of(received, doing));
+
+        RepairDTO result = repairService.getRepairById("id-1");
+
+        assertEquals(2, result.getStatusHistory().size());
+        assertEquals(RepairStatusEnum.RECIBIDA, result.getStatusHistory().get(0).getStatus());
+        assertEquals(receivedAt, result.getStatusHistory().get(0).getChangedAt());
+        assertEquals(RepairStatusEnum.HACIENDO, result.getStatusHistory().get(1).getStatus());
+        assertEquals(doingAt, result.getStatusHistory().get(1).getChangedAt());
+    }
+
+    @Test
     void findPage_usesRequestedSortAcrossWholeQuery() {
         Page<RepairListView> page = new PageImpl<>(List.of());
         when(repairRepository.findPage(any(), any(Pageable.class))).thenReturn(page);
@@ -355,6 +455,7 @@ class RepairServiceTest {
         Repair repair = new Repair();
         repair.setId("id-1");
         repair.setRepairNotes(repairNotes);
+        repair.setStatus(RepairStatusEnum.HACIENDO);
         return repair;
     }
 
@@ -369,5 +470,6 @@ class RepairServiceTest {
         when(repairPartRepository.findByRepairId(any())).thenReturn(List.of());
         when(repairPaymentRepository.findByRepairId(any())).thenReturn(List.of());
         when(deviceObservationRepository.findByRepairIdOrderByObservedAtDesc(any())).thenReturn(List.of());
+        when(repairStatusHistoryRepository.findByRepairIdOrderByChangedAtAscCreationDateTimeAsc(any())).thenReturn(List.of());
     }
 }

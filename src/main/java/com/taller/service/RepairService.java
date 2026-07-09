@@ -4,19 +4,23 @@ import com.taller.model.DeviceObservation;
 import com.taller.model.Repair;
 import com.taller.model.RepairPart;
 import com.taller.model.RepairPayment;
+import com.taller.model.RepairStatusHistory;
 import com.taller.model.enums.RepairStatusEnum;
 import com.taller.model.repository.DeviceObservationRepository;
 import com.taller.model.repository.RepairPaymentRepository;
 import com.taller.model.repository.RepairPartRepository;
 import com.taller.model.repository.RepairRepository;
+import com.taller.model.repository.RepairStatusHistoryRepository;
 import com.taller.model.repository.projection.FinanceRepairView;
 import com.taller.model.repository.projection.RepairListView;
+import com.taller.model.repository.projection.RepairStatusHistoryView;
 import com.taller.model.repository.projection.StatusBoardRepairView;
 import com.taller.resource.dto.DeviceObservationDTO;
 import com.taller.resource.dto.PageDTO;
 import com.taller.resource.dto.RepairDTO;
 import com.taller.resource.dto.RepairPartDTO;
 import com.taller.resource.dto.RepairPaymentDTO;
+import com.taller.resource.dto.RepairStatusHistoryDTO;
 import com.taller.resource.dto.StatusBoardRepairDTO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -41,6 +45,7 @@ public class RepairService {
     private final RepairPartRepository repairPartRepository;
     private final RepairPaymentRepository repairPaymentRepository;
     private final DeviceObservationRepository deviceObservationRepository;
+    private final RepairStatusHistoryRepository repairStatusHistoryRepository;
 
     @Transactional(readOnly = true)
     public List<RepairDTO> getAllRepairs() {
@@ -69,6 +74,7 @@ public class RepairService {
                 ? repairRepository.findById(repairDTO.getId()).orElseGet(Repair::new)
                 : new Repair();
         boolean isNew = repair.getId() == null;
+        RepairStatusEnum previousStatus = repair.getStatus();
 
         repair.setIdDevice(resolveDeviceId(repairDTO));
         repair.setIdClient(resolveClientId(repairDTO));
@@ -112,6 +118,7 @@ public class RepairService {
         }
 
         Repair saved = repairRepository.save(repair);
+        recordStatusHistory(saved, previousStatus, isNew);
 
         if (repairDTO.getParts() != null) {
             repairPartRepository.deleteAll(repairPartRepository.findByRepairId(saved.getId()));
@@ -153,6 +160,7 @@ public class RepairService {
     @Transactional
     public void updateStatus(String id, RepairStatusEnum status, LocalDateTime receiveDateTime, LocalDateTime returnDateTime) {
         Repair repair = repairRepository.findById(id).orElseThrow();
+        RepairStatusEnum previousStatus = repair.getStatus();
         repair.setStatus(status);
         if (status == RepairStatusEnum.RECIBIDA) {
             repair.setReceiveDateTime(receiveDateTime != null ? receiveDateTime : (repair.getReceiveDateTime() != null ? repair.getReceiveDateTime() : LocalDateTime.now()));
@@ -163,6 +171,7 @@ public class RepairService {
             repair.setReturnDateTime(null);
         }
         repairRepository.save(repair);
+        recordStatusHistory(repair, previousStatus, false);
     }
 
     @Transactional
@@ -170,6 +179,7 @@ public class RepairService {
         repairPartRepository.deleteAll(repairPartRepository.findByRepairId(id));
         repairPaymentRepository.deleteAll(repairPaymentRepository.findByRepairId(id));
         deviceObservationRepository.deleteAll(deviceObservationRepository.findByRepairId(id));
+        repairStatusHistoryRepository.deleteByRepairId(id);
         repairRepository.deleteById(id);
     }
 
@@ -221,7 +231,44 @@ public class RepairService {
         dto.setParts(repairPartRepository.findByRepairId(repair.getId()).stream().map(this::toPartDto).toList());
         dto.setPayments(repairPaymentRepository.findByRepairId(repair.getId()).stream().map(this::toPaymentDto).toList());
         dto.setObservations(deviceObservationRepository.findByRepairIdOrderByObservedAtDesc(repair.getId()).stream().map(this::toObservationDto).toList());
+        dto.setStatusHistory(repairStatusHistoryRepository.findByRepairIdOrderByChangedAtAscCreationDateTimeAsc(repair.getId()).stream().map(this::toStatusHistoryDto).toList());
         return dto;
+    }
+
+    private void recordStatusHistory(Repair repair, RepairStatusEnum previousStatus, boolean isNew) {
+        if (repair.getId() == null || repair.getStatus() == null) {
+            return;
+        }
+        if (!isNew && repair.getStatus() == previousStatus) {
+            return;
+        }
+
+        LocalDateTime changedAt = statusChangedAt(repair);
+        if (changedAt == null) {
+            return;
+        }
+        if (repairStatusHistoryRepository.existsByRepairIdAndStatusAndChangedAt(repair.getId(), repair.getStatus(), changedAt)) {
+            return;
+        }
+
+        repairStatusHistoryRepository.save(RepairStatusHistory.builder()
+                .repairId(repair.getId())
+                .status(repair.getStatus())
+                .changedAt(changedAt)
+                .build());
+    }
+
+    private LocalDateTime statusChangedAt(Repair repair) {
+        if (repair.getStatus() == RepairStatusEnum.POR_RECIBIR) {
+            return null;
+        }
+        if (repair.getStatus() == RepairStatusEnum.RECIBIDA) {
+            return repair.getReceiveDateTime();
+        }
+        if (repair.getStatus() == RepairStatusEnum.RETIRADA) {
+            return repair.getReturnDateTime();
+        }
+        return LocalDateTime.now();
     }
 
     private RepairDTO toListDto(RepairListView repair) {
@@ -277,6 +324,15 @@ public class RepairService {
         dto.setProvider(part.getProvider());
         dto.setCost(part.getCost());
         dto.setSalePrice(part.getSalePrice());
+        return dto;
+    }
+
+    private RepairStatusHistoryDTO toStatusHistoryDto(RepairStatusHistoryView history) {
+        RepairStatusHistoryDTO dto = new RepairStatusHistoryDTO();
+        dto.setId(history.getId());
+        dto.setRepairId(history.getRepairId());
+        dto.setStatus(history.getStatus());
+        dto.setChangedAt(history.getChangedAt());
         return dto;
     }
 

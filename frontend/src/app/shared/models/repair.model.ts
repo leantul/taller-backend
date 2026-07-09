@@ -10,6 +10,13 @@ export interface RepairPart {
   salePrice: number;
 }
 
+export interface RepairStatusHistory {
+  id?: string;
+  repairId?: string;
+  status: Repair['status'];
+  changedAt?: string;
+}
+
 export interface Repair {
   id?: string;
   idDevice: string;
@@ -25,6 +32,7 @@ export interface Repair {
   receiveDateTime?: string;
   returnDateTime?: string;
   parts?: RepairPart[];
+  statusHistory?: RepairStatusHistory[];
   observations?: DeviceObservation[];
   clientName?: string;
   clientPhone?: string;

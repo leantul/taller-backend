@@ -31,6 +31,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -46,6 +47,7 @@ public class RepairService {
     private final RepairPaymentRepository repairPaymentRepository;
     private final DeviceObservationRepository deviceObservationRepository;
     private final RepairStatusHistoryRepository repairStatusHistoryRepository;
+    private final Clock clock;
 
     @Transactional(readOnly = true)
     public List<RepairDTO> getAllRepairs() {
@@ -90,7 +92,7 @@ public class RepairService {
                 ? repairDTO.getReceiveDateTime()
                 : repair.getReceiveDateTime();
         if (receiveDateTime == null && isNew) {
-            receiveDateTime = LocalDateTime.now();
+            receiveDateTime = now();
         }
         repair.setReceiveDateTime(receiveDateTime);
 
@@ -98,7 +100,7 @@ public class RepairService {
                 ? repairDTO.getReturnDateTime()
                 : repair.getReturnDateTime();
         if (returnDateTime == null && repairDTO.getStatus() == RepairStatusEnum.RETIRADA) {
-            returnDateTime = LocalDateTime.now();
+            returnDateTime = now();
         }
         repair.setReturnDateTime(returnDateTime);
         repair.setPrice(repairDTO.getPrice());
@@ -163,10 +165,10 @@ public class RepairService {
         RepairStatusEnum previousStatus = repair.getStatus();
         repair.setStatus(status);
         if (status == RepairStatusEnum.RECIBIDA) {
-            repair.setReceiveDateTime(receiveDateTime != null ? receiveDateTime : repair.getReceiveDateTime() != null ? repair.getReceiveDateTime() : LocalDateTime.now());
+            repair.setReceiveDateTime(receiveDateTime != null ? receiveDateTime : repair.getReceiveDateTime() != null ? repair.getReceiveDateTime() : now());
         }
         if (status == RepairStatusEnum.RETIRADA) {
-            repair.setReturnDateTime(returnDateTime != null ? returnDateTime : repair.getReturnDateTime() != null ? repair.getReturnDateTime() : LocalDateTime.now());
+            repair.setReturnDateTime(returnDateTime != null ? returnDateTime : repair.getReturnDateTime() != null ? repair.getReturnDateTime() : now());
         } else {
             repair.setReturnDateTime(null);
         }
@@ -268,7 +270,7 @@ public class RepairService {
         if (repair.getStatus() == RepairStatusEnum.RETIRADA) {
             return repair.getReturnDateTime();
         }
-        return LocalDateTime.now();
+        return now();
     }
 
     private RepairDTO toListDto(RepairListView repair) {
@@ -375,7 +377,7 @@ public class RepairService {
     private DeviceObservation toObservation(Repair repair, DeviceObservationDTO dto, DeviceObservation observation) {
         LocalDateTime observedAt = dto.getObservedAt() != null
                 ? dto.getObservedAt()
-                : observation.getObservedAt() != null ? observation.getObservedAt() : LocalDateTime.now();
+                : observation.getObservedAt() != null ? observation.getObservedAt() : now();
         observation.setDeviceId(repair.getIdDevice());
         observation.setRepairId(repair.getId());
         observation.setNote(dto.getNote().trim());
@@ -383,6 +385,10 @@ public class RepairService {
         observation.setFollowUpAt(dto.getFollowUpAt() != null ? dto.getFollowUpAt() : observedAt.plusMonths(3));
         observation.setResolvedAt(dto.getResolvedAt());
         return observation;
+    }
+
+    private LocalDateTime now() {
+        return LocalDateTime.now(clock);
     }
 
     private DeviceObservationDTO toObservationDto(DeviceObservation observation) {

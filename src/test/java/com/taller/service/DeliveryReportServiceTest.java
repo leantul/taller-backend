@@ -183,14 +183,16 @@ class DeliveryReportServiceTest {
     }
 
     private void stubReportSave() {
-        when(repairRepository.findDeliveryReportSourceById("repair-1")).thenReturn(Optional.of(repairSourceFixtureForSave()));
+        DeliveryReportSourceView source = repairSourceFixtureForSave();
+        when(repairRepository.findDeliveryReportSourceById("repair-1")).thenReturn(Optional.of(source));
         when(repairReportRepository.findIdViewByRepairId("repair-1")).thenReturn(Optional.empty());
         when(repairReportRepository.save(any(RepairReport.class))).thenAnswer(invocation -> {
             RepairReport report = invocation.getArgument(0);
             report.setId("report-1");
             return report;
         });
-        when(repairReportRepository.findViewByRepairId("repair-1")).thenReturn(Optional.of(savedReportView()));
+        RepairReportView savedView = savedReportView();
+        when(repairReportRepository.findViewByRepairId("repair-1")).thenReturn(Optional.of(savedView));
         when(repairReportHardwareItemRepository.findViewByRepairReportIdOrderByCreationDateTimeAsc("report-1")).thenReturn(List.of());
         when(repairReportSoftwareItemRepository.findViewByRepairReportIdOrderByCreationDateTimeAsc("report-1")).thenReturn(List.of());
     }

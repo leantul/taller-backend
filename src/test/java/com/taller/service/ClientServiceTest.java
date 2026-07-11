@@ -1,5 +1,6 @@
 package com.taller.service;
 
+import com.taller.model.Client;
 import com.taller.model.enums.RepairStatusEnum;
 import com.taller.model.repository.ClientRepository;
 import com.taller.model.repository.RepairRepository;
@@ -7,6 +8,7 @@ import com.taller.model.repository.projection.ClientDetailView;
 import com.taller.model.repository.projection.ClientListView;
 import com.taller.model.repository.projection.ClientRepairHistoryView;
 import com.taller.resource.dto.ClientHistoryDTO;
+import com.taller.resource.dto.ClientDTO;
 import com.taller.resource.dto.PageDTO;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -92,5 +94,23 @@ class ClientServiceTest {
 
         assertNull(result.client());
         verify(repairRepository).findClientHistory("c1", PageRequest.of(0, 5));
+    }
+
+    @Test
+    void save_existingClient_updatesManagedEntityInsteadOfRecreatingIt() {
+        Client existing = new Client();
+        existing.setId("c1");
+        existing.setName("Anterior");
+        ClientDTO update = new ClientDTO();
+        update.setId("c1");
+        update.setName("Ada");
+        when(clientRepository.findById("c1")).thenReturn(Optional.of(existing));
+        when(clientRepository.save(existing)).thenReturn(existing);
+
+        ClientDTO result = service.save(update);
+
+        assertEquals("Ada", result.getName());
+        assertEquals(List.of(), result.getPhones());
+        verify(clientRepository).save(existing);
     }
 }

@@ -163,10 +163,10 @@ public class RepairService {
         RepairStatusEnum previousStatus = repair.getStatus();
         repair.setStatus(status);
         if (status == RepairStatusEnum.RECIBIDA) {
-            repair.setReceiveDateTime(receiveDateTime != null ? receiveDateTime : (repair.getReceiveDateTime() != null ? repair.getReceiveDateTime() : LocalDateTime.now()));
+            repair.setReceiveDateTime(receiveDateTime != null ? receiveDateTime : repair.getReceiveDateTime() != null ? repair.getReceiveDateTime() : LocalDateTime.now());
         }
         if (status == RepairStatusEnum.RETIRADA) {
-            repair.setReturnDateTime(returnDateTime != null ? returnDateTime : (repair.getReturnDateTime() != null ? repair.getReturnDateTime() : LocalDateTime.now()));
+            repair.setReturnDateTime(returnDateTime != null ? returnDateTime : repair.getReturnDateTime() != null ? repair.getReturnDateTime() : LocalDateTime.now());
         } else {
             repair.setReturnDateTime(null);
         }
@@ -196,7 +196,7 @@ public class RepairService {
                 .map(repair -> {
                     BigDecimal laborIncome = repair.getLaborAmount() != null
                             ? repair.getLaborAmount()
-                            : (repair.getPrice() != null ? repair.getPrice() : BigDecimal.ZERO);
+                            : repair.getPrice() != null ? repair.getPrice() : BigDecimal.ZERO;
 
                     return laborIncome.add(repair.getPartsProfit() != null ? repair.getPartsProfit() : BigDecimal.ZERO);
                 })
@@ -375,7 +375,7 @@ public class RepairService {
     private DeviceObservation toObservation(Repair repair, DeviceObservationDTO dto, DeviceObservation observation) {
         LocalDateTime observedAt = dto.getObservedAt() != null
                 ? dto.getObservedAt()
-                : (observation.getObservedAt() != null ? observation.getObservedAt() : LocalDateTime.now());
+                : observation.getObservedAt() != null ? observation.getObservedAt() : LocalDateTime.now();
         observation.setDeviceId(repair.getIdDevice());
         observation.setRepairId(repair.getId());
         observation.setNote(dto.getNote().trim());

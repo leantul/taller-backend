@@ -62,6 +62,6 @@ public class DbUrlEnvironmentPostProcessor implements EnvironmentPostProcessor, 
 
     @Override
     public int getOrder() {
-        return Ordered.HIGHEST_PRECEDENCE;
+        return HIGHEST_PRECEDENCE;
     }
 }

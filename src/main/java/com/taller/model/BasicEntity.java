@@ -28,10 +28,15 @@ public class BasicEntity {
      * provider before the entity is persisted to the database.
      */
     @PrePersist
-    private void onPersist() {
-        this.id = UUID.randomUUID().toString();
-        this.creationDateTime = LocalDateTime.now();
-        this.modificationDatetime = LocalDateTime.now();
+    protected void onPersist() {
+        LocalDateTime now = LocalDateTime.now();
+        if (this.id == null) {
+            this.id = UUID.randomUUID().toString();
+        }
+        if (this.creationDateTime == null) {
+            this.creationDateTime = now;
+        }
+        this.modificationDatetime = now;
     }
 
     /**
@@ -41,7 +46,7 @@ public class BasicEntity {
      * provider before the entity is updated in the database.
      */
     @PreUpdate
-    private void onUpdate() {
+    protected void onUpdate() {
         this.modificationDatetime = LocalDateTime.now();
     }
 }

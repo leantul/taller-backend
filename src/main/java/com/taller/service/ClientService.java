@@ -54,7 +54,15 @@ public class ClientService {
 
     @Transactional
     public ClientDTO save(ClientDTO clientDTO) {
-        Client client = new Client();
+        Client client = clientDTO.getId() == null
+                ? new Client()
+                : clientRepository.findById(clientDTO.getId())
+                        .orElseThrow(() -> new IllegalArgumentException("El cliente indicado no existe"));
+        copyEditableFields(clientDTO, client);
+        return toDto(clientRepository.save(client));
+    }
+
+    private void copyEditableFields(ClientDTO clientDTO, Client client) {
         client.setName(clientDTO.getName());
         client.setLastName(clientDTO.getLastName());
         client.setReference(clientDTO.getReference());
@@ -63,14 +71,8 @@ public class ClientService {
         client.setPhone(clientDTO.getPhone());
         client.setBirthDate(clientDTO.getBirthDate());
         client.setNotes(clientDTO.getNotes());
-        client.setPhones(clientDTO.getPhones());
-        client.setEmails(clientDTO.getEmails());
-
-        if (clientDTO.getId() != null) {
-            client.setId(clientDTO.getId());
-        }
-
-        return toDto(clientRepository.save(client));
+        client.setPhones(clientDTO.getPhones() == null ? List.of() : List.copyOf(clientDTO.getPhones()));
+        client.setEmails(clientDTO.getEmails() == null ? List.of() : List.copyOf(clientDTO.getEmails()));
     }
 
     @Transactional

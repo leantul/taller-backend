@@ -297,7 +297,7 @@ public class DeviceService {
     private DeviceObservation toObservation(String deviceId, String repairId, DeviceObservationDTO dto, DeviceObservation observation) {
         LocalDateTime observedAt = dto.getObservedAt() != null
                 ? dto.getObservedAt()
-                : (observation.getObservedAt() != null ? observation.getObservedAt() : LocalDateTime.now());
+                : observation.getObservedAt() != null ? observation.getObservedAt() : LocalDateTime.now();
         observation.setDeviceId(deviceId);
         observation.setRepairId(repairId != null ? repairId : dto.getRepairId());
         observation.setNote(dto.getNote() != null ? dto.getNote().trim() : null);

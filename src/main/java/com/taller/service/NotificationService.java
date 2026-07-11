@@ -69,20 +69,17 @@ public class NotificationService {
 
     @Transactional
     public NotificationDTO save(NotificationDTO dto) {
-        Notification notification = Notification.builder()
-                .title(dto.getTitle())
-                .message(dto.getMessage())
-                .readed(Boolean.FALSE)
-                .eventDate(dto.getEventDate())
-                .type(dto.getType())
-                .entityId(dto.getEntityId())
-                .repairId(dto.getRepairId())
-                .build();
-
-        if (dto.getId() != null) {
-            notification.setId(dto.getId());
-            notification.setReaded(dto.getReaded());
-        }
+        Notification notification = dto.getId() == null
+                ? new Notification()
+                : notificationRepository.findById(dto.getId())
+                        .orElseThrow(() -> new IllegalArgumentException("La notificación indicada no existe"));
+        notification.setTitle(dto.getTitle());
+        notification.setMessage(dto.getMessage());
+        notification.setReaded(dto.getId() == null ? Boolean.FALSE : dto.getReaded());
+        notification.setEventDate(dto.getEventDate());
+        notification.setType(dto.getType());
+        notification.setEntityId(dto.getEntityId());
+        notification.setRepairId(dto.getRepairId());
 
         return toDtos(List.of(notificationRepository.save(notification))).stream().findFirst().orElseGet(NotificationDTO::new);
     }

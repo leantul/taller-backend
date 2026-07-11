@@ -1,7 +1,8 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, DestroyRef, OnInit, inject } from '@angular/core';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { filter } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AuthService } from './core/auth/auth.service';
 import { ThemeMode, ThemeService } from './core/services/theme.service';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
@@ -86,6 +87,7 @@ import { ErrorDialogService, ErrorDialogState } from './core/services/error-dial
   `
 })
 export class AppComponent implements OnInit {
+  private readonly destroyRef = inject(DestroyRef);
   themeMode: ThemeMode;
   unreadNotifications = 0;
   errorDialog: ErrorDialogState | null = null;
@@ -134,11 +136,11 @@ export class AppComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    this.notificationState.unreadCount$.subscribe((count) => {
+    this.notificationState.unreadCount$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((count) => {
       this.unreadNotifications = count;
     });
 
-    this.errorDialogService.state$.subscribe((state) => {
+    this.errorDialogService.state$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((state) => {
       this.errorDialog = state;
     });
 
@@ -147,7 +149,10 @@ export class AppComponent implements OnInit {
     }
 
     this.router.events
-      .pipe(filter((event) => event instanceof NavigationEnd))
+      .pipe(
+        filter((event) => event instanceof NavigationEnd),
+        takeUntilDestroyed(this.destroyRef)
+      )
       .subscribe(() => {
         if (this.auth.isLoggedIn()) {
           this.notificationState.refreshUnreadCount();

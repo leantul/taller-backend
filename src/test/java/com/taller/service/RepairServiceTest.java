@@ -23,7 +23,10 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
 import java.util.Optional;
+import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -43,6 +46,9 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class RepairServiceTest {
 
+    private static final ZoneId BUSINESS_ZONE = ZoneId.of("America/Argentina/Buenos_Aires");
+    private static final Clock FIXED_CLOCK = Clock.fixed(Instant.parse("2026-06-20T20:00:00Z"), BUSINESS_ZONE);
+
     @Mock
     private RepairRepository repairRepository;
     @Mock
@@ -58,7 +64,7 @@ class RepairServiceTest {
 
     @BeforeEach
     void setUp() {
-        repairService = new RepairService(repairRepository, repairPartRepository, repairPaymentRepository, deviceObservationRepository, repairStatusHistoryRepository);
+        repairService = new RepairService(repairRepository, repairPartRepository, repairPaymentRepository, deviceObservationRepository, repairStatusHistoryRepository, FIXED_CLOCK);
     }
 
     @Test
@@ -322,7 +328,7 @@ class RepairServiceTest {
 
         assertEquals("id-1", history.getRepairId());
         assertEquals(RepairStatusEnum.HACIENDO, history.getStatus());
-        assertNotNull(history.getChangedAt());
+        assertEquals(LocalDateTime.of(2026, 6, 20, 17, 0), history.getChangedAt());
     }
 
     @Test

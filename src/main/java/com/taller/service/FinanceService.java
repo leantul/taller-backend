@@ -51,6 +51,9 @@ public class FinanceService {
         BigDecimal totalLabor = deliveredRepairs.stream()
                 .map(repair -> safeMoney(repair.getLaborAmount()))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal totalPartsProfit = deliveredRepairs.stream()
+                .map(repair -> safeMoney(repair.getPartsProfit()))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
         BigDecimal totalQuoted = deliveredRepairs.stream()
                 .map(repair -> safeMoney(repair.getQuotedAmount()))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
@@ -71,6 +74,7 @@ public class FinanceService {
         summary.setTotalIncome(totalIncome);
         summary.setTotalPartsCost(totalPartsCost);
         summary.setTotalLabor(totalLabor);
+        summary.setTotalPartsProfit(totalPartsProfit);
         summary.setTotalQuoted(totalQuoted);
         summary.setZeroFinalAmountCount(zeroFinalAmountCount);
         summary.setPositiveFinalAmountCount(positiveFinalAmountCount);

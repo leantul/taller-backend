@@ -14,6 +14,7 @@ export interface FinanceSummary {
   totalIncome: number | string;
   totalPartsCost: number | string;
   totalLabor: number | string;
+  totalPartsProfit: number | string;
   totalQuoted: number | string;
   zeroFinalAmountCount: number;
   positiveFinalAmountCount: number;

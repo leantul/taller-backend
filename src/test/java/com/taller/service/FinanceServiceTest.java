@@ -46,6 +46,26 @@ class FinanceServiceTest {
         assertEquals(1L, summary.getPositiveFinalAmountCount());
     }
 
+    @Test
+    void getSummary_sumsPartsProfitOnlyForDeliveredRepairsAndTreatsNullAsZero() {
+        LocalDate from = LocalDate.of(2026, 6, 1);
+        LocalDate to = LocalDate.of(2026, 6, 30);
+        FinanceRepairView deliveredWithProfit = financeRepair(RepairStatusEnum.RETIRADA, BigDecimal.valueOf(1500));
+        FinanceRepairView deliveredWithoutProfit = financeRepair(RepairStatusEnum.RETIRADA, BigDecimal.valueOf(900));
+        FinanceRepairView unfinished = financeRepair(RepairStatusEnum.HACIENDO, BigDecimal.valueOf(2500));
+        when(deliveredWithProfit.getPartsProfit()).thenReturn(BigDecimal.valueOf(275));
+        when(deliveredWithoutProfit.getPartsProfit()).thenReturn(null);
+        when(repairRepository.findFinanceRowsBetween(
+                LocalDateTime.of(2026, 6, 1, 0, 0),
+                LocalDateTime.of(2026, 6, 30, 23, 59, 59, 999999999)))
+                .thenReturn(List.of(deliveredWithProfit, deliveredWithoutProfit, unfinished));
+        when(repairRepository.findFinanceRowsFrom(any())).thenReturn(List.of());
+
+        FinanceSummaryDTO summary = new FinanceService(repairRepository).getSummary(from, to);
+
+        assertEquals(0, BigDecimal.valueOf(275).compareTo(summary.getTotalPartsProfit()));
+    }
+
     private FinanceRepairView financeRepair(RepairStatusEnum status, BigDecimal price) {
         FinanceRepairView repair = mock(FinanceRepairView.class);
         when(repair.getStatus()).thenReturn(status);

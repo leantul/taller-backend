@@ -64,6 +64,8 @@ type FinanceTableColumn = {
       <p-card header="Composición del periodo">
         <div class="ops-summary-grid finance-breakdown">
           <div class="ops-item"><span>Mano de obra cargada</span><strong>{{ formatMoney(totalLabor) }}</strong></div>
+          <div class="ops-item finance-profit-item"><span>Ganancias por mano de obra</span><strong>{{ formatMoney(totalLabor) }}</strong><small>{{ formatPercentage(laborProfitPercentage) }} del total de ganancias</small></div>
+          <div class="ops-item finance-profit-item"><span>Ganancias por repuestos</span><strong>{{ formatMoney(totalPartsProfit) }}</strong><small>{{ formatPercentage(partsProfitPercentage) }} del total de ganancias</small></div>
           <div class="ops-item"><span>Presupuestos emitidos</span><strong>{{ formatMoney(totalQuoted) }}</strong></div>
           <div class="ops-item"><span>Ordenes entregadas</span><strong>{{ deliveredCount }}</strong></div>
           <div class="ops-item"><span>Órdenes sin cargo</span><strong>{{ zeroFinalAmountCount }}</strong></div>
@@ -96,7 +98,7 @@ type FinanceTableColumn = {
               </tr>
             </thead>
             <tbody>
-              @for (row of deliveredFinanceRows; track row.repairId + row.date) {
+              @for (row of paginatedFinanceRows; track row.repairId + row.date) {
                 <tr>
                   <td>{{ row.clientName || '-' }}</td>
                   <td>{{ row.date ? (row.date | date:'dd/MM/yyyy') : '-' }}</td>
@@ -110,6 +112,14 @@ type FinanceTableColumn = {
             </tbody>
           </table>
         </div>
+        <div class="table-pager" aria-label="Paginación del detalle por reparación">
+          <span>{{ paginationLabel }}</span>
+          <div class="pager-actions">
+            <button class="pager-button" type="button" aria-label="Página anterior" [disabled]="currentPage === 1" (click)="previousPage()"><i class="pi pi-chevron-left"></i></button>
+            <span>Página {{ currentPage }} de {{ totalPages }}</span>
+            <button class="pager-button" type="button" aria-label="Página siguiente" [disabled]="currentPage === totalPages" (click)="nextPage()"><i class="pi pi-chevron-right"></i></button>
+          </div>
+        </div>
       </p-card>
     </section>
   `
@@ -122,12 +132,15 @@ export class FinancePageComponent implements OnInit, OnDestroy {
   totalIncome = 0;
   totalPartsCost = 0;
   totalLabor = 0;
+  totalPartsProfit = 0;
   totalQuoted = 0;
   zeroFinalAmountCount = 0;
   positiveFinalAmountCount = 0;
   netIncome = 0;
   averageNet = 0;
   deliveredCount = 0;
+  readonly pageSize = 10;
+  currentPage = 1;
   themeMode: ThemeMode;
   chartVisible = false;
   monthlyNetChartData: any = { labels: [], datasets: [] };
@@ -180,6 +193,7 @@ export class FinancePageComponent implements OnInit, OnDestroy {
   private lastSummary: FinanceSummary | null = null;
 
   applyFilters(): void {
+    this.currentPage = 1;
     this.api.getFinanceSummary(this.draftFromDate || undefined, this.draftToDate || undefined).subscribe({
       next: (summary) => {
         this.zone.run(() => {
@@ -214,6 +228,14 @@ export class FinancePageComponent implements OnInit, OnDestroy {
       currency: 'ARS',
       maximumFractionDigits: 0
     }).format(this.asMoney(value));
+  }
+
+  formatPercentage(value: number): string {
+    return new Intl.NumberFormat('es-AR', {
+      style: 'percent',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 1
+    }).format(value);
   }
 
   asMoney(value: unknown): number {
@@ -254,12 +276,14 @@ export class FinancePageComponent implements OnInit, OnDestroy {
     this.totalIncome = this.asMoney(summary.totalIncome);
     this.totalPartsCost = this.asMoney(summary.totalPartsCost);
     this.totalLabor = this.asMoney(summary.totalLabor);
+    this.totalPartsProfit = this.asMoney(summary.totalPartsProfit);
     this.totalQuoted = this.asMoney(summary.totalQuoted);
     this.zeroFinalAmountCount = summary.zeroFinalAmountCount || 0;
     this.positiveFinalAmountCount = summary.positiveFinalAmountCount || 0;
     this.netIncome = this.asMoney(summary.netIncome);
     this.averageNet = this.asMoney(summary.averageNet);
     this.deliveredCount = summary.deliveredCount || 0;
+    this.currentPage = Math.min(this.currentPage, this.totalPages);
   }
 
   get deliveredFinanceRows(): FinanceRow[] {
@@ -269,6 +293,38 @@ export class FinancePageComponent implements OnInit, OnDestroy {
     });
   }
 
+  get paginatedFinanceRows(): FinanceRow[] {
+    const start = (this.currentPage - 1) * this.pageSize;
+    return this.deliveredFinanceRows.slice(start, start + this.pageSize);
+  }
+
+  get totalPages(): number {
+    return Math.max(1, Math.ceil(this.financeRows.length / this.pageSize));
+  }
+
+  get paginationLabel(): string {
+    if (!this.financeRows.length) return '0 reparaciones';
+    const start = (this.currentPage - 1) * this.pageSize + 1;
+    const end = Math.min(start + this.pageSize - 1, this.financeRows.length);
+    return `${start}-${end} de ${this.financeRows.length} reparaciones`;
+  }
+
+  get laborProfitPercentage(): number {
+    return this.profitPercentage(this.totalLabor);
+  }
+
+  get partsProfitPercentage(): number {
+    return this.profitPercentage(this.totalPartsProfit);
+  }
+
+  previousPage(): void {
+    this.currentPage = Math.max(1, this.currentPage - 1);
+  }
+
+  nextPage(): void {
+    this.currentPage = Math.min(this.totalPages, this.currentPage + 1);
+  }
+
   sortByColumn(column: FinanceTableColumnKey): void {
     if (this.sortColumn === column) {
       this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
@@ -276,6 +332,12 @@ export class FinancePageComponent implements OnInit, OnDestroy {
       this.sortColumn = column;
       this.sortDirection = column === 'clientName' ? 'asc' : 'desc';
     }
+    this.currentPage = 1;
+  }
+
+  private profitPercentage(value: number): number {
+    const totalProfit = this.totalLabor + this.totalPartsProfit;
+    return totalProfit === 0 ? 0 : value / totalProfit;
   }
 
   sortIcon(column: FinanceTableColumnKey): string {

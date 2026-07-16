@@ -1,171 +1,154 @@
 package com.taller.service;
 
-import com.taller.model.enums.RepairStatusEnum;
 import com.taller.model.repository.RepairRepository;
-import com.taller.model.repository.projection.FinanceRepairView;
+import com.taller.model.repository.projection.FinanceMonthlyView;
+import com.taller.model.repository.projection.FinancePartsSummaryView;
+import com.taller.model.repository.projection.FinanceRepairSummaryView;
+import com.taller.model.repository.projection.FinanceRowView;
 import com.taller.resource.dto.DashboardSeriesItemDTO;
 import com.taller.resource.dto.FinanceRowDTO;
 import com.taller.resource.dto.FinanceSummaryDTO;
+import com.taller.resource.dto.PageDTO;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.YearMonth;
-import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Stream;
-import java.util.stream.Collectors;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
 public class FinanceService {
 
+    private static final int MAXIMUM_PAGE_SIZE = 100;
+    private static final Set<String> DETAIL_SORT_FIELDS = Set.of("clientName", "date", "income", "partsCost", "net");
+
     private final RepairRepository repairRepository;
 
     @Transactional(readOnly = true)
     public FinanceSummaryDTO getSummary(LocalDate from, LocalDate to) {
-        LocalDateTime fromDateTime = from != null ? from.atStartOfDay() : null;
-        LocalDateTime toDateTime = to != null ? to.plusDays(1).atStartOfDay().minusNanos(1) : null;
-        List<FinanceRepairView> filteredRepairs = findFinanceRows(fromDateTime, toDateTime);
-        List<FinanceRepairView> deliveredRepairs = filteredRepairs.stream()
-                .filter(repair -> repair.getStatus() == RepairStatusEnum.RETIRADA)
-                .toList();
+        LocalDateTime fromDateTime = startOfDay(from);
+        LocalDateTime toDateTime = endOfDay(to);
+        FinanceRepairSummaryView repairSummary = repairRepository.summarizeFinanceRepairs(fromDateTime, toDateTime);
+        FinancePartsSummaryView partsSummary = repairRepository.summarizeFinanceParts(fromDateTime, toDateTime);
 
-        List<FinanceRowDTO> rows = deliveredRepairs.stream()
-                .map(this::toRowDto)
-                .sorted(Comparator.comparing(FinanceRowDTO::getDate, Comparator.nullsLast(Comparator.reverseOrder()))
-                        .thenComparing(FinanceRowDTO::getClientName, Comparator.nullsLast(String::compareToIgnoreCase)))
-                .toList();
-
-        BigDecimal totalIncome = rows.stream()
-                .map(FinanceRowDTO::getIncome)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-        BigDecimal totalPartsCost = rows.stream()
-                .map(FinanceRowDTO::getPartsCost)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-        BigDecimal totalLabor = deliveredRepairs.stream()
-                .map(repair -> safeMoney(repair.getLaborAmount()))
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-        BigDecimal totalPartsProfit = deliveredRepairs.stream()
-                .map(repair -> safeMoney(repair.getPartsProfit()))
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-        BigDecimal totalQuoted = deliveredRepairs.stream()
-                .map(repair -> safeMoney(repair.getQuotedAmount()))
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-        long zeroFinalAmountCount = deliveredRepairs.stream()
-                .filter(repair -> safeMoney(repair.getPrice()).compareTo(BigDecimal.ZERO) == 0)
-                .count();
-        long positiveFinalAmountCount = deliveredRepairs.stream()
-                .filter(repair -> safeMoney(repair.getPrice()).compareTo(BigDecimal.ZERO) > 0)
-                .count();
-        BigDecimal netIncome = rows.stream()
-                .map(FinanceRowDTO::getNet)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        long repairCount = repairSummary != null && repairSummary.getRepairCount() != null
+                ? repairSummary.getRepairCount()
+                : 0L;
+        BigDecimal totalIncome = repairSummary != null ? safeMoney(repairSummary.getTotalIncome()) : BigDecimal.ZERO;
+        BigDecimal totalLabor = repairSummary != null ? safeMoney(repairSummary.getTotalLabor()) : BigDecimal.ZERO;
+        BigDecimal totalQuoted = repairSummary != null ? safeMoney(repairSummary.getTotalQuoted()) : BigDecimal.ZERO;
+        BigDecimal totalPartsCost = partsSummary != null ? safeMoney(partsSummary.getTotalPartsCost()) : BigDecimal.ZERO;
+        BigDecimal totalPartsProfit = partsSummary != null ? safeMoney(partsSummary.getTotalPartsProfit()) : BigDecimal.ZERO;
+        BigDecimal netIncome = totalIncome.subtract(totalPartsCost);
 
         FinanceSummaryDTO summary = new FinanceSummaryDTO();
         summary.setFrom(from);
         summary.setTo(to);
-        summary.setRepairCount(rows.size());
+        summary.setRepairCount(Math.toIntExact(repairCount));
         summary.setTotalIncome(totalIncome);
         summary.setTotalPartsCost(totalPartsCost);
         summary.setTotalLabor(totalLabor);
         summary.setTotalPartsProfit(totalPartsProfit);
         summary.setTotalQuoted(totalQuoted);
-        summary.setZeroFinalAmountCount(zeroFinalAmountCount);
-        summary.setPositiveFinalAmountCount(positiveFinalAmountCount);
+        summary.setZeroFinalAmountCount(repairSummary != null ? safeLong(repairSummary.getZeroFinalAmountCount()) : 0L);
+        summary.setPositiveFinalAmountCount(repairSummary != null ? safeLong(repairSummary.getPositiveFinalAmountCount()) : 0L);
         summary.setNetIncome(netIncome);
-        summary.setAverageNet(rows.isEmpty() ? BigDecimal.ZERO : netIncome.divide(BigDecimal.valueOf(rows.size()), 2, java.math.RoundingMode.HALF_UP));
-        summary.setDeliveredCount(rows.size());
+        summary.setAverageNet(repairCount == 0
+                ? BigDecimal.ZERO
+                : netIncome.divide(BigDecimal.valueOf(repairCount), 2, RoundingMode.HALF_UP));
+        summary.setDeliveredCount(repairCount);
         summary.setMonthlyNet(buildMonthlyNetSeries());
-        summary.setRows(rows);
         return summary;
+    }
+
+    @Transactional(readOnly = true)
+    public PageDTO<FinanceRowDTO> getDetails(
+            LocalDate from,
+            LocalDate to,
+            int page,
+            int size,
+            String sortBy,
+            String sortDir) {
+        String safeSortBy = DETAIL_SORT_FIELDS.contains(sortBy) ? sortBy : "date";
+        Sort.Direction direction = "asc".equalsIgnoreCase(sortDir) ? Sort.Direction.ASC : Sort.Direction.DESC;
+        PageRequest pageRequest = PageRequest.of(
+                Math.max(0, page),
+                Math.min(Math.max(1, size), MAXIMUM_PAGE_SIZE),
+                Sort.by(new Sort.Order(direction, safeSortBy), new Sort.Order(Sort.Direction.ASC, "repairId")));
+        Page<FinanceRowView> result = repairRepository.findFinancePage(startOfDay(from), endOfDay(to), pageRequest);
+        List<FinanceRowDTO> content = result.getContent().stream().map(this::toRowDto).toList();
+        return new PageDTO<>(content, result.getNumber(), result.getSize(), result.getTotalElements(), result.getTotalPages());
     }
 
     private List<DashboardSeriesItemDTO> buildMonthlyNetSeries() {
         YearMonth currentMonth = YearMonth.now();
         YearMonth firstMonth = currentMonth.minusMonths(11);
         LocalDateTime from = firstMonth.atDay(1).atStartOfDay();
-
-        List<FinanceRepairView> repairs = findFinanceRows(from, null).stream()
-                .filter(repair -> repair.getStatus() == RepairStatusEnum.RETIRADA)
-                .toList();
-
         Map<YearMonth, BigDecimal> monthlyNet = new LinkedHashMap<>();
+
         YearMonth cursor = firstMonth;
         while (!cursor.isAfter(currentMonth)) {
             monthlyNet.put(cursor, BigDecimal.ZERO);
             cursor = cursor.plusMonths(1);
         }
 
-        for (FinanceRepairView repair : repairs) {
-            LocalDateTime date = resolveFinanceDate(repair);
-            if (date == null) {
-                continue;
-            }
-
-            YearMonth month = YearMonth.from(date);
-            if (!monthlyNet.containsKey(month)) {
-                continue;
-            }
-
-            BigDecimal income = safeMoney(repair.getPrice());
-            BigDecimal partsCost = safeMoney(repair.getPartsCost());
-            monthlyNet.put(month, monthlyNet.get(month).add(income.subtract(partsCost)));
-        }
+        mergeMonthlyValues(monthlyNet, repairRepository.summarizeMonthlyFinanceIncome(from), false);
+        mergeMonthlyValues(monthlyNet, repairRepository.summarizeMonthlyFinancePartsCost(from), true);
 
         return monthlyNet.entrySet().stream()
                 .map(entry -> new DashboardSeriesItemDTO(formatMonth(entry.getKey()), entry.getValue()))
                 .toList();
     }
 
-    private FinanceRowDTO toRowDto(FinanceRepairView repair) {
-        BigDecimal income = safeMoney(repair.getPrice());
-        BigDecimal partsCost = safeMoney(repair.getPartsCost());
-
-        FinanceRowDTO row = new FinanceRowDTO();
-        row.setRepairId(repair.getId());
-        row.setClientName(formatClientName(repair));
-        row.setDate(resolveFinanceDate(repair));
-        row.setIncome(income);
-        row.setPartsCost(partsCost);
-        row.setNet(income.subtract(partsCost));
-        return row;
+    private void mergeMonthlyValues(
+            Map<YearMonth, BigDecimal> monthlyNet,
+            List<FinanceMonthlyView> values,
+            boolean subtract) {
+        for (FinanceMonthlyView value : values) {
+            if (value.getMonth() == null) continue;
+            YearMonth month = YearMonth.from(value.getMonth());
+            if (!monthlyNet.containsKey(month)) continue;
+            BigDecimal amount = safeMoney(value.getValue());
+            monthlyNet.put(month, subtract ? monthlyNet.get(month).subtract(amount) : monthlyNet.get(month).add(amount));
+        }
     }
 
-    private LocalDateTime resolveFinanceDate(FinanceRepairView repair) {
-        return repair.getReturnDateTime() != null ? repair.getReturnDateTime() : repair.getReceiveDateTime();
+    private FinanceRowDTO toRowDto(FinanceRowView row) {
+        FinanceRowDTO dto = new FinanceRowDTO();
+        dto.setRepairId(row.getRepairId());
+        dto.setClientName(row.getClientName());
+        dto.setDate(row.getDate());
+        dto.setIncome(safeMoney(row.getIncome()));
+        dto.setPartsCost(safeMoney(row.getPartsCost()));
+        dto.setNet(safeMoney(row.getNet()));
+        return dto;
+    }
+
+    private LocalDateTime startOfDay(LocalDate date) {
+        return date != null ? date.atStartOfDay() : null;
+    }
+
+    private LocalDateTime endOfDay(LocalDate date) {
+        return date != null ? date.plusDays(1).atStartOfDay().minusNanos(1) : null;
     }
 
     private BigDecimal safeMoney(BigDecimal value) {
         return value != null ? value : BigDecimal.ZERO;
     }
 
-    private List<FinanceRepairView> findFinanceRows(LocalDateTime from, LocalDateTime to) {
-        if (from != null && to != null) {
-            return repairRepository.findFinanceRowsBetween(from, to);
-        }
-
-        if (from != null) {
-            return repairRepository.findFinanceRowsFrom(from);
-        }
-
-        if (to != null) {
-            return repairRepository.findFinanceRowsTo(to);
-        }
-
-        return repairRepository.findFinanceRowsAll();
-    }
-
-    private String formatClientName(FinanceRepairView repair) {
-        String fullName = Stream.of(repair.getClientName(), repair.getClientLastName())
-                .filter(value -> value != null && !value.isBlank())
-                .collect(Collectors.joining(" "));
-        return fullName.isBlank() ? "-" : fullName;
+    private long safeLong(Long value) {
+        return value != null ? value : 0L;
     }
 
     private String formatMonth(YearMonth month) {

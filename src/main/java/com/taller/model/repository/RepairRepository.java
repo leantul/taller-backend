@@ -6,6 +6,10 @@ import com.taller.model.repository.projection.DeviceLastRepairView;
 import com.taller.model.repository.projection.ClientRepairHistoryView;
 import com.taller.model.repository.projection.DeliveryReportSourceView;
 import com.taller.model.repository.projection.FinanceRepairView;
+import com.taller.model.repository.projection.FinanceMonthlyView;
+import com.taller.model.repository.projection.FinancePartsSummaryView;
+import com.taller.model.repository.projection.FinanceRepairSummaryView;
+import com.taller.model.repository.projection.FinanceRowView;
 import com.taller.model.repository.projection.RepairListView;
 import com.taller.model.repository.projection.RepairStatusCountView;
 import com.taller.model.repository.projection.StatusBoardRepairView;
@@ -62,6 +66,84 @@ public interface RepairRepository extends JpaRepository<Repair, String> {
                OR lower(d.model) LIKE lower(concat('%', :term, '%'))
                OR lower(d.deviceType.name) LIKE lower(concat('%', :term, '%')))
             """;
+
+    String FINANCE_DATE_FILTER = """
+            (:from IS NULL OR COALESCE(r.returnDateTime, r.receiveDateTime) >= :from)
+            AND (:to IS NULL OR COALESCE(r.returnDateTime, r.receiveDateTime) <= :to)
+            """;
+
+    @Query(value = """
+            SELECT r.id AS repairId,
+                   CASE
+                       WHEN c.name IS NULL AND c.lastName IS NULL THEN '-'
+                       ELSE trim(concat(coalesce(c.name, ''), concat(' ', coalesce(c.lastName, ''))))
+                   END AS clientName,
+                   COALESCE(r.returnDateTime, r.receiveDateTime) AS date,
+                   COALESCE(r.price, 0) AS income,
+                   COALESCE(SUM(COALESCE(p.cost, 0) * COALESCE(p.quantity, 1)), 0) AS partsCost,
+                   COALESCE(r.price, 0) - COALESCE(SUM(COALESCE(p.cost, 0) * COALESCE(p.quantity, 1)), 0) AS net
+            FROM Repair r
+            LEFT JOIN r.client c
+            LEFT JOIN r.parts p
+            WHERE r.status = com.taller.model.enums.RepairStatusEnum.RETIRADA
+              AND """ + FINANCE_DATE_FILTER + """
+            GROUP BY r.id, c.name, c.lastName, r.returnDateTime, r.receiveDateTime, r.price
+            """,
+            countQuery = """
+            SELECT COUNT(r)
+            FROM Repair r
+            WHERE r.status = com.taller.model.enums.RepairStatusEnum.RETIRADA
+              AND """ + FINANCE_DATE_FILTER)
+    Page<FinanceRowView> findFinancePage(
+            @Param("from") LocalDateTime from,
+            @Param("to") LocalDateTime to,
+            Pageable pageable);
+
+    @Query("""
+            SELECT COUNT(r) AS repairCount,
+                   COALESCE(SUM(COALESCE(r.price, 0)), 0) AS totalIncome,
+                   COALESCE(SUM(COALESCE(r.laborAmount, 0)), 0) AS totalLabor,
+                   COALESCE(SUM(COALESCE(r.quotedAmount, 0)), 0) AS totalQuoted,
+                   COALESCE(SUM(CASE WHEN COALESCE(r.price, 0) = 0 THEN 1 ELSE 0 END), 0) AS zeroFinalAmountCount,
+                   COALESCE(SUM(CASE WHEN COALESCE(r.price, 0) > 0 THEN 1 ELSE 0 END), 0) AS positiveFinalAmountCount
+            FROM Repair r
+            WHERE r.status = com.taller.model.enums.RepairStatusEnum.RETIRADA
+              AND """ + FINANCE_DATE_FILTER)
+    FinanceRepairSummaryView summarizeFinanceRepairs(
+            @Param("from") LocalDateTime from,
+            @Param("to") LocalDateTime to);
+
+    @Query("""
+            SELECT COALESCE(SUM(COALESCE(p.cost, 0) * COALESCE(p.quantity, 1)), 0) AS totalPartsCost,
+                   COALESCE(SUM((COALESCE(p.salePrice, 0) - COALESCE(p.cost, 0)) * COALESCE(p.quantity, 1)), 0) AS totalPartsProfit
+            FROM RepairPart p
+            JOIN p.repair r
+            WHERE r.status = com.taller.model.enums.RepairStatusEnum.RETIRADA
+              AND """ + FINANCE_DATE_FILTER)
+    FinancePartsSummaryView summarizeFinanceParts(
+            @Param("from") LocalDateTime from,
+            @Param("to") LocalDateTime to);
+
+    @Query("""
+            SELECT FUNCTION('date_trunc', 'month', COALESCE(r.returnDateTime, r.receiveDateTime)) AS month,
+                   COALESCE(SUM(COALESCE(r.price, 0)), 0) AS value
+            FROM Repair r
+            WHERE r.status = com.taller.model.enums.RepairStatusEnum.RETIRADA
+              AND COALESCE(r.returnDateTime, r.receiveDateTime) >= :from
+            GROUP BY FUNCTION('date_trunc', 'month', COALESCE(r.returnDateTime, r.receiveDateTime))
+            """)
+    List<FinanceMonthlyView> summarizeMonthlyFinanceIncome(@Param("from") LocalDateTime from);
+
+    @Query("""
+            SELECT FUNCTION('date_trunc', 'month', COALESCE(r.returnDateTime, r.receiveDateTime)) AS month,
+                   COALESCE(SUM(COALESCE(p.cost, 0) * COALESCE(p.quantity, 1)), 0) AS value
+            FROM RepairPart p
+            JOIN p.repair r
+            WHERE r.status = com.taller.model.enums.RepairStatusEnum.RETIRADA
+              AND COALESCE(r.returnDateTime, r.receiveDateTime) >= :from
+            GROUP BY FUNCTION('date_trunc', 'month', COALESCE(r.returnDateTime, r.receiveDateTime))
+            """)
+    List<FinanceMonthlyView> summarizeMonthlyFinancePartsCost(@Param("from") LocalDateTime from);
 
     @Query("""
             SELECT r.id AS id,

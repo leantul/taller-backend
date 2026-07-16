@@ -63,9 +63,8 @@ type FinanceTableColumn = {
     <section class="dashboard-grid lists finance-layout">
       <p-card header="Composición del periodo">
         <div class="ops-summary-grid finance-breakdown">
-          <div class="ops-item"><span>Mano de obra cargada</span><strong>{{ formatMoney(totalLabor) }}</strong></div>
-          <div class="ops-item finance-profit-item"><span>Ganancias por mano de obra</span><strong>{{ formatMoney(totalLabor) }}</strong><small>{{ formatPercentage(laborProfitPercentage) }} del total de ganancias</small></div>
-          <div class="ops-item finance-profit-item"><span>Ganancias por repuestos</span><strong>{{ formatMoney(totalPartsProfit) }}</strong><small>{{ formatPercentage(partsProfitPercentage) }} del total de ganancias</small></div>
+          <div class="ops-item"><span>Ganancias por mano de obra</span><strong>{{ formatMoney(totalLabor) }}</strong><small>{{ formatPercentage(laborProfitPercentage) }} del total de ganancias</small></div>
+          <div class="ops-item"><span>Ganancias por repuestos</span><strong>{{ formatMoney(totalPartsProfit) }}</strong><small>{{ formatPercentage(partsProfitPercentage) }} del total de ganancias</small></div>
           <div class="ops-item"><span>Presupuestos emitidos</span><strong>{{ formatMoney(totalQuoted) }}</strong></div>
           <div class="ops-item"><span>Ordenes entregadas</span><strong>{{ deliveredCount }}</strong></div>
           <div class="ops-item"><span>Órdenes sin cargo</span><strong>{{ zeroFinalAmountCount }}</strong></div>
@@ -98,7 +97,7 @@ type FinanceTableColumn = {
               </tr>
             </thead>
             <tbody>
-              @for (row of paginatedFinanceRows; track row.repairId + row.date) {
+              @for (row of financeRows; track row.repairId + row.date) {
                 <tr>
                   <td>{{ row.clientName || '-' }}</td>
                   <td>{{ row.date ? (row.date | date:'dd/MM/yyyy') : '-' }}</td>
@@ -141,6 +140,8 @@ export class FinancePageComponent implements OnInit, OnDestroy {
   deliveredCount = 0;
   readonly pageSize = 10;
   currentPage = 1;
+  totalElements = 0;
+  totalPages = 1;
   themeMode: ThemeMode;
   chartVisible = false;
   monthlyNetChartData: any = { labels: [], datasets: [] };
@@ -194,6 +195,7 @@ export class FinancePageComponent implements OnInit, OnDestroy {
 
   applyFilters(): void {
     this.currentPage = 1;
+    this.loadDetails();
     this.api.getFinanceSummary(this.draftFromDate || undefined, this.draftToDate || undefined).subscribe({
       next: (summary) => {
         this.zone.run(() => {
@@ -271,7 +273,6 @@ export class FinancePageComponent implements OnInit, OnDestroy {
   }
 
   private hydrateSummary(summary: FinanceSummary): void {
-    this.financeRows = summary.rows || [];
     this.repairCount = summary.repairCount || 0;
     this.totalIncome = this.asMoney(summary.totalIncome);
     this.totalPartsCost = this.asMoney(summary.totalPartsCost);
@@ -283,30 +284,13 @@ export class FinancePageComponent implements OnInit, OnDestroy {
     this.netIncome = this.asMoney(summary.netIncome);
     this.averageNet = this.asMoney(summary.averageNet);
     this.deliveredCount = summary.deliveredCount || 0;
-    this.currentPage = Math.min(this.currentPage, this.totalPages);
-  }
-
-  get deliveredFinanceRows(): FinanceRow[] {
-    return [...this.financeRows].sort((left, right) => {
-      const direction = this.sortDirection === 'asc' ? 1 : -1;
-      return this.compareFinanceRows(left, right, this.sortColumn) * direction;
-    });
-  }
-
-  get paginatedFinanceRows(): FinanceRow[] {
-    const start = (this.currentPage - 1) * this.pageSize;
-    return this.deliveredFinanceRows.slice(start, start + this.pageSize);
-  }
-
-  get totalPages(): number {
-    return Math.max(1, Math.ceil(this.financeRows.length / this.pageSize));
   }
 
   get paginationLabel(): string {
-    if (!this.financeRows.length) return '0 reparaciones';
+    if (!this.totalElements) return '0 reparaciones';
     const start = (this.currentPage - 1) * this.pageSize + 1;
-    const end = Math.min(start + this.pageSize - 1, this.financeRows.length);
-    return `${start}-${end} de ${this.financeRows.length} reparaciones`;
+    const end = Math.min(start + this.financeRows.length - 1, this.totalElements);
+    return `${start}-${end} de ${this.totalElements} reparaciones`;
   }
 
   get laborProfitPercentage(): number {
@@ -318,11 +302,15 @@ export class FinancePageComponent implements OnInit, OnDestroy {
   }
 
   previousPage(): void {
-    this.currentPage = Math.max(1, this.currentPage - 1);
+    if (this.currentPage === 1) return;
+    this.currentPage--;
+    this.loadDetails();
   }
 
   nextPage(): void {
-    this.currentPage = Math.min(this.totalPages, this.currentPage + 1);
+    if (this.currentPage === this.totalPages) return;
+    this.currentPage++;
+    this.loadDetails();
   }
 
   sortByColumn(column: FinanceTableColumnKey): void {
@@ -333,6 +321,7 @@ export class FinancePageComponent implements OnInit, OnDestroy {
       this.sortDirection = column === 'clientName' ? 'asc' : 'desc';
     }
     this.currentPage = 1;
+    this.loadDetails();
   }
 
   private profitPercentage(value: number): number {
@@ -438,26 +427,38 @@ export class FinancePageComponent implements OnInit, OnDestroy {
     });
   }
 
-  private compareFinanceRows(left: FinanceRow, right: FinanceRow, column: FinanceTableColumnKey): number {
-    switch (column) {
-      case 'clientName':
-        return (left.clientName || '').localeCompare(right.clientName || '', 'es', { sensitivity: 'base' });
-      case 'date':
-        return this.dateTimestamp(left.date) - this.dateTimestamp(right.date);
-      case 'income':
-        return this.asMoney(left.income) - this.asMoney(right.income);
-      case 'partsCost':
-        return this.asMoney(left.partsCost) - this.asMoney(right.partsCost);
-      case 'net':
-      default:
-        return this.asMoney(left.net) - this.asMoney(right.net);
-    }
-  }
-
-  private dateTimestamp(value: string | null): number {
-    if (!value) return 0;
-    const timestamp = new Date(value).getTime();
-    return Number.isFinite(timestamp) ? timestamp : 0;
+  private loadDetails(): void {
+    this.api.getFinanceDetails(
+      this.draftFromDate || undefined,
+      this.draftToDate || undefined,
+      this.currentPage - 1,
+      this.pageSize,
+      this.sortColumn,
+      this.sortDirection
+    ).subscribe({
+      next: (page) => {
+        this.zone.run(() => {
+          this.financeRows = page.content || [];
+          this.currentPage = page.page + 1;
+          this.totalElements = page.totalElements;
+          this.totalPages = Math.max(1, page.totalPages);
+          this.changeDetector.detectChanges();
+        });
+      },
+      error: (error) => {
+        this.zone.run(() => {
+          this.financeRows = [];
+          this.totalElements = 0;
+          this.totalPages = 1;
+          this.messageService.add({
+            severity: 'error',
+            summary: 'No se pudo cargar el detalle financiero',
+            detail: this.financeErrorDetail(error)
+          });
+          this.changeDetector.detectChanges();
+        });
+      }
+    });
   }
 
   private restoreColumnWidths(): void {

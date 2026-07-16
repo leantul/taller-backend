@@ -1,6 +1,8 @@
 package com.taller.resource.controller;
 
 import com.taller.resource.dto.FinanceSummaryDTO;
+import com.taller.resource.dto.FinanceRowDTO;
+import com.taller.resource.dto.PageDTO;
 import com.taller.service.FinanceService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -24,5 +26,17 @@ public class FinanceController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to
     ) {
         return financeService.getSummary(from, to);
+    }
+
+    @GetMapping("/details")
+    public PageDTO<FinanceRowDTO> getDetails(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "date") String sortBy,
+            @RequestParam(defaultValue = "desc") String sortDir
+    ) {
+        return financeService.getDetails(from, to, page, size, sortBy, sortDir);
     }
 }

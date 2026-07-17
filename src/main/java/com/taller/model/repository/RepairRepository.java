@@ -68,8 +68,8 @@ public interface RepairRepository extends JpaRepository<Repair, String> {
             """;
 
     String FINANCE_DATE_FILTER = """
-            (:from IS NULL OR COALESCE(r.returnDateTime, r.receiveDateTime) >= :from)
-            AND (:to IS NULL OR COALESCE(r.returnDateTime, r.receiveDateTime) <= :to)
+            COALESCE(r.returnDateTime, r.receiveDateTime) >= COALESCE(:from, COALESCE(r.returnDateTime, r.receiveDateTime))
+            AND COALESCE(r.returnDateTime, r.receiveDateTime) <= COALESCE(:to, COALESCE(r.returnDateTime, r.receiveDateTime))
             """;
 
     @Query(value = """

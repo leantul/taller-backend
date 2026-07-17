@@ -67,11 +67,6 @@ public interface RepairRepository extends JpaRepository<Repair, String> {
                OR lower(d.deviceType.name) LIKE lower(concat('%', :term, '%')))
             """;
 
-    String FINANCE_DATE_FILTER = """
-            COALESCE(r.returnDateTime, r.receiveDateTime) >= COALESCE(:from, COALESCE(r.returnDateTime, r.receiveDateTime))
-            AND COALESCE(r.returnDateTime, r.receiveDateTime) <= COALESCE(:to, COALESCE(r.returnDateTime, r.receiveDateTime))
-            """;
-
     @Query(value = """
             SELECT r.id AS repairId,
                    CASE
@@ -86,14 +81,17 @@ public interface RepairRepository extends JpaRepository<Repair, String> {
             LEFT JOIN r.client c
             LEFT JOIN r.parts p
             WHERE r.status = com.taller.model.enums.RepairStatusEnum.RETIRADA
-              AND """ + FINANCE_DATE_FILTER + """
+              AND COALESCE(r.returnDateTime, r.receiveDateTime) >= COALESCE(:from, COALESCE(r.returnDateTime, r.receiveDateTime))
+              AND COALESCE(r.returnDateTime, r.receiveDateTime) <= COALESCE(:to, COALESCE(r.returnDateTime, r.receiveDateTime))
             GROUP BY r.id, c.name, c.lastName, r.returnDateTime, r.receiveDateTime, r.price
             """,
             countQuery = """
             SELECT COUNT(r)
             FROM Repair r
             WHERE r.status = com.taller.model.enums.RepairStatusEnum.RETIRADA
-              AND """ + FINANCE_DATE_FILTER)
+              AND COALESCE(r.returnDateTime, r.receiveDateTime) >= COALESCE(:from, COALESCE(r.returnDateTime, r.receiveDateTime))
+              AND COALESCE(r.returnDateTime, r.receiveDateTime) <= COALESCE(:to, COALESCE(r.returnDateTime, r.receiveDateTime))
+            """)
     Page<FinanceRowView> findFinancePage(
             @Param("from") LocalDateTime from,
             @Param("to") LocalDateTime to,
@@ -108,7 +106,9 @@ public interface RepairRepository extends JpaRepository<Repair, String> {
                    COALESCE(SUM(CASE WHEN COALESCE(r.price, 0) > 0 THEN 1 ELSE 0 END), 0) AS positiveFinalAmountCount
             FROM Repair r
             WHERE r.status = com.taller.model.enums.RepairStatusEnum.RETIRADA
-              AND """ + FINANCE_DATE_FILTER)
+              AND COALESCE(r.returnDateTime, r.receiveDateTime) >= COALESCE(:from, COALESCE(r.returnDateTime, r.receiveDateTime))
+              AND COALESCE(r.returnDateTime, r.receiveDateTime) <= COALESCE(:to, COALESCE(r.returnDateTime, r.receiveDateTime))
+            """)
     FinanceRepairSummaryView summarizeFinanceRepairs(
             @Param("from") LocalDateTime from,
             @Param("to") LocalDateTime to);
@@ -119,7 +119,9 @@ public interface RepairRepository extends JpaRepository<Repair, String> {
             FROM RepairPart p
             JOIN p.repair r
             WHERE r.status = com.taller.model.enums.RepairStatusEnum.RETIRADA
-              AND """ + FINANCE_DATE_FILTER)
+              AND COALESCE(r.returnDateTime, r.receiveDateTime) >= COALESCE(:from, COALESCE(r.returnDateTime, r.receiveDateTime))
+              AND COALESCE(r.returnDateTime, r.receiveDateTime) <= COALESCE(:to, COALESCE(r.returnDateTime, r.receiveDateTime))
+            """)
     FinancePartsSummaryView summarizeFinanceParts(
             @Param("from") LocalDateTime from,
             @Param("to") LocalDateTime to);

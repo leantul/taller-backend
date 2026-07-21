@@ -2,6 +2,8 @@ package com.taller.resource.dto;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.taller.model.enums.RepairStatusEnum;
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -23,6 +25,8 @@ public class RepairDTO {
     private LocalDateTime receiveDateTime;
     private LocalDateTime returnDateTime;
     private BigDecimal price;
+    @NotNull(message = "Completá la mano de obra. Si no corresponde, ingresá $0")
+    @DecimalMin(value = "0.0", message = "La mano de obra no puede ser negativa")
     private BigDecimal laborAmount;
     private BigDecimal extraAmount;
     private BigDecimal quotedAmount;

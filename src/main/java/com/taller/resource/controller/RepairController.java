@@ -9,6 +9,7 @@ import com.taller.model.enums.RepairStatusEnum;
 import com.taller.service.DeliveryReportService;
 import com.taller.service.RepairService;
 import lombok.RequiredArgsConstructor;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -60,12 +61,12 @@ public class RepairController {
     }
 
     @PostMapping
-    public ResponseEntity<RepairDTO> saveRepair(@RequestBody RepairDTO repairDTO) {
+    public ResponseEntity<RepairDTO> saveRepair(@Valid @RequestBody RepairDTO repairDTO) {
         return new ResponseEntity<>(repairService.save(repairDTO), HttpStatus.OK);
     }
 
     @PutMapping
-    public ResponseEntity<RepairDTO> updateRepair(@RequestBody RepairDTO repairDTO) {
+    public ResponseEntity<RepairDTO> updateRepair(@Valid @RequestBody RepairDTO repairDTO) {
         return new ResponseEntity<>(repairService.save(repairDTO), HttpStatus.OK);
     }
 

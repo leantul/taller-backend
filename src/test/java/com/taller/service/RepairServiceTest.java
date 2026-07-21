@@ -23,6 +23,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
 import java.util.Optional;
+import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -36,6 +37,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -85,6 +87,7 @@ class RepairServiceTest {
         dto.setIdDevice("d1");
         dto.setDescription("Test");
         dto.setStatus(RepairStatusEnum.POR_RECIBIR);
+        dto.setLaborAmount(BigDecimal.ZERO);
 
         RepairDTO saved = repairService.save(dto);
 
@@ -103,6 +106,7 @@ class RepairServiceTest {
         dto.setIdDevice("d1");
         dto.setDescription("Test");
         dto.setStatus(RepairStatusEnum.RECIBIDA);
+        dto.setLaborAmount(BigDecimal.ZERO);
         dto.setReceiveDateTime(selectedReceiveDate);
 
         RepairDTO saved = repairService.save(dto);
@@ -120,6 +124,7 @@ class RepairServiceTest {
         dto.setIdDevice("d1");
         dto.setDescription("Test");
         dto.setStatus(RepairStatusEnum.RECIBIDA);
+        dto.setLaborAmount(BigDecimal.ZERO);
 
         RepairDTO saved = repairService.save(dto);
 
@@ -144,6 +149,7 @@ class RepairServiceTest {
         dto.setIdDevice("d1");
         dto.setDescription("Test");
         dto.setStatus(RepairStatusEnum.RETIRADA);
+        dto.setLaborAmount(BigDecimal.ZERO);
 
         RepairDTO saved = repairService.save(dto);
 
@@ -160,6 +166,7 @@ class RepairServiceTest {
         dto.setIdDevice("d1");
         dto.setDescription("Test");
         dto.setStatus(RepairStatusEnum.POR_RECIBIR);
+        dto.setLaborAmount(BigDecimal.ZERO);
         dto.setRepairNotes("  Observación cargada durante el alta  ");
 
         RepairDTO saved = repairService.save(dto);
@@ -178,6 +185,27 @@ class RepairServiceTest {
         RepairDTO saved = repairService.save(dto);
 
         assertEquals("Trabajo realizado y pruebas completas.", saved.getRepairNotes());
+    }
+
+    @Test
+    void save_withoutLaborAmount_isRejected() {
+        RepairDTO dto = new RepairDTO();
+
+        IllegalArgumentException error = assertThrows(IllegalArgumentException.class, () -> repairService.save(dto));
+
+        assertEquals("Completá la mano de obra. Si no corresponde, ingresá $0", error.getMessage());
+        verify(repairRepository, never()).save(any());
+    }
+
+    @Test
+    void save_withNegativeLaborAmount_isRejected() {
+        RepairDTO dto = new RepairDTO();
+        dto.setLaborAmount(BigDecimal.valueOf(-1));
+
+        IllegalArgumentException error = assertThrows(IllegalArgumentException.class, () -> repairService.save(dto));
+
+        assertEquals("La mano de obra no puede ser negativa", error.getMessage());
+        verify(repairRepository, never()).save(any());
     }
 
     @Test
@@ -453,6 +481,7 @@ class RepairServiceTest {
         dto.setIdDevice("d1");
         dto.setDescription("Test");
         dto.setStatus(RepairStatusEnum.HACIENDO);
+        dto.setLaborAmount(BigDecimal.ZERO);
         dto.setRepairNotes(repairNotes);
         return dto;
     }

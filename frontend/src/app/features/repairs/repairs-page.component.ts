@@ -84,8 +84,8 @@ export class RepairsPageComponent implements OnInit {
   clientSearch = '';
   selectedClientName = '';
   clientSuggestions: { label: string; value: string }[] = [];
-  draft: Repair = { idDevice: '', idClient: '', orderNumber: '', description: '', status: 'POR_RECIBIR', price: 0, quotedAmount: 0, quoteNotes: '', repairNotes: '', parts: [], observations: [] };
-  editingRepair: Repair = { idDevice: '', idClient: '', orderNumber: '', description: '', status: 'POR_RECIBIR', price: 0, quotedAmount: 0, quoteNotes: '', parts: [], observations: [] };
+  draft: Repair = { idDevice: '', idClient: '', orderNumber: '', description: '', status: 'POR_RECIBIR', price: 0, laborAmount: null, quotedAmount: 0, quoteNotes: '', repairNotes: '', parts: [], observations: [] };
+  editingRepair: Repair = { idDevice: '', idClient: '', orderNumber: '', description: '', status: 'POR_RECIBIR', price: 0, laborAmount: null, quotedAmount: 0, quoteNotes: '', parts: [], observations: [] };
   draftClient: Client = { name: '', lastName: '', reference: '', email: '', phone: '' };
   statusEditingRepair: Repair | null = null;
   searchTerm = '';
@@ -180,13 +180,17 @@ export class RepairsPageComponent implements OnInit {
       this.messageService.add({ severity: 'warn', summary: 'Faltan datos', detail: 'Cliente, dispositivo y falla reportada son obligatorios.' });
       return;
     }
+    if (this.draft.laborAmount == null) {
+      this.showLaborAmountRequiredMessage();
+      return;
+    }
     const payload = { ...this.draft, orderNumber: this.draft.orderNumber || '' };
     this.isSaving = true;
     this.api.createRepair(payload).subscribe({
       next: () => {
         this.isSaving = false;
         this.messageService.add({ severity: 'success', summary: 'Reparación guardada', detail: 'Alta creada correctamente.' });
-      this.draft = { idDevice: '', idClient: '', orderNumber: '', description: '', status: 'POR_RECIBIR', price: 0, quotedAmount: 0, quoteNotes: '', repairNotes: '', parts: [], observations: [] };
+      this.draft = { idDevice: '', idClient: '', orderNumber: '', description: '', status: 'POR_RECIBIR', price: 0, laborAmount: null, quotedAmount: 0, quoteNotes: '', repairNotes: '', parts: [], observations: [] };
         this.selectedClientName='';
         this.clientDevices=[];
         this.rebuildClientDeviceOptions();
@@ -380,6 +384,10 @@ export class RepairsPageComponent implements OnInit {
   }
 
   saveRepairChanges(): void {
+    if (this.editingRepair.laborAmount == null) {
+      this.showLaborAmountRequiredMessage();
+      return;
+    }
     const payload: Repair = { ...this.editingRepair };
     if (payload.status !== 'RETIRADA') {
       payload.returnDateTime = undefined;
@@ -415,7 +423,16 @@ export class RepairsPageComponent implements OnInit {
 
   private errorDetail(error: any, fallback: string): string {
     if (error?.status === 403) return 'No autorizado (403). Verificá permisos/token de sesión.';
+    if (error?.error?.error) return error.error.error;
     return `${fallback} (${error?.status || 'sin código'}).`;
+  }
+
+  private showLaborAmountRequiredMessage(): void {
+    this.messageService.add({
+      severity: 'warn',
+      summary: 'Falta mano de obra',
+      detail: 'Completá la mano de obra. Si no corresponde, ingresá $0'
+    });
   }
 
   applyFilters(): void {

@@ -72,6 +72,7 @@ public class RepairService {
 
     @Transactional
     public RepairDTO save(RepairDTO repairDTO) {
+        validateLaborAmount(repairDTO.getLaborAmount());
         Repair repair = repairDTO.getId() != null
                 ? repairRepository.findById(repairDTO.getId()).orElseGet(Repair::new)
                 : new Repair();
@@ -209,6 +210,15 @@ public class RepairService {
     private String nextOrderNumber() {
         Long value = repairRepository.nextOrderValue();
         return String.valueOf(value);
+    }
+
+    private void validateLaborAmount(BigDecimal laborAmount) {
+        if (laborAmount == null) {
+            throw new IllegalArgumentException("Completá la mano de obra. Si no corresponde, ingresá $0");
+        }
+        if (laborAmount.signum() < 0) {
+            throw new IllegalArgumentException("La mano de obra no puede ser negativa");
+        }
     }
 
     private RepairDTO toDto(Repair repair) {

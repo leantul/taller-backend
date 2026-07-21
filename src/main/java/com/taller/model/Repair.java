@@ -53,7 +53,7 @@ public class Repair extends BasicEntity {
     @Column(name = "price")
     private BigDecimal price;
 
-    @Column(name = "labor_amount")
+    @Column(name = "labor_amount", nullable = false)
     private BigDecimal laborAmount;
 
     @Column(name = "extra_amount")

@@ -68,6 +68,7 @@
         <div class="field"><label>Presupuesto enviado</label><p-inputNumber [(ngModel)]="draft.quotedAmount" name="quotedAmount" mode="currency" currency="ARS" locale="es-AR" [min]="0"></p-inputNumber></div>
         <div class="field"><label>Detalle del presupuesto</label><textarea class="p-inputtext" rows="5" [(ngModel)]="draft.quoteNotes" name="quoteNotes" placeholder="Detalle completo del trabajo"></textarea></div>
         <div class="field"><label>Observaciones de la reparación</label><textarea class="p-inputtext" rows="5" [(ngModel)]="draft.repairNotes" name="repairNotes" placeholder="Observaciones propias de esta reparación"></textarea></div>
+        <div class="field"><label>Mano de obra</label><p-inputNumber [(ngModel)]="draft.laborAmount" name="laborAmount" mode="currency" currency="ARS" locale="es-AR" [min]="0" [required]="true"></p-inputNumber></div>
         <div class="field"><label>Monto final</label><p-inputNumber [(ngModel)]="draft.price" name="price" mode="currency" currency="ARS" locale="es-AR" [min]="0"></p-inputNumber></div>
         <button pButton type="submit" label="Guardar reparación" icon="pi pi-check" [disabled]="isSaving" [loading]="isSaving"></button>
       </form>
@@ -249,7 +250,7 @@
   <div class="field"><label>Presupuesto enviado</label><p-inputNumber [(ngModel)]="editingRepair.quotedAmount" mode="currency" currency="ARS" locale="es-AR" [min]="0"></p-inputNumber></div>
   <div class="field"><label>Detalle del presupuesto</label><textarea class="p-inputtext" rows="4" [(ngModel)]="editingRepair.quoteNotes"></textarea></div>
   <div class="field"><label>Observaciones de la reparación</label><textarea class="p-inputtext" rows="6" [(ngModel)]="editingRepair.repairNotes" placeholder="Observaciones propias de esta reparación"></textarea></div>
-  <div class="field"><label>Mano de obra</label><p-inputNumber [(ngModel)]="editingRepair.laborAmount" mode="currency" currency="ARS" locale="es-AR" [min]="0"></p-inputNumber></div>
+  <div class="field"><label>Mano de obra</label><p-inputNumber [(ngModel)]="editingRepair.laborAmount" mode="currency" currency="ARS" locale="es-AR" [min]="0" [required]="true"></p-inputNumber></div>
   <div class="field"><label>Monto final</label><p-inputNumber [(ngModel)]="editingRepair.price" mode="currency" currency="ARS" locale="es-AR" [min]="0"></p-inputNumber></div>
   <div class="field">
     <div class="inline-row" style="justify-content:space-between;align-items:center;">

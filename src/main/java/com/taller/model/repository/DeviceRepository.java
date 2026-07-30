@@ -30,6 +30,24 @@ public interface DeviceRepository extends JpaRepository<Device, String> {
             """)
     List<DeviceListView> findListRows();
 
+    @Query("""
+            SELECT d.id AS id,
+                   d.brand AS brand,
+                   d.model AS model,
+                   d.serialNumber AS serialNumber,
+                   d.deviceTypeId AS deviceTypeId,
+                   d.deviceType.name AS deviceTypeName,
+                   d.clientId AS clientId,
+                   c.name AS clientName,
+                   c.lastName AS clientLastName,
+                   (SELECT h.passwordValue FROM DevicePasswordHistory h WHERE h.deviceId = d.id AND h.isCurrent = true) AS currentPassword
+            FROM Device d
+            LEFT JOIN d.client c
+            WHERE d.clientId = ?1
+            ORDER BY d.creationDateTime DESC
+            """)
+    List<DeviceListView> findListRowsByClientId(String clientId);
+
     @Query(value = """
             SELECT d.id AS id,
                    d.brand AS brand,

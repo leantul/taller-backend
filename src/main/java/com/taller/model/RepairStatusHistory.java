@@ -8,6 +8,7 @@ import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
+import jakarta.persistence.Index;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
@@ -22,7 +23,7 @@ import java.time.LocalDateTime;
 @Setter
 @Builder
 @Entity
-@Table(name = "repair_status_history")
+@Table(name = "repair_status_history", indexes = @Index(name = "idx_repair_status_history_repair_changed", columnList = "repair_id, changed_at"))
 @AllArgsConstructor
 @NoArgsConstructor
 @AttributeOverride(name = "id", column = @Column(name = "id_repair_status_history"))

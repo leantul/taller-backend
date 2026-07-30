@@ -50,6 +50,7 @@ public class NotificationService {
     private final DeviceRepository deviceRepository;
     private final AppMetadataRepository appMetadataRepository;
     private final DeviceObservationRepository deviceObservationRepository;
+    private volatile LocalDate lastSynchronizedDate;
 
     @Transactional(readOnly = true)
     public List<NotificationDTO> latest() {
@@ -65,6 +66,20 @@ public class NotificationService {
     public void synchronize() {
         synchronizeWarrantyNotifications();
         synchronizeObservationNotifications();
+    }
+
+    /**
+     * Keeps the read endpoints current without repeating the synchronization work on every navigation.
+     * The persisted metadata still makes this safe across application restarts.
+     */
+    @Transactional
+    public synchronized void synchronizeIfNeeded() {
+        LocalDate today = LocalDate.now();
+        if (today.equals(lastSynchronizedDate)) {
+            return;
+        }
+        synchronize();
+        lastSynchronizedDate = today;
     }
 
     @Transactional

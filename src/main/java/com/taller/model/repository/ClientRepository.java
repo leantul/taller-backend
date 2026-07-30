@@ -18,6 +18,18 @@ import org.springframework.data.domain.Pageable;
 @Repository
 public interface ClientRepository extends JpaRepository<Client, String> {
 
+    @Query("""
+            SELECT c.id AS id,
+                   c.name AS name,
+                   c.lastName AS lastName,
+                   c.reference AS reference,
+                   c.email AS email,
+                   c.phone AS phone
+            FROM Client c
+            ORDER BY c.creationDateTime DESC
+            """)
+    List<ClientBasicView> findAllBasic();
+
     @Query(value = """
             SELECT c.id AS id,
                    c.name AS name,
@@ -81,16 +93,6 @@ public interface ClientRepository extends JpaRepository<Client, String> {
     List<String> findAdditionalEmailsById(String id);
 
     @Query("""
-            SELECT c FROM Client c
-            WHERE lower(c.name) LIKE lower(concat('%', ?1, '%'))
-               OR lower(c.lastName) LIKE lower(concat('%', ?1, '%'))
-               OR lower(c.reference) LIKE lower(concat('%', ?1, '%'))
-               OR lower(c.phone) LIKE lower(concat('%', ?1, '%'))
-               OR lower(c.email) LIKE lower(concat('%', ?1, '%'))
-            """)
-    List<Client> search(String term);
-
-    @Query("""
             SELECT c.id AS id,
                    c.name AS name,
                    c.lastName AS lastName,
@@ -98,7 +100,26 @@ public interface ClientRepository extends JpaRepository<Client, String> {
                    c.email AS email,
                    c.phone AS phone
             FROM Client c
-            WHERE EXISTS (SELECT d FROM Device d WHERE d.clientId = c.id)
+            WHERE lower(c.name) LIKE lower(concat('%', ?1, '%'))
+               OR lower(c.lastName) LIKE lower(concat('%', ?1, '%'))
+               OR lower(c.reference) LIKE lower(concat('%', ?1, '%'))
+               OR lower(c.phone) LIKE lower(concat('%', ?1, '%'))
+               OR lower(c.email) LIKE lower(concat('%', ?1, '%'))
+            """)
+    List<ClientBasicView> search(String term);
+
+    @Query("""
+            SELECT c.id AS id,
+                   c.name AS name,
+                   c.lastName AS lastName,
+                   c.reference AS reference,
+                   c.email AS email,
+                   c.phone AS phone,
+                   MIN(dt.name) AS deviceTypeName
+            FROM Client c
+            JOIN c.devices d
+            LEFT JOIN d.deviceType dt
+            GROUP BY c.id, c.name, c.lastName, c.reference, c.email, c.phone, c.creationDateTime
             ORDER BY c.creationDateTime DESC
             """)
     List<ClientBasicView> findTop5WithDevicesBasic(Pageable pageable);

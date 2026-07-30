@@ -6,7 +6,10 @@ import lombok.*;
 @Getter
 @Setter
 @Builder
-@Table(name = "devices")
+@Table(name = "devices", indexes = {
+        @Index(name = "idx_devices_client_id", columnList = "client_id"),
+        @Index(name = "idx_devices_device_type_id", columnList = "device_type_id")
+})
 @Entity
 @AllArgsConstructor
 @NoArgsConstructor

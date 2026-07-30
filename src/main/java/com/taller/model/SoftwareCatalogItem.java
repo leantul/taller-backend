@@ -20,7 +20,7 @@ import lombok.Setter;
 @AttributeOverride(name = "id", column = @Column(name = "id_software_catalog_item"))
 public class SoftwareCatalogItem extends BasicEntity {
 
-    @Column(name = "name", nullable = false)
+    @Column(name = "name", nullable = false, unique = true)
     private String name;
 
     @Column(name = "detail")

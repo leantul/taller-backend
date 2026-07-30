@@ -1,5 +1,5 @@
 import { HttpInterceptorFn } from '@angular/common/http';
-import { ApplicationRef, inject, NgZone } from '@angular/core';
+import { inject, NgZone } from '@angular/core';
 import { catchError, finalize, throwError } from 'rxjs';
 import { MessageService } from 'primeng/api';
 import { LoadingService } from '../services/loading.service';
@@ -11,11 +11,13 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const authService = inject(AuthService);
   const messageService = inject(MessageService);
   const errorDialogService = inject(ErrorDialogService);
-  const appRef = inject(ApplicationRef);
   const zone = inject(NgZone);
   const token = authService.getToken();
+  const isBackgroundRequest = req.url.includes('/notifications/unread-count');
 
-  zone.run(() => loading.show());
+  if (!isBackgroundRequest) {
+    zone.run(() => loading.show());
+  }
   const isAuthRequest = req.url.includes('/auth/login');
 
   const request = token && !isAuthRequest
@@ -40,10 +42,10 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
       return throwError(() => error);
     }),
     finalize(() => {
-      const finishRequest = () => zone.run(() => {
-        loading.hide();
-        appRef.tick();
-      });
+      if (isBackgroundRequest) {
+        return;
+      }
+      const finishRequest = () => zone.run(() => loading.hide());
 
       if (typeof requestAnimationFrame === 'function') {
         requestAnimationFrame(finishRequest);

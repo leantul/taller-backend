@@ -124,28 +124,11 @@ public class RepairService {
         recordStatusHistory(saved, previousStatus, isNew);
 
         if (repairDTO.getParts() != null) {
-            repairPartRepository.deleteAll(repairPartRepository.findByRepairId(saved.getId()));
-            List<RepairPart> parts = repairDTO.getParts().stream().map(dto -> RepairPart.builder()
-                    .repairId(saved.getId())
-                    .name(dto.getName())
-                    .quantity(dto.getQuantity())
-                    .provider(dto.getProvider())
-                    .cost(dto.getCost())
-                    .salePrice(dto.getSalePrice())
-                    .build()).toList();
-            repairPartRepository.saveAll(parts);
+            syncParts(saved, repairDTO.getParts());
         }
 
         if (repairDTO.getPayments() != null) {
-            repairPaymentRepository.deleteAll(repairPaymentRepository.findByRepairId(saved.getId()));
-            List<RepairPayment> payments = repairDTO.getPayments().stream().map(dto -> RepairPayment.builder()
-                    .repairId(saved.getId())
-                    .amount(dto.getAmount())
-                    .currency(dto.getCurrency())
-                    .paymentDate(dto.getPaymentDate())
-                    .notes(dto.getNotes())
-                    .build()).toList();
-            repairPaymentRepository.saveAll(payments);
+            syncPayments(saved, repairDTO.getPayments());
         }
 
         if (repairDTO.getObservations() != null) {
@@ -382,6 +365,51 @@ public class RepairService {
                 .map(dto -> toObservation(repair, dto, existingById.getOrDefault(dto.getId(), new DeviceObservation())))
                 .toList();
         deviceObservationRepository.saveAll(observations);
+    }
+
+    private void syncParts(Repair repair, List<RepairPartDTO> partDtos) {
+        Map<String, RepairPart> existingById = repairPartRepository.findByRepairId(repair.getId()).stream()
+                .filter(part -> part.getId() != null)
+                .collect(Collectors.toMap(RepairPart::getId, part -> part));
+        Set<String> incomingIds = partDtos.stream()
+                .map(RepairPartDTO::getId)
+                .filter(id -> id != null && existingById.containsKey(id))
+                .collect(Collectors.toSet());
+        repairPartRepository.deleteAll(existingById.values().stream()
+                .filter(part -> !incomingIds.contains(part.getId()))
+                .toList());
+        repairPartRepository.saveAll(partDtos.stream().map(dto -> {
+            RepairPart part = existingById.getOrDefault(dto.getId(), new RepairPart());
+            part.setRepairId(repair.getId());
+            part.setName(dto.getName());
+            part.setQuantity(dto.getQuantity());
+            part.setProvider(dto.getProvider());
+            part.setCost(dto.getCost());
+            part.setSalePrice(dto.getSalePrice());
+            return part;
+        }).toList());
+    }
+
+    private void syncPayments(Repair repair, List<RepairPaymentDTO> paymentDtos) {
+        Map<String, RepairPayment> existingById = repairPaymentRepository.findByRepairId(repair.getId()).stream()
+                .filter(payment -> payment.getId() != null)
+                .collect(Collectors.toMap(RepairPayment::getId, payment -> payment));
+        Set<String> incomingIds = paymentDtos.stream()
+                .map(RepairPaymentDTO::getId)
+                .filter(id -> id != null && existingById.containsKey(id))
+                .collect(Collectors.toSet());
+        repairPaymentRepository.deleteAll(existingById.values().stream()
+                .filter(payment -> !incomingIds.contains(payment.getId()))
+                .toList());
+        repairPaymentRepository.saveAll(paymentDtos.stream().map(dto -> {
+            RepairPayment payment = existingById.getOrDefault(dto.getId(), new RepairPayment());
+            payment.setRepairId(repair.getId());
+            payment.setAmount(dto.getAmount());
+            payment.setCurrency(dto.getCurrency());
+            payment.setPaymentDate(dto.getPaymentDate());
+            payment.setNotes(dto.getNotes());
+            return payment;
+        }).toList());
     }
 
     private DeviceObservation toObservation(Repair repair, DeviceObservationDTO dto, DeviceObservation observation) {

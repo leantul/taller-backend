@@ -1,4 +1,4 @@
-import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { CardModule } from 'primeng/card';
@@ -9,7 +9,7 @@ import { AutoCompleteModule } from 'primeng/autocomplete';
 import { DialogModule } from 'primeng/dialog';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { ConfirmationService, MessageService } from 'primeng/api';
-import { forkJoin } from 'rxjs';
+import { debounceTime, distinctUntilChanged, forkJoin, Subject, Subscription } from 'rxjs';
 import { ApiService } from '../../core/services/api.service';
 import { Device, DeviceObservation, DevicePasswordHistory, DeviceType } from '../../shared/models/device.model';
 import { Client } from '../../shared/models/client.model';
@@ -87,7 +87,7 @@ type DeviceTableColumn = {
 
       <p-card header="Dispositivos">
         <div class="table-toolbar multi repairs-filters">
-          <span class="p-input-icon-left filter-search"><i class="pi pi-search"></i><input pInputText [(ngModel)]="searchTerm" (ngModelChange)="applyFilters()" placeholder="Buscar por cualquier campo" /></span>
+          <span class="p-input-icon-left filter-search"><i class="pi pi-search"></i><input pInputText [(ngModel)]="searchTerm" (ngModelChange)="onSearchTermChange()" placeholder="Buscar por cualquier campo" /></span>
           <p-autoComplete
             [(ngModel)]="selectedClientTerm"
             [suggestions]="clientFilterSuggestions"
@@ -344,7 +344,7 @@ type DeviceTableColumn = {
     </p-dialog>
   `
 })
-export class DevicesPageComponent implements OnInit {
+export class DevicesPageComponent implements OnInit, OnDestroy {
   devices: Device[] = [];
   filteredDevices: (Device & { clientName?: string })[] = [];
   clients: Client[] = [];
@@ -395,6 +395,9 @@ export class DevicesPageComponent implements OnInit {
   private resizingColumnKey: DeviceTableColumnKey | null = null;
   private resizeStartX = 0;
   private resizeStartWidth = 0;
+  private pageRequest?: Subscription;
+  private readonly searchChanges = new Subject<string>();
+  private searchSubscription?: Subscription;
 
   constructor(
     private readonly api: ApiService,
@@ -405,12 +408,25 @@ export class DevicesPageComponent implements OnInit {
 
   ngOnInit(): void {
     this.restoreColumnWidths();
+    this.searchSubscription = this.searchChanges.pipe(
+      debounceTime(300),
+      distinctUntilChanged()
+    ).subscribe(() => this.applyFilters());
+    this.reload();
     forkJoin({ clients: this.api.getClients(), deviceTypes: this.api.getDeviceTypes() }).subscribe(({ clients, deviceTypes }) => {
       this.clients = clients;
       this.typeOptions = deviceTypes;
       this.draft.deviceTypeId = this.defaultDeviceTypeId();
-      this.reload();
     });
+  }
+
+  ngOnDestroy(): void {
+    this.pageRequest?.unsubscribe();
+    this.searchSubscription?.unsubscribe();
+  }
+
+  onSearchTermChange(): void {
+    this.searchChanges.next(this.searchTerm.trim());
   }
 
   get clientOptions(): { label: string; value: string }[] {
@@ -435,13 +451,13 @@ export class DevicesPageComponent implements OnInit {
     if (!value || typeof value === 'string') {
       this.selectedClientId = null;
     }
-    this.applyFilters();
+    this.searchChanges.next(`${this.searchTerm.trim()}|${this.selectedClientSearchText()}`);
   }
 
   onClientFilterSelect(selection: { label: string; value: string }): void {
     this.selectedClientTerm = selection;
     this.selectedClientId = selection?.value || null;
-    this.applyFilters();
+    this.searchChanges.next(`${this.searchTerm.trim()}|${this.selectedClientId || ''}`);
   }
 
   save(): void {
@@ -768,7 +784,8 @@ export class DevicesPageComponent implements OnInit {
   }
 
   private reload(): void {
-    this.api.getDevicePage(
+    this.pageRequest?.unsubscribe();
+    this.pageRequest = this.api.getDevicePage(
       this.currentPage - 1,
       this.pageSize,
       this.searchTerm.trim(),

@@ -3,6 +3,7 @@ package com.taller.model;
 import jakarta.persistence.AttributeOverride;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.Index;
 import jakarta.persistence.Table;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -16,7 +17,7 @@ import lombok.Setter;
 @Setter
 @Builder
 @Entity
-@Table(name = "repair_reports")
+@Table(name = "repair_reports", indexes = @Index(name = "uk_repair_reports_repair_id", columnList = "repair_id", unique = true))
 @AllArgsConstructor
 @NoArgsConstructor
 @AttributeOverride(name = "id", column = @Column(name = "id_repair_report"))

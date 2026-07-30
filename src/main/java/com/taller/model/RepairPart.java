@@ -9,7 +9,7 @@ import java.math.BigDecimal;
 @Setter
 @Builder
 @Entity
-@Table(name = "repair_parts")
+@Table(name = "repair_parts", indexes = @Index(name = "idx_repair_parts_repair_id", columnList = "repair_id"))
 @AllArgsConstructor
 @NoArgsConstructor
 @AttributeOverride(name = "id", column = @Column(name = "id_repair_part"))

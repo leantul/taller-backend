@@ -12,6 +12,7 @@ export class DeviceApiService {
   constructor(private readonly http: HttpClient) {}
 
   getAll(): Observable<Device[]> { return this.http.get<Device[]>(this.url); }
+  getByClientId(clientId: string): Observable<Device[]> { return this.http.get<Device[]>(`${this.url}/by-client/${encodeURIComponent(clientId)}`); }
   getPage(page: number, size: number, term = '', clientId = '', clientTerm = '', sortBy = 'createdAt', sortDir: 'asc' | 'desc' = 'desc'): Observable<PageResponse<Device>> {
     const params = new URLSearchParams({ page: String(page), size: String(size), term, clientId, clientTerm, sortBy, sortDir });
     return this.http.get<PageResponse<Device>>(`${this.url}/page?${params.toString()}`);

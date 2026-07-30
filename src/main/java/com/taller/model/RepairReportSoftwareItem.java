@@ -3,6 +3,7 @@ package com.taller.model;
 import jakarta.persistence.AttributeOverride;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.Index;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -14,7 +15,7 @@ import lombok.Setter;
 @Setter
 @Builder
 @Entity
-@Table(name = "repair_report_software_items")
+@Table(name = "repair_report_software_items", indexes = @Index(name = "idx_repair_report_software_items_report_id", columnList = "repair_report_id"))
 @AllArgsConstructor
 @NoArgsConstructor
 @AttributeOverride(name = "id", column = @Column(name = "id_repair_report_software_item"))

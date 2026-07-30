@@ -18,13 +18,13 @@ public class NotificationController {
 
     @GetMapping
     public List<NotificationDTO> latest() {
-        notificationService.synchronize();
+        notificationService.synchronizeIfNeeded();
         return notificationService.latest();
     }
 
     @GetMapping("/unread-count")
     public long unreadCount() {
-        notificationService.synchronize();
+        notificationService.synchronizeIfNeeded();
         return notificationService.unreadCount();
     }
 

@@ -7,4 +7,5 @@ public interface ClientBasicView {
     String getReference();
     String getEmail();
     String getPhone();
+    String getDeviceTypeName();
 }

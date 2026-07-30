@@ -3,6 +3,7 @@ package com.taller.model.repository;
 import com.taller.model.Repair;
 import com.taller.model.enums.RepairStatusEnum;
 import com.taller.model.repository.projection.DeviceLastRepairView;
+import com.taller.model.repository.projection.DashboardCountsView;
 import com.taller.model.repository.projection.ClientRepairHistoryView;
 import com.taller.model.repository.projection.DeliveryReportSourceView;
 import com.taller.model.repository.projection.FinanceRepairView;
@@ -23,6 +24,12 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
 public interface RepairRepository extends JpaRepository<Repair, String> {
+    @Query(value = """
+            SELECT (SELECT COUNT(*) FROM clients) AS "clientCount",
+                   (SELECT COUNT(*) FROM devices) AS "deviceCount",
+                   (SELECT COUNT(*) FROM repairs) AS "repairCount"
+            """, nativeQuery = true)
+    DashboardCountsView dashboardCounts();
     String REPAIR_PAGE_SELECT = """
             SELECT r.id AS id,
                    r.idDevice AS idDevice,
@@ -680,8 +687,11 @@ public interface RepairRepository extends JpaRepository<Repair, String> {
                    r.quoteNotes AS quoteNotes,
                    r.approved AS approved,
                    r.rejected AS rejected,
-                   r.readyNotifiedAt AS readyNotifiedAt
+                   r.readyNotifiedAt AS readyNotifiedAt,
+                   c.name AS clientName,
+                   c.lastName AS clientLastName
             FROM Repair r
+            LEFT JOIN r.client c
             WHERE r.status = com.taller.model.enums.RepairStatusEnum.RETIRADA
             ORDER BY COALESCE(r.returnDateTime, r.receiveDateTime) DESC
             """)
@@ -695,11 +705,20 @@ public interface RepairRepository extends JpaRepository<Repair, String> {
     List<RepairStatusCountView> countByStatus();
 
     @Query("""
-            SELECT r.idDevice AS deviceId, MAX(r.receiveDateTime) AS lastRepairDate
+            SELECT r.idDevice AS deviceId,
+                   MAX(r.receiveDateTime) AS lastRepairDate,
+                   dt.name AS deviceTypeName,
+                   d.brand AS deviceBrand,
+                   d.model AS deviceModel,
+                   c.name AS clientName,
+                   c.lastName AS clientLastName
             FROM Repair r
+            JOIN r.device d
+            LEFT JOIN d.deviceType dt
+            LEFT JOIN d.client c
             WHERE r.idDevice IS NOT NULL
               AND r.receiveDateTime IS NOT NULL
-            GROUP BY r.idDevice
+            GROUP BY r.idDevice, dt.name, d.brand, d.model, c.name, c.lastName
             ORDER BY MAX(r.receiveDateTime) ASC
             """)
     List<DeviceLastRepairView> findOldestLastRepairByDevice(Pageable pageable);

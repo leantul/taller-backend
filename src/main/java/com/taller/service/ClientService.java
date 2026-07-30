@@ -4,6 +4,7 @@ import com.taller.model.Client;
 import com.taller.model.repository.ClientRepository;
 import com.taller.model.repository.RepairRepository;
 import com.taller.model.repository.projection.ClientDetailView;
+import com.taller.model.repository.projection.ClientBasicView;
 import com.taller.model.repository.projection.ClientListView;
 import com.taller.model.repository.projection.ClientRepairHistoryView;
 import com.taller.resource.dto.ClientDetailDTO;
@@ -49,7 +50,7 @@ public class ClientService {
 
     @Transactional(readOnly = true)
     public List<ClientDTO> findAll() {
-        return clientRepository.findAll().stream().map(this::toDto).toList();
+        return clientRepository.findAllBasic().stream().map(this::toBasicDto).toList();
     }
 
     @Transactional
@@ -101,7 +102,18 @@ public class ClientService {
 
     @Transactional(readOnly = true)
     public List<ClientDTO> search(String term) {
-        return clientRepository.search(term).stream().map(this::toDto).toList();
+        return clientRepository.search(term).stream().map(this::toBasicDto).toList();
+    }
+
+    private ClientDTO toBasicDto(ClientBasicView client) {
+        ClientDTO dto = new ClientDTO();
+        dto.setId(client.getId());
+        dto.setName(client.getName());
+        dto.setLastName(client.getLastName());
+        dto.setReference(client.getReference());
+        dto.setEmail(client.getEmail());
+        dto.setPhone(client.getPhone());
+        return dto;
     }
 
     private ClientDTO toDto(Client client) {

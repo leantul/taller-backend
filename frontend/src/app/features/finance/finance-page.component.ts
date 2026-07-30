@@ -160,6 +160,8 @@ export class FinancePageComponent implements OnInit, OnDestroy {
   private resizingColumnKey: FinanceTableColumnKey | null = null;
   private resizeStartX = 0;
   private resizeStartWidth = 0;
+  private detailsRequest?: Subscription;
+  private summaryRequest?: Subscription;
 
   constructor(
     private readonly api: ApiService,
@@ -188,6 +190,8 @@ export class FinancePageComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.detailsRequest?.unsubscribe();
+    this.summaryRequest?.unsubscribe();
     this.subscriptions.unsubscribe();
   }
 
@@ -196,7 +200,8 @@ export class FinancePageComponent implements OnInit, OnDestroy {
   applyFilters(): void {
     this.currentPage = 1;
     this.loadDetails();
-    this.api.getFinanceSummary(this.draftFromDate || undefined, this.draftToDate || undefined).subscribe({
+    this.summaryRequest?.unsubscribe();
+    this.summaryRequest = this.api.getFinanceSummary(this.draftFromDate || undefined, this.draftToDate || undefined).subscribe({
       next: (summary) => {
         this.zone.run(() => {
           this.lastSummary = summary;
@@ -428,7 +433,8 @@ export class FinancePageComponent implements OnInit, OnDestroy {
   }
 
   private loadDetails(): void {
-    this.api.getFinanceDetails(
+    this.detailsRequest?.unsubscribe();
+    this.detailsRequest = this.api.getFinanceDetails(
       this.draftFromDate || undefined,
       this.draftToDate || undefined,
       this.currentPage - 1,

@@ -40,6 +40,11 @@ public class DeviceController {
         return deviceService.getAllDevices();
     }
 
+    @GetMapping("/by-client/{clientId}")
+    public List<DeviceDTO> getDevicesByClient(@PathVariable String clientId) {
+        return deviceService.getDevicesByClientId(clientId);
+    }
+
     @GetMapping("/page")
     public PageDTO<DeviceDTO> getPage(
             @RequestParam(defaultValue = "0") int page,

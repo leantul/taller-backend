@@ -1,35 +1,23 @@
 package com.taller.config;
 
-import com.taller.model.Device;
-import com.taller.model.DevicePasswordHistory;
 import com.taller.model.repository.DevicePasswordHistoryRepository;
-import com.taller.model.repository.DeviceRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 @Component
 @RequiredArgsConstructor
 public class DevicePasswordHistoryBootstrap implements ApplicationRunner {
 
-    private final DeviceRepository deviceRepository;
     private final DevicePasswordHistoryRepository devicePasswordHistoryRepository;
 
     @Override
+    @Transactional
     public void run(ApplicationArguments args) {
-        for (Device device : deviceRepository.findAll()) {
-            if (device.getPassword() == null || device.getPassword().isBlank()) {
-                continue;
-            }
-            if (devicePasswordHistoryRepository.countByDeviceId(device.getId()) > 0) {
-                continue;
-            }
-            devicePasswordHistoryRepository.save(DevicePasswordHistory.builder()
-                    .deviceId(device.getId())
-                    .passwordValue(device.getPassword())
-                    .isCurrent(true)
-                    .build());
-        }
+        devicePasswordHistoryRepository.bootstrapLegacyPasswords();
+        devicePasswordHistoryRepository.normalizeCurrentPasswords();
+        devicePasswordHistoryRepository.ensureSingleCurrentPasswordIndex();
     }
 }

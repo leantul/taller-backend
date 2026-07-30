@@ -13,7 +13,12 @@ import java.util.List;
 @Getter
 @Setter
 @Builder
-@Table(name = "repairs")
+@Table(name = "repairs", indexes = {
+        @Index(name = "idx_repairs_client_id", columnList = "id_client"),
+        @Index(name = "idx_repairs_device_id", columnList = "id_device"),
+        @Index(name = "idx_repairs_status_return_date", columnList = "status, return_date_time"),
+        @Index(name = "idx_repairs_receive_date", columnList = "receive_date_time")
+})
 @Entity
 @AllArgsConstructor
 @NoArgsConstructor
@@ -37,7 +42,7 @@ public class Repair extends BasicEntity {
     @Column(name = "description", columnDefinition = "TEXT")
     private String description;
 
-    @Column(name = "order_number")
+    @Column(name = "order_number", unique = true)
     private String orderNumber;
 
     @Column(name = "status")

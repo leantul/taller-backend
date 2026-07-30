@@ -22,7 +22,7 @@ class NotificationControllerTest {
         assertEquals(List.of(), controller.latest());
 
         var order = inOrder(notificationService);
-        order.verify(notificationService).synchronize();
+        order.verify(notificationService).synchronizeIfNeeded();
         order.verify(notificationService).latest();
     }
 
@@ -33,7 +33,7 @@ class NotificationControllerTest {
         assertEquals(3L, controller.unreadCount());
 
         var order = inOrder(notificationService);
-        order.verify(notificationService).synchronize();
+        order.verify(notificationService).synchronizeIfNeeded();
         order.verify(notificationService).unreadCount();
     }
 }

@@ -1,1 +1,0 @@
-ALTER TABLE repairs ADD COLUMN IF NOT EXISTS quote_notes TEXT;

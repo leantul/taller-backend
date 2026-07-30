@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { ChangeDetectorRef, Component, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Subject, debounceTime, distinctUntilChanged, takeUntil } from 'rxjs';
+import { Subject, Subscription, debounceTime, distinctUntilChanged, takeUntil } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
@@ -207,6 +207,7 @@ export class ClientsPageComponent implements OnInit, OnDestroy {
   private resizingColumnKey: ClientTableColumnKey | null = null;
   private resizeStartX = 0;
   private resizeStartWidth = 0;
+  private pageRequest?: Subscription;
 
   constructor(private readonly api: ApiService, private readonly messages: MessageService, private readonly confirmations: ConfirmationService, private readonly changeDetector: ChangeDetectorRef) {}
 
@@ -215,7 +216,7 @@ export class ClientsPageComponent implements OnInit, OnDestroy {
     this.search$.pipe(debounceTime(300), distinctUntilChanged(), takeUntil(this.destroy$)).subscribe(() => { this.currentPage = 0; this.reload(); });
     this.reload();
   }
-  ngOnDestroy(): void { this.destroy$.next(); this.destroy$.complete(); }
+  ngOnDestroy(): void { this.pageRequest?.unsubscribe(); this.destroy$.next(); this.destroy$.complete(); }
 
   save(): void {
     this.api.createClient(this.draft).subscribe({
@@ -315,7 +316,8 @@ export class ClientsPageComponent implements OnInit, OnDestroy {
   }
 
   private reload(): void {
-    this.api.getClientPage(this.currentPage, this.pageSize, this.searchTerm.trim(), this.sortBy, this.sortDir).subscribe((page) => {
+    this.pageRequest?.unsubscribe();
+    this.pageRequest = this.api.getClientPage(this.currentPage, this.pageSize, this.searchTerm.trim(), this.sortBy, this.sortDir).subscribe((page) => {
       this.clients = page.content; this.currentPage = page.page; this.totalElements = page.totalElements; this.totalPages = page.totalPages; this.changeDetector.detectChanges();
     });
   }

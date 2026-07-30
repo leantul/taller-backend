@@ -75,6 +75,13 @@ public class DeviceService {
     }
 
     @Transactional(readOnly = true)
+    public List<DeviceDTO> getDevicesByClientId(String clientId) {
+        return deviceRepository.findListRowsByClientId(clientId).stream()
+                .map(device -> toListDto(device, List.of()))
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
     public PageDTO<DeviceDTO> findPage(int page, int size, String term, String clientId, String clientTerm, String sortBy, String sortDir) {
         Page<DeviceListView> result = deviceRepository.findPage(
                 normalizeTerm(term),
@@ -258,17 +265,7 @@ public class DeviceService {
     }
 
     private void clearCurrentPassword(String deviceId) {
-        List<DevicePasswordHistory> histories = devicePasswordHistoryRepository.findByDeviceIdOrderByCreationDateTimeDesc(deviceId);
-        boolean changed = false;
-        for (DevicePasswordHistory history : histories) {
-            if (Boolean.TRUE.equals(history.getIsCurrent())) {
-                history.setIsCurrent(false);
-                changed = true;
-            }
-        }
-        if (changed) {
-            devicePasswordHistoryRepository.saveAll(histories);
-        }
+        devicePasswordHistoryRepository.clearCurrentByDeviceId(deviceId);
     }
 
     private void promoteLatestPassword(String deviceId) {

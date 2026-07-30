@@ -9,7 +9,11 @@ import java.time.LocalDateTime;
 @Setter
 @Builder
 @Entity
-@Table(name = "device_observations")
+@Table(name = "device_observations", indexes = {
+        @Index(name = "idx_device_observations_device_id", columnList = "device_id"),
+        @Index(name = "idx_device_observations_repair_id", columnList = "repair_id"),
+        @Index(name = "idx_device_observations_pending_follow_up", columnList = "resolved_at, follow_up_at")
+})
 @AllArgsConstructor
 @NoArgsConstructor
 @AttributeOverride(name = "id", column = @Column(name = "id_device_observation"))

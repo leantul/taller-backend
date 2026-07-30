@@ -1,5 +1,5 @@
-import { ChangeDetectorRef, Component, OnInit, TrackByFunction, ViewChild } from '@angular/core';
-import { forkJoin } from 'rxjs';
+import { ChangeDetectorRef, Component, OnDestroy, OnInit, TrackByFunction, ViewChild } from '@angular/core';
+import { debounceTime, distinctUntilChanged, forkJoin, Subject, Subscription } from 'rxjs';
 import { ActivatedRoute } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -51,7 +51,7 @@ type RepairTableColumn = {
   providers: [ConfirmationService],
   templateUrl: './repairs-page.component.html'
 })
-export class RepairsPageComponent implements OnInit {
+export class RepairsPageComponent implements OnInit, OnDestroy {
   @ViewChild(RepairDetailDialogComponent) private repairDetailDialog?: RepairDetailDialogComponent;
   @ViewChild(DeliveryReportDialogComponent) private deliveryReportDialog?: DeliveryReportDialogComponent;
   repairs: Repair[] = [];
@@ -121,21 +121,26 @@ export class RepairsPageComponent implements OnInit {
   private resizeStartX = 0;
   private resizeStartWidth = 0;
   private readonly columnWidthStorageKey = 'taller.repairs.columnWidths';
+  private pageRequest?: Subscription;
+  private readonly searchChanges = new Subject<string>();
+  private searchSubscription?: Subscription;
 
   constructor(private readonly api: ApiService, private readonly messageService: MessageService, private readonly route: ActivatedRoute, private readonly confirmationService: ConfirmationService, private readonly changeDetector: ChangeDetectorRef) {}
   ngOnInit(): void {
     this.restoreColumnWidths();
-    forkJoin({ clients: this.api.getClients(), devices: this.api.getDevices(), deviceTypes: this.api.getDeviceTypes() }).subscribe(({ clients, devices, deviceTypes }) => {
+    this.searchSubscription = this.searchChanges.pipe(
+      debounceTime(300),
+      distinctUntilChanged()
+    ).subscribe(() => this.applyFilters());
+    this.reload();
+    forkJoin({ clients: this.api.getClients(), deviceTypes: this.api.getDeviceTypes() }).subscribe(({ clients, deviceTypes }) => {
       this.clients = clients;
       this.clientsById = new Map(clients.filter(item => !!item.id).map(item => [item.id!, item]));
-      this.devicesById = new Map(devices.filter(item => !!item.id).map(item => [item.id!, item]));
-      this.allDevices = devices;
       this.typeOptions = deviceTypes;
       this.draftDevice.deviceTypeId = this.defaultDeviceTypeId();
       this.rebuildStaticOptions();
       this.updateFilteredClients();
       this.refreshSelectionSummaries();
-      this.reload();
       this.changeDetector.detectChanges();
     });
 
@@ -148,21 +153,28 @@ export class RepairsPageComponent implements OnInit {
     });
   }
 
+  ngOnDestroy(): void {
+    this.pageRequest?.unsubscribe();
+    this.searchSubscription?.unsubscribe();
+  }
+
+  onSearchTermChange(): void {
+    this.searchChanges.next(this.searchTerm.trim());
+  }
+
   selectClient(client: Client): void {
     this.draft.idClient = client.id || '';
     this.selectedClientName = `${client.name} ${client.lastName}`.trim();
     this.showClientModal = false;
-    this.clientDevices = this.allDevices.filter((device) => device.clientId === this.draft.idClient);
-    this.rebuildClientDeviceOptions();
-    this.refreshSelectionSummaries();
-    this.changeDetector.detectChanges();
+    this.draft.idDevice = '';
+    this.loadClientDevices(this.draft.idClient);
   }
 
   createDeviceInline(): void {
     this.draftDevice.clientId = this.draft.idClient;
     this.api.createDevice(this.draftDevice).subscribe((device) => {
       this.clientDevices = [device, ...this.clientDevices];
-      this.allDevices = [device, ...this.allDevices];
+      this.allDevices = [device, ...this.allDevices.filter((item) => item.id !== device.id)];
       if (device.id) this.devicesById.set(device.id, device);
       this.rebuildStaticOptions();
       this.rebuildClientDeviceOptions();
@@ -208,10 +220,8 @@ export class RepairsPageComponent implements OnInit {
     const exactClient = this.clients.find((c) => `${c.name} ${c.lastName}`.trim().toLowerCase() === value.trim().toLowerCase());
     if (exactClient?.id) {
       this.draft.idClient = exactClient.id;
-      this.clientDevices = this.allDevices.filter((device) => device.clientId === this.draft.idClient);
-      this.rebuildClientDeviceOptions();
-      this.refreshSelectionSummaries();
-      this.changeDetector.detectChanges();
+      this.draft.idDevice = '';
+      this.loadClientDevices(this.draft.idClient);
       return;
     }
 
@@ -343,13 +353,11 @@ export class RepairsPageComponent implements OnInit {
           observations: (detail.observations || []).map((observation) => ({ ...observation }))
         };
         this.editClientOptions = [...this.clientOptions];
-        this.editDeviceOptions = [...this.deviceOptions];
-        this.refreshSelectionSummaries();
-        this.refreshEditingDevicePassword();
-        this.changeDetector.detectChanges();
-        queueMicrotask(() => {
-          this.showEditModal = true;
-          this.changeDetector.detectChanges();
+        this.loadEditDevices(detail.idClient, () => {
+          queueMicrotask(() => {
+            this.showEditModal = true;
+            this.changeDetector.detectChanges();
+          });
         });
       },
       error: (error) => {
@@ -440,7 +448,8 @@ export class RepairsPageComponent implements OnInit {
     this.reload();
   }
   private reload(): void {
-    this.api.getRepairPage(
+    this.pageRequest?.unsubscribe();
+    this.pageRequest = this.api.getRepairPage(
       this.currentPage - 1,
       this.pageSize,
       this.searchTerm.trim(),
@@ -665,7 +674,11 @@ export class RepairsPageComponent implements OnInit {
   onEditRepairClientChange(): void {
     if (!this.editClientOptions.some((option) => option.value === this.editingRepair.idClient)) {
       this.editingRepair.idClient = '';
+      this.editDeviceOptions = [];
+      this.editingRepair.idDevice = '';
+      return;
     }
+    this.loadEditDevices(this.editingRepair.idClient);
   }
 
   onEditRepairDeviceChange(): void {
@@ -689,6 +702,46 @@ export class RepairsPageComponent implements OnInit {
     this.deviceOptions = this.allDevices
       .map((d) => ({ label: `${d.brand || '-'} - ${d.model || '-'}`, value: d.id || '' }))
       .filter((d) => !!d.value);
+  }
+
+  private loadClientDevices(clientId: string): void {
+    if (!clientId) {
+      this.clientDevices = [];
+      this.rebuildClientDeviceOptions();
+      this.refreshSelectionSummaries();
+      return;
+    }
+    this.api.getDevicesByClientId(clientId).subscribe((devices) => {
+      this.clientDevices = devices;
+      this.allDevices = devices;
+      this.devicesById = new Map(devices.filter((item) => !!item.id).map((item) => [item.id!, item]));
+      this.rebuildStaticOptions();
+      this.rebuildClientDeviceOptions();
+      this.refreshSelectionSummaries();
+      this.changeDetector.detectChanges();
+    });
+  }
+
+  private loadEditDevices(clientId: string, done?: () => void): void {
+    if (!clientId) {
+      this.editDeviceOptions = [];
+      done?.();
+      return;
+    }
+    this.api.getDevicesByClientId(clientId).subscribe((devices) => {
+      this.allDevices = devices;
+      this.devicesById = new Map(devices.filter((item) => !!item.id).map((item) => [item.id!, item]));
+      this.deviceOptions = devices
+        .map((device) => ({ label: `${device.brand || '-'} - ${device.model || '-'}`, value: device.id || '' }))
+        .filter((device) => !!device.value);
+      this.editDeviceOptions = [...this.deviceOptions];
+      if (!this.editDeviceOptions.some((option) => option.value === this.editingRepair.idDevice)) {
+        this.editingRepair.idDevice = '';
+      }
+      this.refreshEditingDevicePassword();
+      this.changeDetector.detectChanges();
+      done?.();
+    });
   }
 
   private rebuildClientDeviceOptions(): void {

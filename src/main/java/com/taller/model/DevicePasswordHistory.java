@@ -6,6 +6,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Index;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -16,7 +17,9 @@ import lombok.Setter;
 @Getter
 @Setter
 @Builder
-@Table(name = "device_password_history")
+@Table(name = "device_password_history", indexes = {
+        @Index(name = "idx_device_password_history_device_id", columnList = "device_id")
+})
 @Entity
 @AllArgsConstructor
 @NoArgsConstructor

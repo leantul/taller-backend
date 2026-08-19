@@ -7,11 +7,14 @@ import com.taller.model.repository.DeviceObservationRepository;
 import com.taller.model.repository.DevicePasswordHistoryRepository;
 import com.taller.model.repository.DeviceRepository;
 import com.taller.model.repository.DeviceTypeRepository;
+import com.taller.model.repository.RepairRepository;
 import com.taller.model.repository.projection.DeviceListView;
+import com.taller.model.repository.projection.DeviceRepairHistoryView;
 import com.taller.resource.dto.DeviceDTO;
 import com.taller.resource.dto.DeviceObservationDTO;
 import com.taller.resource.dto.DevicePasswordHistoryDTO;
 import com.taller.resource.dto.DevicePasswordUpsertDTO;
+import com.taller.resource.dto.DeviceRepairHistoryItemDTO;
 import com.taller.resource.dto.PageDTO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -35,6 +38,7 @@ public class DeviceService {
     private final DeviceTypeRepository deviceTypeRepository;
     private final DevicePasswordHistoryRepository devicePasswordHistoryRepository;
     private final DeviceObservationRepository deviceObservationRepository;
+    private final RepairRepository repairRepository;
 
     @Transactional
     public DeviceDTO save(DeviceDTO deviceDTO) {
@@ -99,6 +103,12 @@ public class DeviceService {
     @Transactional(readOnly = true)
     public DeviceDTO getDeviceById(String id) {
         return deviceRepository.findById(id).map(device -> toDto(device, true)).orElse(null);
+    }
+
+    @Transactional(readOnly = true)
+    public PageDTO<DeviceRepairHistoryItemDTO> findRepairHistory(String deviceId, int page, int size) {
+        Page<DeviceRepairHistoryView> result = repairRepository.findDeviceHistory(deviceId, pageRequest(page, size, 50));
+        return toPage(result, result.getContent().stream().map(this::toRepairHistoryItemDto).toList());
     }
 
     @Transactional(readOnly = true)
@@ -244,6 +254,16 @@ public class DeviceService {
         dto.setCreatedAt(history.getCreationDateTime());
         dto.setUpdatedAt(history.getModificationDatetime());
         return dto;
+    }
+
+    private DeviceRepairHistoryItemDTO toRepairHistoryItemDto(DeviceRepairHistoryView repair) {
+        return new DeviceRepairHistoryItemDTO(
+                repair.getId(),
+                repair.getOrderNumber(),
+                repair.getStatus(),
+                repair.getDescription(),
+                repair.getReceiveDateTime(),
+                repair.getReturnDateTime());
     }
 
     private Map<String, List<DeviceObservation>> observationsByDeviceId(Collection<String> deviceIds) {

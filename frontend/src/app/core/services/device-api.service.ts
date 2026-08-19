@@ -2,7 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { APP_CONFIG } from '../config/app-config';
-import { Device, DeviceObservation, DeviceType } from '../../shared/models/device.model';
+import { Device, DeviceObservation, DeviceRepairHistoryItem, DeviceType } from '../../shared/models/device.model';
 import { PageResponse } from '../../shared/models/client.model';
 
 @Injectable({ providedIn: 'root' })
@@ -19,6 +19,9 @@ export class DeviceApiService {
   }
   getTypes(): Observable<DeviceType[]> { return this.http.get<DeviceType[]>(`${APP_CONFIG.apiUrl}/device-type`); }
   getById(id: string): Observable<Device> { return this.http.get<Device>(`${this.url}/${id}`); }
+  getRepairHistory(id: string, page = 0, size = 5): Observable<PageResponse<DeviceRepairHistoryItem>> {
+    return this.http.get<PageResponse<DeviceRepairHistoryItem>>(`${this.url}/${id}/repairs?page=${page}&size=${size}`);
+  }
   search(term: string): Observable<Device[]> { return this.http.get<Device[]>(`${this.url}/search?term=${encodeURIComponent(term)}`); }
   create(payload: Device): Observable<Device> { return this.http.post<Device>(this.url, payload); }
   update(payload: Device): Observable<Device> { return this.http.put<Device>(this.url, payload); }

@@ -34,6 +34,7 @@ export class ApiService {
   getDevicePage = this.devices.getPage.bind(this.devices);
   getDeviceTypes = this.devices.getTypes.bind(this.devices);
   getDeviceById = this.devices.getById.bind(this.devices);
+  getDeviceRepairHistory = this.devices.getRepairHistory.bind(this.devices);
   searchDevices = this.devices.search.bind(this.devices);
   createDevice = this.devices.create.bind(this.devices);
   updateDevice = this.devices.update.bind(this.devices);

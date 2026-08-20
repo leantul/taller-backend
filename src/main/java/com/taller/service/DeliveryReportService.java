@@ -16,6 +16,8 @@ import com.taller.model.repository.projection.RepairReportView;
 import com.taller.resource.dto.RepairReportDTO;
 import com.taller.resource.dto.RepairReportHardwareItemDTO;
 import com.taller.resource.dto.RepairReportSoftwareItemDTO;
+import java.time.Clock;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -33,6 +35,7 @@ public class DeliveryReportService {
     private final RepairReportSoftwareItemRepository repairReportSoftwareItemRepository;
     private final WorkshopSettingsService workshopSettingsService;
     private final DeliveryReportPdfService deliveryReportPdfService;
+    private final Clock clock;
 
     @Transactional(readOnly = true)
     public RepairReportDTO getByRepairId(String repairId) {
@@ -50,7 +53,7 @@ public class DeliveryReportService {
 
         report.setRepairId(repairId);
         report.setOrderNumber(valueOrFallback(dto.getOrderNumber(), repair.getOrderNumber()));
-        report.setIssuedAt(dto.getIssuedAt() != null ? dto.getIssuedAt() : java.time.LocalDateTime.now());
+        report.setIssuedAt(dto.getIssuedAt() != null ? dto.getIssuedAt() : LocalDateTime.now(clock));
         report.setClientName(normalizeOptional(dto.getClientName()));
         report.setClientLastName(normalizeOptional(dto.getClientLastName()));
         report.setClientPhone(normalizeOptional(dto.getClientPhone()));
@@ -116,7 +119,7 @@ public class DeliveryReportService {
         RepairReportDTO dto = new RepairReportDTO();
         dto.setRepairId(repairId);
         dto.setOrderNumber(repair.getOrderNumber());
-        dto.setIssuedAt(java.time.LocalDateTime.now());
+        dto.setIssuedAt(LocalDateTime.now(clock));
         dto.setClientName(repair.getClientName());
         dto.setClientLastName(repair.getClientLastName());
         dto.setClientPhone(repair.getClientPhone());

@@ -21,7 +21,10 @@ import com.taller.model.repository.projection.RepairReportIdView;
 import com.taller.model.repository.projection.RepairReportView;
 import com.taller.resource.dto.RepairReportDTO;
 import java.math.BigDecimal;
+import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -33,6 +36,10 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
 class DeliveryReportServiceTest {
+
+    private static final Clock BUENOS_AIRES_CLOCK = Clock.fixed(
+            Instant.parse("2026-08-20T02:55:00Z"),
+            ZoneId.of("America/Argentina/Buenos_Aires"));
 
     @Mock
     private RepairRepository repairRepository;
@@ -60,12 +67,13 @@ class DeliveryReportServiceTest {
                 repairReportHardwareItemRepository,
                 repairReportSoftwareItemRepository,
                 workshopSettingsService,
-                deliveryReportPdfService
+                deliveryReportPdfService,
+                BUENOS_AIRES_CLOCK
         );
     }
 
     @Test
-    void getByRepairId_buildsDefaultSnapshotFromRepair() {
+    void getByRepairId_usesBusinessTimeZoneNearUtcMidnight() {
         DeliveryReportSourceView source = repairSourceFixtureForDefaultReport();
         when(repairRepository.findDeliveryReportSourceById("repair-1")).thenReturn(Optional.of(source));
         when(repairReportRepository.findViewByRepairId("repair-1")).thenReturn(Optional.empty());
@@ -83,6 +91,7 @@ class DeliveryReportServiceTest {
         assertFalse(report.getShowPartPrices());
         assertEquals(BigDecimal.valueOf(58000), report.getFinalAmount());
         assertNotNull(report.getIssuedAt());
+        assertEquals(LocalDateTime.of(2026, 8, 19, 23, 55), report.getIssuedAt());
     }
 
     @Test
@@ -136,6 +145,7 @@ class DeliveryReportServiceTest {
         ArgumentCaptor<RepairReport> reportCaptor = ArgumentCaptor.forClass(RepairReport.class);
         verify(repairReportRepository).save(reportCaptor.capture());
         assertEquals(false, reportCaptor.getValue().getShowPartPrices());
+        assertEquals(LocalDateTime.of(2026, 8, 19, 23, 55), reportCaptor.getValue().getIssuedAt());
     }
 
     @Test

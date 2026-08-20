@@ -35,3 +35,12 @@ export interface Device {
   passwordHistory?: DevicePasswordHistory[];
   observations?: DeviceObservation[];
 }
+
+export interface DeviceRepairHistoryItem {
+  id: string;
+  orderNumber: string;
+  status: import('./repair.model').Repair['status'];
+  description?: string;
+  receiveDateTime?: string;
+  returnDateTime?: string;
+}

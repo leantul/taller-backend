@@ -1,4 +1,4 @@
-import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { CardModule } from 'primeng/card';
@@ -11,8 +11,10 @@ import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { debounceTime, distinctUntilChanged, forkJoin, Subject, Subscription } from 'rxjs';
 import { ApiService } from '../../core/services/api.service';
-import { Device, DeviceObservation, DevicePasswordHistory, DeviceType } from '../../shared/models/device.model';
+import { Device, DeviceObservation, DevicePasswordHistory, DeviceRepairHistoryItem, DeviceType } from '../../shared/models/device.model';
 import { Client } from '../../shared/models/client.model';
+import { RepairDetailDialogComponent } from '../../shared/components/repair-detail-dialog.component';
+import { repairStatusClass, repairStatusLabel } from '../../shared/utils/repair-status.util';
 
 const ARGENTINA_TIME_ZONE = 'America/Argentina/Buenos_Aires';
 const HISTORY_DATE_HAS_TIME_ZONE = /(?:z|[+-]\d{2}:?\d{2})$/i;
@@ -38,7 +40,7 @@ type DeviceTableColumn = {
 @Component({
   selector: 'app-devices-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, CardModule, InputTextModule, ButtonModule, SelectModule, AutoCompleteModule, DialogModule, ConfirmDialogModule],
+  imports: [CommonModule, FormsModule, CardModule, InputTextModule, ButtonModule, SelectModule, AutoCompleteModule, DialogModule, ConfirmDialogModule, RepairDetailDialogComponent],
   providers: [ConfirmationService, MessageService],
   template: `
     <p-confirmdialog></p-confirmdialog>
@@ -132,13 +134,13 @@ type DeviceTableColumn = {
             </thead>
             <tbody>
               @for (d of visibleDevices; track d.id || d.serialNumber) {
-                <tr>
+                <tr class="clickable-row" (click)="openDeviceDetail(d)">
                   <td>{{ d.deviceTypeName || '-' }}</td>
                   <td>{{ d.brand }}</td>
                   <td>{{ d.model }}</td>
                   <td>{{ d.clientName || getClientName(d.clientId) }}</td>
                   <td>
-                    <button class="observation-summary-button" type="button" (click)="openObservationManager(d)">
+                    <button class="observation-summary-button" type="button" (click)="stop($event); openObservationManager(d)">
                       <i class="pi pi-flag"></i>
                       <span>{{ observationSummary(d) }}</span>
                     </button>
@@ -147,13 +149,13 @@ type DeviceTableColumn = {
                     <div class="inline-row">
                       <span>{{ formatPassword(d.currentPassword, isDevicePasswordVisible(d.id || d.serialNumber)) }}</span>
                       @if (d.currentPassword) {
-                        <button class="icon-action" type="button" aria-label="Mostrar contraseña" (click)="toggleDevicePassword(d.id || d.serialNumber)">
+                        <button class="icon-action" type="button" aria-label="Mostrar contraseña" (click)="stop($event); toggleDevicePassword(d.id || d.serialNumber)">
                           <i [class]="isDevicePasswordVisible(d.id || d.serialNumber) ? 'pi pi-eye-slash' : 'pi pi-eye'"></i>
                         </button>
                       }
                     </div>
                   </td>
-                  <td>
+                  <td (click)="$event.stopPropagation()">
                     <div class="action-buttons">
                       <button class="icon-action" type="button" aria-label="Gestionar observaciones" (click)="openObservationManager(d)"><i class="pi pi-flag"></i></button>
                       <button class="icon-action" type="button" aria-label="Gestionar contraseñas" (click)="openPasswordManager(d)"><i class="pi pi-key"></i></button>
@@ -178,6 +180,73 @@ type DeviceTableColumn = {
         </div>
       </p-card>
     </div>
+
+    <p-dialog
+      header="Detalle del dispositivo"
+      [(visible)]="detailVisible"
+      [modal]="true"
+      [style]="{width:'70rem', maxWidth:'95vw'}"
+      [contentStyle]="{overflow:'hidden', padding:'0.35rem'}">
+      @if (detailDevice) {
+        <div class="detail-dialog-body">
+          <div class="detail-grid device-detail-grid">
+            <div class="detail-item"><label>Tipo</label><strong>{{ detailDevice.deviceTypeName || '-' }}</strong></div>
+            <div class="detail-item"><label>Cliente</label><strong>{{ detailDevice.clientName || getClientName(detailDevice.clientId) || '-' }}</strong></div>
+            <div class="detail-item"><label>Marca</label><strong>{{ detailDevice.brand || '-' }}</strong></div>
+            <div class="detail-item"><label>Modelo</label><strong>{{ detailDevice.model || '-' }}</strong></div>
+            @if (detailDevice.serialNumber) {
+              <div class="detail-item detail-wide device-serial-detail"><label>Serie / IMEI</label><strong>{{ detailDevice.serialNumber }}</strong></div>
+            }
+            <div class="detail-item detail-wide">
+              <label>Contraseña actual</label>
+              <div class="inline-row readonly-password-row">
+                <strong>{{ formatPassword(detailDevice.currentPassword, showDetailPassword) }}</strong>
+                @if (detailDevice.currentPassword) {
+                  <button class="icon-action" type="button" [attr.aria-label]="showDetailPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'" (click)="showDetailPassword = !showDetailPassword">
+                    <i [class]="showDetailPassword ? 'pi pi-eye-slash' : 'pi pi-eye'"></i>
+                  </button>
+                }
+              </div>
+            </div>
+            @if (detailDevice.technicalDetails) {
+              <div class="detail-item detail-wide detail-text-block"><label>Características</label><div class="detail-scrollable">{{ detailDevice.technicalDetails }}</div></div>
+            }
+          </div>
+
+          <div class="detail-section-heading">
+            <div><span class="eyebrow">Trazabilidad</span><h3>Historial de reparaciones</h3></div>
+            <span class="detail-count">{{ detailHistoryTotalElements }} {{ detailHistoryTotalElements === 1 ? 'reparación' : 'reparaciones' }}</span>
+          </div>
+          <div class="native-table-wrap device-history-table">
+            <table class="native-table">
+              <thead><tr><th>Orden</th><th>Estado</th><th>Falla reportada</th><th>Ingreso</th><th>Entrega</th><th>Detalle</th></tr></thead>
+              <tbody>
+                @for (repair of detailRepairs; track repair.id) {
+                  <tr>
+                    <td>#{{ repair.orderNumber || '-' }}</td>
+                    <td><span class="status-pill" [ngClass]="statusClass(repair.status)">{{ statusLabel(repair.status) }}</span></td>
+                    <td>{{ repair.description || '-' }}</td>
+                    <td>{{ repair.receiveDateTime ? (repair.receiveDateTime | date:'dd/MM/yyyy HH:mm') : '-' }}</td>
+                    <td>{{ repair.returnDateTime ? (repair.returnDateTime | date:'dd/MM/yyyy HH:mm') : '-' }}</td>
+                    <td><button class="icon-action" type="button" aria-label="Ver reparación" (click)="openRepairDetail(repair)"><i class="pi pi-eye"></i></button></td>
+                  </tr>
+                } @empty {
+                  <tr><td class="empty-cell" colspan="6">Este dispositivo no tiene reparaciones registradas.</td></tr>
+                }
+              </tbody>
+            </table>
+          </div>
+          <div class="table-pager" aria-label="Paginación del historial del dispositivo">
+            <span>{{ detailPaginationLabel }}</span>
+            <div class="pager-actions">
+              <button class="pager-button" type="button" [disabled]="detailHistoryPage === 0" (click)="previousDetailHistoryPage()"><i class="pi pi-chevron-left"></i></button>
+              <span>Página {{ detailHistoryPage + 1 }} de {{ displayDetailHistoryTotalPages }}</span>
+              <button class="pager-button" type="button" [disabled]="detailHistoryPage + 1 >= displayDetailHistoryTotalPages" (click)="nextDetailHistoryPage()"><i class="pi pi-chevron-right"></i></button>
+            </div>
+          </div>
+        </div>
+      }
+    </p-dialog>
 
     <p-dialog header="Editar dispositivo" [(visible)]="editVisible" [modal]="true" [style]="{width:'34rem'}">
       <div class="field">
@@ -342,9 +411,11 @@ type DeviceTableColumn = {
       <div class="field"><label>Celular</label><input pInputText [(ngModel)]="draftClient.phone" autocomplete="off" /></div>
       <button pButton type="button" label="Guardar cliente" icon="pi pi-check" (click)="createClientInline()"></button>
     </p-dialog>
+    <app-repair-detail-dialog></app-repair-detail-dialog>
   `
 })
 export class DevicesPageComponent implements OnInit, OnDestroy {
+  @ViewChild(RepairDetailDialogComponent) private repairDetailDialog?: RepairDetailDialogComponent;
   devices: Device[] = [];
   filteredDevices: (Device & { clientName?: string })[] = [];
   clients: Client[] = [];
@@ -354,6 +425,7 @@ export class DevicesPageComponent implements OnInit, OnDestroy {
   editVisible = false;
   passwordVisible = false;
   observationVisible = false;
+  detailVisible = false;
   showNewClientModal = false;
   selectedClientTerm: string | { label: string; value: string } = '';
   selectedClientId: string | null = null;
@@ -371,6 +443,13 @@ export class DevicesPageComponent implements OnInit, OnDestroy {
   showNewPassword = false;
   passwordDevice: Device | null = null;
   observationDevice: Device | null = null;
+  detailDevice: Device | null = null;
+  detailRepairs: DeviceRepairHistoryItem[] = [];
+  detailHistoryPage = 0;
+  detailHistoryPageSize = 5;
+  detailHistoryTotalElements = 0;
+  detailHistoryTotalPages = 0;
+  showDetailPassword = false;
   newPasswordValue = '';
   newObservationNote = '';
   editingPasswordId: string | null = null;
@@ -466,6 +545,64 @@ export class DevicesPageComponent implements OnInit, OnDestroy {
       this.showDraftPassword = false;
       this.reload();
     });
+  }
+
+  openDeviceDetail(device: Device): void {
+    if (!device.id) return;
+    this.detailDevice = this.normalizeDevice(device);
+    this.detailRepairs = [];
+    this.detailHistoryPage = 0;
+    this.detailHistoryTotalElements = 0;
+    this.detailHistoryTotalPages = 0;
+    this.showDetailPassword = false;
+
+    forkJoin({
+      device: this.api.getDeviceById(device.id),
+      repairs: this.api.getDeviceRepairHistory(device.id, this.detailHistoryPage, this.detailHistoryPageSize)
+    }).subscribe({
+      next: ({ device: detail, repairs }) => {
+        this.detailDevice = this.normalizeDevice({
+          ...detail,
+          clientName: detail.clientName || device.clientName || this.getClientName(detail.clientId)
+        });
+        this.applyDetailHistoryPage(repairs);
+        this.detailVisible = true;
+        this.changeDetector.detectChanges();
+      },
+      error: () => this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudo cargar el detalle del dispositivo.' })
+    });
+  }
+
+  openRepairDetail(repair: DeviceRepairHistoryItem): void {
+    if (!this.detailDevice) return;
+    this.repairDetailDialog?.open(
+      repair.id,
+      this.detailDevice.clientName || this.getClientName(this.detailDevice.clientId) || '-',
+      `${this.detailDevice.brand} ${this.detailDevice.model}`.trim() || '-');
+  }
+
+  previousDetailHistoryPage(): void {
+    if (this.detailHistoryPage === 0) return;
+    this.detailHistoryPage--;
+    this.loadDetailHistory();
+  }
+
+  nextDetailHistoryPage(): void {
+    if (this.detailHistoryPage + 1 >= this.detailHistoryTotalPages) return;
+    this.detailHistoryPage++;
+    this.loadDetailHistory();
+  }
+
+  statusLabel(status: DeviceRepairHistoryItem['status']): string {
+    return repairStatusLabel(status);
+  }
+
+  statusClass(status: DeviceRepairHistoryItem['status']): string {
+    return repairStatusClass(status);
+  }
+
+  stop(event: Event): void {
+    event.stopPropagation();
   }
 
   openEdit(device: Device): void {
@@ -734,6 +871,17 @@ export class DevicesPageComponent implements OnInit, OnDestroy {
     return `${start}-${end} de ${this.totalElements} dispositivos`;
   }
 
+  get displayDetailHistoryTotalPages(): number {
+    return Math.max(1, this.detailHistoryTotalPages);
+  }
+
+  get detailPaginationLabel(): string {
+    if (!this.detailHistoryTotalElements) return '0 reparaciones';
+    const start = this.detailHistoryPage * this.detailHistoryPageSize + 1;
+    const end = Math.min(start + this.detailRepairs.length - 1, this.detailHistoryTotalElements);
+    return `${start}-${end} de ${this.detailHistoryTotalElements} reparaciones`;
+  }
+
   columnWidth(columnKey: DeviceTableColumnKey): string {
     return this.deviceColumns.find((column) => column.key === columnKey)?.width || 'auto';
   }
@@ -801,6 +949,24 @@ export class DevicesPageComponent implements OnInit, OnDestroy {
       this.totalPages = Math.max(1, page.totalPages);
       this.changeDetector.detectChanges();
     });
+  }
+
+  private loadDetailHistory(): void {
+    if (!this.detailDevice?.id) return;
+    this.api.getDeviceRepairHistory(this.detailDevice.id, this.detailHistoryPage, this.detailHistoryPageSize).subscribe({
+      next: (page) => {
+        this.applyDetailHistoryPage(page);
+        this.changeDetector.detectChanges();
+      },
+      error: () => this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudo cargar el historial de reparaciones.' })
+    });
+  }
+
+  private applyDetailHistoryPage(page: { content: DeviceRepairHistoryItem[]; page: number; totalElements: number; totalPages: number }): void {
+    this.detailRepairs = page.content;
+    this.detailHistoryPage = page.page;
+    this.detailHistoryTotalElements = page.totalElements;
+    this.detailHistoryTotalPages = page.totalPages;
   }
 
   private normalizeDevice(device: Device): Device {

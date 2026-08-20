@@ -3,6 +3,7 @@ package com.taller.resource.controller;
 import com.taller.resource.dto.DeviceDTO;
 import com.taller.resource.dto.DeviceObservationDTO;
 import com.taller.resource.dto.DevicePasswordUpsertDTO;
+import com.taller.resource.dto.DeviceRepairHistoryItemDTO;
 import com.taller.resource.dto.PageDTO;
 import com.taller.service.DeviceService;
 import lombok.RequiredArgsConstructor;
@@ -60,6 +61,14 @@ public class DeviceController {
     @GetMapping("/{id}")
     public DeviceDTO getDeviceById(@PathVariable String id) {
         return deviceService.getDeviceById(id);
+    }
+
+    @GetMapping("/{id}/repairs")
+    public PageDTO<DeviceRepairHistoryItemDTO> getRepairHistory(
+            @PathVariable String id,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "5") int size) {
+        return deviceService.findRepairHistory(id, page, size);
     }
 
     @GetMapping("/search")

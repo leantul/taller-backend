@@ -6,7 +6,9 @@ import com.taller.model.repository.DeviceObservationRepository;
 import com.taller.model.repository.DevicePasswordHistoryRepository;
 import com.taller.model.repository.DeviceRepository;
 import com.taller.model.repository.DeviceTypeRepository;
+import com.taller.model.repository.RepairRepository;
 import com.taller.model.repository.projection.DeviceListView;
+import com.taller.model.repository.projection.DeviceRepairHistoryView;
 import com.taller.resource.dto.DeviceDTO;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -35,6 +37,8 @@ class DeviceServiceTest {
     private DevicePasswordHistoryRepository devicePasswordHistoryRepository;
     @Mock
     private DeviceObservationRepository deviceObservationRepository;
+    @Mock
+    private RepairRepository repairRepository;
 
     @Test
     void save_usesCatalogTypeAndReturnsFriendlyName() {
@@ -78,11 +82,27 @@ class DeviceServiceTest {
         verify(deviceRepository).findPage("mac", "", "", "client", "asc", PageRequest.of(0, 10));
     }
 
+    @Test
+    void findRepairHistory_returnsOnlyRepairsForRequestedDevice() {
+        DeviceRepairHistoryView row = mock(DeviceRepairHistoryView.class);
+        when(row.getId()).thenReturn("repair-id");
+        when(row.getOrderNumber()).thenReturn("1042");
+        when(repairRepository.findDeviceHistory("device-id", PageRequest.of(0, 5)))
+                .thenReturn(new PageImpl<>(List.of(row), PageRequest.of(0, 5), 1));
+
+        var result = service().findRepairHistory("device-id", 0, 5);
+
+        assertEquals(1, result.content().size());
+        assertEquals("repair-id", result.content().getFirst().id());
+        verify(repairRepository).findDeviceHistory("device-id", PageRequest.of(0, 5));
+    }
+
     private DeviceService service() {
         return new DeviceService(
                 deviceRepository,
                 deviceTypeRepository,
                 devicePasswordHistoryRepository,
-                deviceObservationRepository);
+                deviceObservationRepository,
+                repairRepository);
     }
 }

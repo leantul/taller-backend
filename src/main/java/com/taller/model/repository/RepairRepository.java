@@ -3,6 +3,7 @@ package com.taller.model.repository;
 import com.taller.model.Repair;
 import com.taller.model.enums.RepairStatusEnum;
 import com.taller.model.repository.projection.DeviceLastRepairView;
+import com.taller.model.repository.projection.DeviceRepairHistoryView;
 import com.taller.model.repository.projection.DashboardCountsView;
 import com.taller.model.repository.projection.ClientRepairHistoryView;
 import com.taller.model.repository.projection.DeliveryReportSourceView;
@@ -195,6 +196,22 @@ public interface RepairRepository extends JpaRepository<Repair, String> {
             """,
             countQuery = "SELECT COUNT(r) FROM Repair r WHERE r.idClient = :clientId")
     Page<ClientRepairHistoryView> findClientHistory(@Param("clientId") String clientId, Pageable pageable);
+
+    @Query(value = """
+            SELECT r.id AS id,
+                   r.orderNumber AS orderNumber,
+                   r.status AS status,
+                   r.description AS description,
+                   r.receiveDateTime AS receiveDateTime,
+                   r.returnDateTime AS returnDateTime
+            FROM Repair r
+            WHERE r.idDevice = :deviceId
+            ORDER BY CASE WHEN r.receiveDateTime IS NULL THEN 1 ELSE 0 END,
+                     r.receiveDateTime DESC,
+                     r.orderNumber DESC
+            """,
+            countQuery = "SELECT COUNT(r) FROM Repair r WHERE r.idDevice = :deviceId")
+    Page<DeviceRepairHistoryView> findDeviceHistory(@Param("deviceId") String deviceId, Pageable pageable);
 
     @Query("""
             SELECT r.id AS id,

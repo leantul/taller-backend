@@ -29,6 +29,9 @@ import static com.taller.service.support.PageSupport.toPageDto;
 @RequiredArgsConstructor
 public class ClientService {
 
+    private static final int MINIMUM_SEARCH_TERM_LENGTH = 2;
+    private static final int MAXIMUM_SEARCH_RESULTS = 50;
+
     private final ClientRepository clientRepository;
     private final RepairRepository repairRepository;
 
@@ -105,8 +108,17 @@ public class ClientService {
     }
 
     @Transactional(readOnly = true)
-    public List<ClientDTO> search(String term) {
-        return clientRepository.search(term).stream().map(this::toBasicDto).toList();
+    public List<ClientDTO> search(String term, int limit) {
+        String normalizedTerm = normalizeTerm(term);
+        if (normalizedTerm.length() < MINIMUM_SEARCH_TERM_LENGTH) {
+            return List.of();
+        }
+        return clientRepository.search(
+                        normalizedTerm,
+                        boundedPageRequest(0, limit, MAXIMUM_SEARCH_RESULTS))
+                .stream()
+                .map(this::toBasicDto)
+                .toList();
     }
 
     private ClientDTO toBasicDto(ClientBasicView client) {

@@ -4,6 +4,7 @@ import com.taller.model.Client;
 import com.taller.model.enums.RepairStatusEnum;
 import com.taller.model.repository.ClientRepository;
 import com.taller.model.repository.RepairRepository;
+import com.taller.model.repository.projection.ClientBasicView;
 import com.taller.model.repository.projection.ClientDetailView;
 import com.taller.model.repository.projection.ClientListView;
 import com.taller.model.repository.projection.ClientRepairHistoryView;
@@ -24,7 +25,10 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -94,6 +98,36 @@ class ClientServiceTest {
 
         assertNull(result.client());
         verify(repairRepository).findClientHistory("c1", PageRequest.of(0, 5));
+    }
+
+    @Test
+    void search_skipsRepositoryForTermsShorterThanTwoCharacters() {
+        assertEquals(List.of(), service.search(" a ", 20));
+
+        verify(clientRepository, never()).search(anyString(), any());
+    }
+
+    @Test
+    void search_normalizesTermAndUsesRequestedLimit() {
+        ClientBasicView row = mock(ClientBasicView.class);
+        when(row.getId()).thenReturn("c1");
+        when(row.getName()).thenReturn("Ada");
+        when(row.getLastName()).thenReturn("Lovelace");
+        when(clientRepository.search("ada", PageRequest.of(0, 20))).thenReturn(List.of(row));
+
+        List<ClientDTO> result = service.search(" ada ", 20);
+
+        assertEquals(1, result.size());
+        assertEquals("c1", result.getFirst().getId());
+    }
+
+    @Test
+    void search_capsResultLimitAtFifty() {
+        when(clientRepository.search("ada", PageRequest.of(0, 50))).thenReturn(List.of());
+
+        service.search("ada", 500);
+
+        verify(clientRepository).search("ada", PageRequest.of(0, 50));
     }
 
     @Test

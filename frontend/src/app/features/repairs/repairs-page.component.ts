@@ -1,5 +1,5 @@
 import { ChangeDetectorRef, Component, OnDestroy, OnInit, TrackByFunction, ViewChild } from '@angular/core';
-import { debounceTime, distinctUntilChanged, forkJoin, Subject, Subscription } from 'rxjs';
+import { catchError, debounceTime, distinctUntilChanged, finalize, map, of, Subject, Subscription, switchMap, timer } from 'rxjs';
 import { ActivatedRoute } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -38,6 +38,13 @@ type RepairTableRow = {
 type RepairTableColumnKey = 'orderLabel' | 'clientLabel' | 'deviceLabel' | 'statusLabel' | 'finalAmountValue' | 'actions';
 type RepairSortField = 'orderNumber' | 'clientName' | 'deviceLabel' | 'status' | 'price';
 type RepairStatusFilter = Repair['status'] | '';
+type ClientSearchTarget = 'create' | 'modal' | 'edit';
+
+type ClientOption = {
+  label: string;
+  value: string;
+  client: Client;
+};
 
 type RepairTableColumn = {
   key: RepairTableColumnKey;
@@ -59,15 +66,13 @@ export class RepairsPageComponent implements OnInit, OnDestroy {
   repairs: Repair[] = [];
   filteredRepairs: Repair[] = [];
   visibleRepairRows: RepairTableRow[] = [];
-  clients: Client[] = [];
-  clientsById = new Map<string, Client>();
   devicesById = new Map<string, Device>();
   clientDevices: Device[] = [];
   allDevices: Device[] = [];
-  clientOptions: { label: string; value: string }[] = [];
   deviceOptions: { label: string; value: string }[] = [];
   clientDeviceOptions: { label: string; value: string }[] = [];
   filteredClientsList: Client[] = [];
+  selectedClient: Client | null = null;
   selectedClientSummary = '';
   selectedDeviceSummary = '';
   selectedDevicePassword = '';
@@ -75,7 +80,9 @@ export class RepairsPageComponent implements OnInit, OnDestroy {
   showSelectedDevicePassword = false;
   showEditingDevicePassword = false;
   showDraftDevicePassword = false;
-  editClientOptions: { label: string; value: string }[] = [];
+  editingClientName = '';
+  editingSelectedClientLabel = '';
+  editClientSuggestions: ClientOption[] = [];
   editDeviceOptions: { label: string; value: string }[] = [];
   draftDevice: Device = { brand: '', model: '', serialNumber: '', clientId: '', deviceTypeId: '', currentPassword: '' };
   showClientModal = false;
@@ -85,7 +92,11 @@ export class RepairsPageComponent implements OnInit, OnDestroy {
   showNewClientModal = false;
   clientSearch = '';
   selectedClientName = '';
-  clientSuggestions: { label: string; value: string }[] = [];
+  clientSuggestions: ClientOption[] = [];
+  isClientAutocompleteLoading = false;
+  isClientModalLoading = false;
+  isEditClientLoading = false;
+  clientModalSearchFailed = false;
   draft: Repair = { idDevice: '', idClient: '', orderNumber: '', description: '', status: 'POR_RECIBIR', price: 0, laborAmount: null, quotedAmount: 0, quoteNotes: '', repairNotes: '', parts: [], observations: [] };
   editingRepair: Repair = { idDevice: '', idClient: '', orderNumber: '', description: '', status: 'POR_RECIBIR', price: 0, laborAmount: null, quotedAmount: 0, quoteNotes: '', parts: [], observations: [] };
   draftClient: Client = { name: '', lastName: '', reference: '', email: '', phone: '' };
@@ -122,7 +133,9 @@ export class RepairsPageComponent implements OnInit, OnDestroy {
   private readonly columnWidthStorageKey = 'taller.repairs.columnWidths';
   private pageRequest?: Subscription;
   private readonly searchChanges = new Subject<string>();
+  private readonly clientSearchChanges = new Subject<{ target: ClientSearchTarget; term: string }>();
   private searchSubscription?: Subscription;
+  private clientSearchSubscription?: Subscription;
 
   constructor(private readonly api: ApiService, private readonly messageService: MessageService, private readonly route: ActivatedRoute, private readonly confirmationService: ConfirmationService, private readonly changeDetector: ChangeDetectorRef) {}
   ngOnInit(): void {
@@ -131,14 +144,28 @@ export class RepairsPageComponent implements OnInit, OnDestroy {
       debounceTime(300),
       distinctUntilChanged()
     ).subscribe(() => this.applyFilters());
+    this.clientSearchSubscription = this.clientSearchChanges.pipe(
+      switchMap((request) => {
+        const term = request.term.trim();
+        if (term.length < 2) {
+          return of({ request, clients: [] as Client[], failed: false });
+        }
+        this.setClientSearchLoading(request.target, true);
+        return timer(300).pipe(
+          switchMap(() => this.api.searchClients(term, 20)),
+          map((clients) => ({ request, clients, failed: false })),
+          catchError(() => of({ request, clients: [] as Client[], failed: true })),
+          finalize(() => this.setClientSearchLoading(request.target, false))
+        );
+      })
+    ).subscribe(({ request, clients, failed }) => {
+      this.setClientSearchResults(request.target, clients, failed);
+      this.changeDetector.detectChanges();
+    });
     this.reload();
-    forkJoin({ clients: this.api.getClients(), deviceTypes: this.api.getDeviceTypes() }).subscribe(({ clients, deviceTypes }) => {
-      this.clients = clients;
-      this.clientsById = new Map(clients.filter(item => !!item.id).map(item => [item.id!, item]));
+    this.api.getDeviceTypes().subscribe((deviceTypes) => {
       this.typeOptions = deviceTypes;
       this.draftDevice.deviceTypeId = this.defaultDeviceTypeId();
-      this.rebuildStaticOptions();
-      this.updateFilteredClients();
       this.refreshSelectionSummaries();
       this.changeDetector.detectChanges();
     });
@@ -155,6 +182,7 @@ export class RepairsPageComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.pageRequest?.unsubscribe();
     this.searchSubscription?.unsubscribe();
+    this.clientSearchSubscription?.unsubscribe();
   }
 
   onSearchTermChange(): void {
@@ -162,8 +190,9 @@ export class RepairsPageComponent implements OnInit, OnDestroy {
   }
 
   selectClient(client: Client): void {
+    this.selectedClient = client;
     this.draft.idClient = client.id || '';
-    this.selectedClientName = `${client.name} ${client.lastName}`.trim();
+    this.selectedClientName = this.clientOptionLabel(client);
     this.showClientModal = false;
     this.draft.idDevice = '';
     this.loadClientDevices(this.draft.idClient);
@@ -175,7 +204,7 @@ export class RepairsPageComponent implements OnInit, OnDestroy {
       this.clientDevices = [device, ...this.clientDevices];
       this.allDevices = [device, ...this.allDevices.filter((item) => item.id !== device.id)];
       if (device.id) this.devicesById.set(device.id, device);
-      this.rebuildStaticOptions();
+      this.rebuildDeviceOptions();
       this.rebuildClientDeviceOptions();
       this.draft.idDevice = device.id || '';
       this.draftDevice = { brand: '', model: '', serialNumber: '', clientId: this.draft.idClient, deviceTypeId: this.defaultDeviceTypeId(), currentPassword: '' };
@@ -201,9 +230,10 @@ export class RepairsPageComponent implements OnInit, OnDestroy {
       next: () => {
         this.isSaving = false;
         this.messageService.add({ severity: 'success', summary: 'Reparación guardada', detail: 'Alta creada correctamente.' });
-      this.draft = { idDevice: '', idClient: '', orderNumber: '', description: '', status: 'POR_RECIBIR', price: 0, laborAmount: null, quotedAmount: 0, quoteNotes: '', repairNotes: '', parts: [], observations: [] };
-        this.selectedClientName='';
-        this.clientDevices=[];
+        this.draft = { idDevice: '', idClient: '', orderNumber: '', description: '', status: 'POR_RECIBIR', price: 0, laborAmount: null, quotedAmount: 0, quoteNotes: '', repairNotes: '', parts: [], observations: [] };
+        this.selectedClient = null;
+        this.selectedClientName = '';
+        this.clientDevices = [];
         this.rebuildClientDeviceOptions();
         this.refreshSelectionSummaries();
         this.reload();
@@ -214,16 +244,12 @@ export class RepairsPageComponent implements OnInit, OnDestroy {
 
 
 
-  onClientInputChange(value: string): void {
+  onClientInputChange(value: string | ClientOption): void {
+    if (typeof value !== 'string') return;
     this.selectedClientName = value;
-    const exactClient = this.clients.find((c) => `${c.name} ${c.lastName}`.trim().toLowerCase() === value.trim().toLowerCase());
-    if (exactClient?.id) {
-      this.draft.idClient = exactClient.id;
-      this.draft.idDevice = '';
-      this.loadClientDevices(this.draft.idClient);
-      return;
-    }
+    if (this.selectedClient && this.clientOptionLabel(this.selectedClient) === value.trim()) return;
 
+    this.selectedClient = null;
     this.draft.idClient = '';
     this.draft.idDevice = '';
     this.clientDevices = [];
@@ -239,10 +265,6 @@ export class RepairsPageComponent implements OnInit, OnDestroy {
 
     this.api.createClient(this.draftClient).subscribe({
       next: (client) => {
-        this.clients = [client, ...this.clients];
-        if (client.id) this.clientsById.set(client.id, client);
-        this.rebuildStaticOptions();
-        this.updateFilteredClients();
         this.selectClient(client);
         this.draftClient = { name: '', lastName: '', reference: '', email: '', phone: '' };
         this.showNewClientModal = false;
@@ -351,7 +373,9 @@ export class RepairsPageComponent implements OnInit, OnDestroy {
           parts: (detail.parts || []).map((part) => ({ ...part })),
           observations: (detail.observations || []).map((observation) => ({ ...observation }))
         };
-        this.editClientOptions = [...this.clientOptions];
+        this.editingClientName = repair.clientName || detail.idClient;
+        this.editingSelectedClientLabel = this.editingClientName;
+        this.editClientSuggestions = [];
         this.loadEditDevices(detail.idClient, () => {
           queueMicrotask(() => {
             this.showEditModal = true;
@@ -391,6 +415,10 @@ export class RepairsPageComponent implements OnInit, OnDestroy {
   }
 
   saveRepairChanges(): void {
+    if (!this.editingRepair.idClient || !this.editingRepair.idDevice) {
+      this.messageService.add({ severity: 'warn', summary: 'Faltan datos', detail: 'Seleccioná un cliente y uno de sus dispositivos.' });
+      return;
+    }
     if (this.editingRepair.laborAmount == null) {
       this.showLaborAmountRequiredMessage();
       return;
@@ -469,14 +497,11 @@ export class RepairsPageComponent implements OnInit, OnDestroy {
   }
 
   clientLabel(repair: Repair): string {
-    if (repair.clientName) return repair.clientName;
-    const client = this.clientsById.get(repair.idClient);
-    return client ? `${client.name} ${client.lastName}`.trim() : repair.idClient;
+    return repair.clientName || repair.idClient;
   }
 
   clientPhone(repair: Repair): string {
-    if (repair.clientPhone) return repair.clientPhone;
-    return this.clientsById.get(repair.idClient)?.phone || '';
+    return repair.clientPhone || '';
   }
 
   deviceLabel(repair: Repair): string {
@@ -512,22 +537,11 @@ export class RepairsPageComponent implements OnInit, OnDestroy {
     return digits ? `https://wa.me/${digits}` : '';
   }
   filterClientSuggestions(query: string): void {
-    const term = (query || '').trim().toLowerCase();
-    if (term.length < 3) {
-      this.clientSuggestions = [];
-      return;
-    }
-
-    this.clientSuggestions = this.clients
-      .filter((c) => `${c.name} ${c.lastName}`.toLowerCase().includes(term))
-      .slice(0, 10)
-      .map((c) => ({ label: `${c.name} ${c.lastName}`.trim(), value: c.id || '' }))
-      .filter((c) => !!c.value);
+    this.requestClientSearch('create', query);
   }
 
-  onClientAutocompleteSelect(selection: { label: string; value: string }): void {
-    const client = this.clients.find((c) => c.id === selection.value);
-    if (client) this.selectClient(client);
+  onClientAutocompleteSelect(selection: ClientOption): void {
+    this.selectClient(selection.client);
   }
 
   get draftReceiveDateTimeLocal(): string {
@@ -642,14 +656,33 @@ export class RepairsPageComponent implements OnInit, OnDestroy {
     this.refreshSelectionSummaries();
   }
 
-  onEditRepairClientChange(): void {
-    if (!this.editClientOptions.some((option) => option.value === this.editingRepair.idClient)) {
-      this.editingRepair.idClient = '';
-      this.editDeviceOptions = [];
+  filterEditClientSuggestions(query: string): void {
+    this.requestClientSearch('edit', query);
+  }
+
+  onEditClientInputChange(value: string | ClientOption): void {
+    if (typeof value !== 'string') return;
+    this.editingClientName = value;
+    if (this.editingSelectedClientLabel === value.trim()) return;
+    this.editingSelectedClientLabel = '';
+    this.editingRepair.idClient = '';
+    this.editingRepair.idDevice = '';
+    this.editDeviceOptions = [];
+    this.refreshEditingDevicePassword();
+  }
+
+  onEditClientAutocompleteSelect(selection: ClientOption): void {
+    const clientId = selection.client.id || '';
+    if (!clientId) return;
+    const clientChanged = clientId !== this.editingRepair.idClient;
+    this.editingRepair.idClient = clientId;
+    this.editingClientName = selection.label;
+    this.editingSelectedClientLabel = selection.label;
+    if (clientChanged) {
       this.editingRepair.idDevice = '';
-      return;
+      this.editDeviceOptions = [];
     }
-    this.loadEditDevices(this.editingRepair.idClient);
+    this.loadEditDevices(clientId);
   }
 
   onEditRepairDeviceChange(): void {
@@ -659,17 +692,22 @@ export class RepairsPageComponent implements OnInit, OnDestroy {
     this.refreshEditingDevicePassword();
   }
 
-  updateFilteredClients(): void {
-    const term = this.clientSearch.trim().toLowerCase();
-    this.filteredClientsList = !term
-      ? this.clients
-      : this.clients.filter((c) => `${c.name} ${c.lastName} ${c.reference || ''} ${c.phone} ${c.email}`.toLowerCase().includes(term));
+  openClientSearchModal(): void {
+    this.clientSearch = '';
+    this.filteredClientsList = [];
+    this.clientModalSearchFailed = false;
+    this.showClientModal = true;
   }
 
-  private rebuildStaticOptions(): void {
-    this.clientOptions = this.clients
-      .map((c) => ({ label: `${c.name} ${c.lastName}`.trim(), value: c.id || '' }))
-      .filter((c) => !!c.value);
+  onClientModalSearchChange(): void {
+    this.requestClientSearch('modal', this.clientSearch);
+  }
+
+  get hasClientModalSearchTerm(): boolean {
+    return this.clientSearch.trim().length >= 2;
+  }
+
+  private rebuildDeviceOptions(): void {
     this.deviceOptions = this.allDevices
       .map((d) => ({ label: `${d.brand || '-'} - ${d.model || '-'}`, value: d.id || '' }))
       .filter((d) => !!d.value);
@@ -686,7 +724,7 @@ export class RepairsPageComponent implements OnInit, OnDestroy {
       this.clientDevices = devices;
       this.allDevices = devices;
       this.devicesById = new Map(devices.filter((item) => !!item.id).map((item) => [item.id!, item]));
-      this.rebuildStaticOptions();
+      this.rebuildDeviceOptions();
       this.rebuildClientDeviceOptions();
       this.refreshSelectionSummaries();
       this.changeDetector.detectChanges();
@@ -728,8 +766,9 @@ export class RepairsPageComponent implements OnInit, OnDestroy {
   }
 
   private refreshSelectionSummaries(): void {
-    const client = this.clientsById.get(this.draft.idClient);
-    this.selectedClientSummary = client ? `${client.name} ${client.lastName}`.trim() : '';
+    this.selectedClientSummary = this.selectedClient && this.selectedClient.id === this.draft.idClient
+      ? this.clientOptionLabel(this.selectedClient)
+      : '';
     const device = this.clientDevices.find((item) => item.id === this.draft.idDevice) || this.devicesById.get(this.draft.idDevice);
     this.selectedDeviceSummary = device ? `${device.deviceTypeName || '-'} · ${device.brand} ${device.model}`.replace(/\s+/g, ' ').trim() : '';
     this.selectedDevicePassword = device?.currentPassword || '';
@@ -738,6 +777,39 @@ export class RepairsPageComponent implements OnInit, OnDestroy {
   private refreshEditingDevicePassword(): void {
     const device = this.allDevices.find((item) => item.id === this.editingRepair.idDevice) || this.devicesById.get(this.editingRepair.idDevice);
     this.editingDevicePassword = device?.currentPassword || '';
+  }
+
+  private requestClientSearch(target: ClientSearchTarget, term: string): void {
+    this.clientSearchChanges.next({ target, term: term || '' });
+  }
+
+  private setClientSearchResults(target: ClientSearchTarget, clients: Client[], failed: boolean): void {
+    if (target === 'create') {
+      this.clientSuggestions = this.toClientOptions(clients);
+      return;
+    }
+    if (target === 'edit') {
+      this.editClientSuggestions = this.toClientOptions(clients);
+      return;
+    }
+    this.filteredClientsList = clients;
+    this.clientModalSearchFailed = failed;
+  }
+
+  private setClientSearchLoading(target: ClientSearchTarget, loading: boolean): void {
+    if (target === 'create') this.isClientAutocompleteLoading = loading;
+    if (target === 'modal') this.isClientModalLoading = loading;
+    if (target === 'edit') this.isEditClientLoading = loading;
+  }
+
+  private toClientOptions(clients: Client[]): ClientOption[] {
+    return clients
+      .filter((client) => !!client.id)
+      .map((client) => ({ label: this.clientOptionLabel(client), value: client.id!, client }));
+  }
+
+  private clientOptionLabel(client: Client): string {
+    return `${client.name || ''} ${client.lastName || ''}`.trim();
   }
 
   private formatMoney(value: unknown): string {

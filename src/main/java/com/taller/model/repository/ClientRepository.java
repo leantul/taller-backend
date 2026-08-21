@@ -105,8 +105,9 @@ public interface ClientRepository extends JpaRepository<Client, String> {
                OR lower(c.reference) LIKE lower(concat('%', ?1, '%'))
                OR lower(c.phone) LIKE lower(concat('%', ?1, '%'))
                OR lower(c.email) LIKE lower(concat('%', ?1, '%'))
+            ORDER BY c.creationDateTime DESC
             """)
-    List<ClientBasicView> search(String term);
+    List<ClientBasicView> search(String term, Pageable pageable);
 
     @Query("""
             SELECT c.id AS id,

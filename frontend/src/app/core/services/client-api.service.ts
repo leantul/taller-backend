@@ -20,7 +20,9 @@ export class ClientApiService {
   getHistory(id: string, page: number, size: number, includeClient: boolean): Observable<ClientHistory> {
     return this.http.get<ClientHistory>(`${this.url}/${id}/history?page=${page}&size=${size}&includeClient=${includeClient}`);
   }
-  search(term: string): Observable<Client[]> { return this.http.get<Client[]>(`${this.url}/search?term=${encodeURIComponent(term)}`); }
+  search(term: string, limit = 20): Observable<Client[]> {
+    return this.http.get<Client[]>(`${this.url}/search?term=${encodeURIComponent(term)}&limit=${limit}`);
+  }
   save(payload: Client): Observable<Client> { return this.http.post<Client>(this.url, payload); }
   delete(id: string): Observable<void> { return this.http.delete<void>(`${this.url}/${id}`); }
 }

@@ -22,6 +22,8 @@ import com.taller.resource.dto.RepairPartDTO;
 import com.taller.resource.dto.RepairPaymentDTO;
 import com.taller.resource.dto.RepairStatusHistoryDTO;
 import com.taller.resource.dto.StatusBoardRepairDTO;
+import com.taller.resource.mapper.DeviceObservationMapper;
+import com.taller.resource.mapper.RepairPartMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -37,6 +39,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+
+import static com.taller.service.support.PageSupport.boundedPageRequest;
+import static com.taller.service.support.PageSupport.normalizeTerm;
+import static com.taller.service.support.PageSupport.toPageDto;
 
 @Service
 @RequiredArgsConstructor
@@ -56,8 +62,9 @@ public class RepairService {
 
     @Transactional(readOnly = true)
     public PageDTO<RepairDTO> findPage(int page, int size, String term, LocalDateTime from, LocalDateTime to, RepairStatusEnum status, String sortField, String sortOrder) {
-        Page<RepairListView> result = findRepairPage(normalizeTerm(term), status, from, to, pageRequest(page, size, 100, sortField, sortOrder));
-        return toPage(result, result.getContent().stream().map(this::toListDto).toList());
+        Page<RepairListView> result = findRepairPage(normalizeTerm(term), status, from, to,
+                boundedPageRequest(page, size, 100, resolveSort(sortField, sortOrder)));
+        return toPageDto(result, result.getContent().stream().map(this::toListDto).toList());
     }
 
     @Transactional(readOnly = true)
@@ -223,9 +230,9 @@ public class RepairService {
         dto.setApproved(repair.getApproved());
         dto.setRejected(repair.getRejected());
         dto.setReadyNotifiedAt(repair.getReadyNotifiedAt());
-        dto.setParts(repairPartRepository.findByRepairId(repair.getId()).stream().map(this::toPartDto).toList());
+        dto.setParts(repairPartRepository.findByRepairId(repair.getId()).stream().map(RepairPartMapper::toDto).toList());
         dto.setPayments(repairPaymentRepository.findByRepairId(repair.getId()).stream().map(this::toPaymentDto).toList());
-        dto.setObservations(deviceObservationRepository.findByRepairIdOrderByObservedAtDesc(repair.getId()).stream().map(this::toObservationDto).toList());
+        dto.setObservations(deviceObservationRepository.findByRepairIdOrderByObservedAtDesc(repair.getId()).stream().map(DeviceObservationMapper::toDto).toList());
         dto.setStatusHistory(repairStatusHistoryRepository.findByRepairIdOrderByChangedAtAscCreationDateTimeAsc(repair.getId()).stream().map(this::toStatusHistoryDto).toList());
         return dto;
     }
@@ -308,18 +315,6 @@ public class RepairService {
 
     private String defaultLabel(String value) {
         return value != null && !value.isBlank() ? value : "-";
-    }
-
-    private RepairPartDTO toPartDto(RepairPart part) {
-        RepairPartDTO dto = new RepairPartDTO();
-        dto.setId(part.getId());
-        dto.setRepairId(part.getRepairId());
-        dto.setName(part.getName());
-        dto.setQuantity(part.getQuantity());
-        dto.setProvider(part.getProvider());
-        dto.setCost(part.getCost());
-        dto.setSalePrice(part.getSalePrice());
-        return dto;
     }
 
     private RepairStatusHistoryDTO toStatusHistoryDto(RepairStatusHistoryView history) {
@@ -429,18 +424,6 @@ public class RepairService {
         return LocalDateTime.now(clock);
     }
 
-    private DeviceObservationDTO toObservationDto(DeviceObservation observation) {
-        DeviceObservationDTO dto = new DeviceObservationDTO();
-        dto.setId(observation.getId());
-        dto.setDeviceId(observation.getDeviceId());
-        dto.setRepairId(observation.getRepairId());
-        dto.setNote(observation.getNote());
-        dto.setObservedAt(observation.getObservedAt());
-        dto.setFollowUpAt(observation.getFollowUpAt());
-        dto.setResolvedAt(observation.getResolvedAt());
-        return dto;
-    }
-
     private String resolveDeviceId(RepairDTO repairDTO) {
         if (repairDTO.getIdDevice() != null) {
             return repairDTO.getIdDevice();
@@ -453,22 +436,6 @@ public class RepairService {
             return repairDTO.getIdClient();
         }
         return repairDTO.getClient() != null ? repairDTO.getClient().getId() : null;
-    }
-
-    private <T> PageDTO<T> toPage(Page<?> page, List<T> content) {
-        return new PageDTO<>(content, page.getNumber(), page.getSize(), page.getTotalElements(), page.getTotalPages());
-    }
-
-    private String normalizeTerm(String term) {
-        return term == null ? "" : term.trim();
-    }
-
-    private PageRequest pageRequest(int page, int size, int maximumSize, String sortField, String sortOrder) {
-        return PageRequest.of(
-                Math.max(0, page),
-                Math.min(Math.max(1, size), maximumSize),
-                resolveSort(sortField, sortOrder)
-        );
     }
 
     private Page<RepairListView> findRepairPage(String term, RepairStatusEnum status, LocalDateTime from, LocalDateTime to, PageRequest pageRequest) {

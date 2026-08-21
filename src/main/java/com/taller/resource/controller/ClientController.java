@@ -47,8 +47,10 @@ public class ClientController {
     }
 
     @GetMapping("/search")
-    public List<ClientDTO> search(@RequestParam String term) {
-        return clientService.search(term);
+    public List<ClientDTO> search(
+            @RequestParam String term,
+            @RequestParam(defaultValue = "20") int limit) {
+        return clientService.search(term, limit);
     }
 
     @PostMapping

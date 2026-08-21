@@ -8,6 +8,7 @@ import { MessageService } from 'primeng/api';
 import { ApiService } from '../../core/services/api.service';
 import { FinanceRow, FinanceSummary } from '../../shared/models/finance.model';
 import { ThemeMode, ThemeService } from '../../core/services/theme.service';
+import { beginColumnResize, persistColumnWidths, resolveColumnWidth, restoreColumnWidths } from '../../shared/utils/resizable-columns.util';
 
 type FinanceTableColumnKey = 'clientName' | 'date' | 'income' | 'partsCost' | 'net';
 type FinanceTableColumn = {
@@ -157,9 +158,6 @@ export class FinancePageComponent implements OnInit, OnDestroy {
   sortDirection: 'asc' | 'desc' = 'desc';
   private readonly subscriptions = new Subscription();
   private readonly columnWidthStorageKey = 'taller.finance.columnWidths';
-  private resizingColumnKey: FinanceTableColumnKey | null = null;
-  private resizeStartX = 0;
-  private resizeStartWidth = 0;
   private detailsRequest?: Subscription;
   private summaryRequest?: Subscription;
 
@@ -340,38 +338,14 @@ export class FinancePageComponent implements OnInit, OnDestroy {
   }
 
   columnWidth(columnKey: FinanceTableColumnKey): string {
-    return this.financeColumns.find((column) => column.key === columnKey)?.width || 'auto';
+    return resolveColumnWidth(this.financeColumns, columnKey);
   }
 
   startColumnResize(event: MouseEvent, columnKey: FinanceTableColumnKey): void {
-    event.preventDefault();
-    event.stopPropagation();
-    const header = (event.currentTarget as HTMLElement).closest('th');
-    if (!header) return;
-
-    this.resizingColumnKey = columnKey;
-    this.resizeStartX = event.clientX;
-    this.resizeStartWidth = header.getBoundingClientRect().width;
-
-    const onMouseMove = (moveEvent: MouseEvent) => {
-      if (!this.resizingColumnKey) return;
-      const nextWidth = Math.max(96, Math.round(this.resizeStartWidth + (moveEvent.clientX - this.resizeStartX)));
-      const column = this.financeColumns.find((item) => item.key === this.resizingColumnKey);
-      if (column) {
-        column.width = `${nextWidth}px`;
-        this.persistColumnWidths();
-        this.changeDetector.detectChanges();
-      }
-    };
-
-    const onMouseUp = () => {
-      this.resizingColumnKey = null;
-      window.removeEventListener('mousemove', onMouseMove);
-      window.removeEventListener('mouseup', onMouseUp);
-    };
-
-    window.addEventListener('mousemove', onMouseMove);
-    window.addEventListener('mouseup', onMouseUp);
+    beginColumnResize(event, columnKey, this.financeColumns, () => {
+      this.persistColumnWidths();
+      this.changeDetector.detectChanges();
+    });
   }
 
   private buildMonthlyNetChart(summary: FinanceSummary): void {
@@ -468,23 +442,11 @@ export class FinancePageComponent implements OnInit, OnDestroy {
   }
 
   private restoreColumnWidths(): void {
-    const stored = localStorage.getItem(this.columnWidthStorageKey);
-    if (!stored) return;
-    try {
-      const widths = JSON.parse(stored) as Partial<Record<FinanceTableColumnKey, string>>;
-      this.financeColumns.forEach((column) => {
-        if (widths[column.key]) column.width = widths[column.key]!;
-      });
-    } catch {
-      localStorage.removeItem(this.columnWidthStorageKey);
-    }
+    restoreColumnWidths(this.financeColumns, this.columnWidthStorageKey);
   }
 
   private persistColumnWidths(): void {
-    localStorage.setItem(
-      this.columnWidthStorageKey,
-      JSON.stringify(Object.fromEntries(this.financeColumns.map((column) => [column.key, column.width])))
-    );
+    persistColumnWidths(this.financeColumns, this.columnWidthStorageKey);
   }
 
   private setCurrentMonthRange(): void {

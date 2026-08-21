@@ -16,9 +16,9 @@ import com.taller.resource.dto.DevicePasswordHistoryDTO;
 import com.taller.resource.dto.DevicePasswordUpsertDTO;
 import com.taller.resource.dto.DeviceRepairHistoryItemDTO;
 import com.taller.resource.dto.PageDTO;
+import com.taller.resource.mapper.DeviceObservationMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,6 +29,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
+
+import static com.taller.service.support.PageSupport.boundedPageRequest;
+import static com.taller.service.support.PageSupport.normalizeSortDirection;
+import static com.taller.service.support.PageSupport.normalizeTerm;
+import static com.taller.service.support.PageSupport.toPageDto;
 
 @Service
 @RequiredArgsConstructor
@@ -92,10 +97,10 @@ public class DeviceService {
                 normalizeTerm(clientId),
                 normalizeTerm(clientTerm),
                 normalizeDeviceSortBy(sortBy),
-                normalizeSortDir(sortDir),
-                pageRequest(page, size, 100));
+                normalizeSortDirection(sortDir),
+                boundedPageRequest(page, size, 100));
         Map<String, List<DeviceObservation>> observationsByDeviceId = observationsByDeviceId(result.getContent().stream().map(DeviceListView::getId).toList());
-        return toPage(result, result.getContent().stream()
+        return toPageDto(result, result.getContent().stream()
                 .map(device -> toListDto(device, observationsByDeviceId.getOrDefault(device.getId(), List.of())))
                 .toList());
     }
@@ -107,8 +112,8 @@ public class DeviceService {
 
     @Transactional(readOnly = true)
     public PageDTO<DeviceRepairHistoryItemDTO> findRepairHistory(String deviceId, int page, int size) {
-        Page<DeviceRepairHistoryView> result = repairRepository.findDeviceHistory(deviceId, pageRequest(page, size, 50));
-        return toPage(result, result.getContent().stream().map(this::toRepairHistoryItemDto).toList());
+        Page<DeviceRepairHistoryView> result = repairRepository.findDeviceHistory(deviceId, boundedPageRequest(page, size, 50));
+        return toPageDto(result, result.getContent().stream().map(this::toRepairHistoryItemDto).toList());
     }
 
     @Transactional(readOnly = true)
@@ -224,9 +229,9 @@ public class DeviceService {
         dto.setCurrentPassword(resolveCurrentPassword(device, histories));
         if (includeHistory) {
             dto.setPasswordHistory(histories.stream().sorted(Comparator.comparing(DevicePasswordHistory::getCreationDateTime).reversed()).map(this::toPasswordHistoryDto).toList());
-            dto.setObservations(deviceObservationRepository.findByDeviceIdOrderByObservedAtDesc(device.getId()).stream().map(this::toObservationDto).toList());
+            dto.setObservations(deviceObservationRepository.findByDeviceIdOrderByObservedAtDesc(device.getId()).stream().map(DeviceObservationMapper::toDto).toList());
         } else {
-            dto.setObservations(deviceObservationRepository.findByDeviceIdAndResolvedAtIsNullOrderByObservedAtDesc(device.getId()).stream().map(this::toObservationDto).toList());
+            dto.setObservations(deviceObservationRepository.findByDeviceIdAndResolvedAtIsNullOrderByObservedAtDesc(device.getId()).stream().map(DeviceObservationMapper::toDto).toList());
         }
         return dto;
     }
@@ -242,7 +247,7 @@ public class DeviceService {
         dto.setClientId(device.getClientId());
         dto.setClientName(joinLabel(device.getClientName(), device.getClientLastName()));
         dto.setCurrentPassword(device.getCurrentPassword());
-        dto.setObservations(observations.stream().map(this::toObservationDto).toList());
+        dto.setObservations(observations.stream().map(DeviceObservationMapper::toDto).toList());
         return dto;
     }
 
@@ -324,28 +329,8 @@ public class DeviceService {
         return observation;
     }
 
-    private DeviceObservationDTO toObservationDto(DeviceObservation observation) {
-        DeviceObservationDTO dto = new DeviceObservationDTO();
-        dto.setId(observation.getId());
-        dto.setDeviceId(observation.getDeviceId());
-        dto.setRepairId(observation.getRepairId());
-        dto.setNote(observation.getNote());
-        dto.setObservedAt(observation.getObservedAt());
-        dto.setFollowUpAt(observation.getFollowUpAt());
-        dto.setResolvedAt(observation.getResolvedAt());
-        return dto;
-    }
-
     private boolean hasText(String value) {
         return value != null && !value.isBlank();
-    }
-
-    private <T> PageDTO<T> toPage(Page<?> page, List<T> content) {
-        return new PageDTO<>(content, page.getNumber(), page.getSize(), page.getTotalElements(), page.getTotalPages());
-    }
-
-    private String normalizeTerm(String term) {
-        return term == null ? "" : term.trim();
     }
 
     private String normalizeDeviceSortBy(String sortBy) {
@@ -353,14 +338,6 @@ public class DeviceService {
             case "deviceType", "brand", "model", "client", "observations", "password" -> sortBy.trim();
             default -> "createdAt";
         };
-    }
-
-    private String normalizeSortDir(String sortDir) {
-        return "asc".equalsIgnoreCase(sortDir) ? "asc" : "desc";
-    }
-
-    private PageRequest pageRequest(int page, int size, int maximumSize) {
-        return PageRequest.of(Math.max(0, page), Math.min(Math.max(1, size), maximumSize));
     }
 
     private String joinLabel(String... values) {

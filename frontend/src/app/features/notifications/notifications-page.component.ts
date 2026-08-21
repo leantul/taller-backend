@@ -7,6 +7,8 @@ import { MessageService } from 'primeng/api';
 import { ApiService } from '../../core/services/api.service';
 import { NotificationStateService } from '../../core/services/notification-state.service';
 import { NotificationItem } from '../../shared/models/notification.model';
+import { repairStatusLabel } from '../../shared/utils/repair-status.util';
+import { phoneDigits } from '../../shared/utils/contact.util';
 
 @Component({
   selector: 'app-notifications-page',
@@ -208,19 +210,11 @@ export class NotificationsPageComponent implements OnInit {
   }
 
   statusLabel(status?: string): string {
-    switch (status) {
-      case 'POR_RECIBIR': return 'Por recibir';
-      case 'RECIBIDA': return 'Recibida';
-      case 'PRESUPUESTADA_ESPERANDO_RESPUESTA': return 'Presupuestada';
-      case 'HACIENDO': return 'Haciendo';
-      case 'ESPERANDO_RETIRO': return 'Esperando retiro';
-      case 'RETIRADA': return 'Retirada';
-      default: return status || '-';
-    }
+    return status ? repairStatusLabel(status as NonNullable<NotificationItem['status']>) : '-';
   }
 
   whatsAppLink(phone?: string): string {
-    const digits = (phone || '').replace(/\D/g, '');
+    const digits = phoneDigits(phone);
     return digits ? `https://wa.me/${digits}` : '';
   }
 

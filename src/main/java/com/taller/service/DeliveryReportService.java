@@ -24,6 +24,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import static com.taller.service.support.TextSupport.normalizeOptional;
+import static com.taller.service.support.TextSupport.normalizeRequired;
+
 @Service
 @RequiredArgsConstructor
 public class DeliveryReportService {
@@ -52,7 +55,7 @@ public class DeliveryReportService {
                 .orElseGet(RepairReport::new);
 
         report.setRepairId(repairId);
-        report.setOrderNumber(valueOrFallback(dto.getOrderNumber(), repair.getOrderNumber()));
+        report.setOrderNumber(normalizeRequired(dto.getOrderNumber(), repair.getOrderNumber()));
         report.setIssuedAt(dto.getIssuedAt() != null ? dto.getIssuedAt() : LocalDateTime.now(clock));
         report.setClientName(normalizeOptional(dto.getClientName()));
         report.setClientLastName(normalizeOptional(dto.getClientLastName()));
@@ -193,15 +196,6 @@ public class DeliveryReportService {
         dto.setSoftwareName(item.getSoftwareName());
         dto.setDetail(item.getDetail());
         return dto;
-    }
-
-    private String normalizeOptional(String value) {
-        return value == null ? null : value.trim();
-    }
-
-    private String valueOrFallback(String primary, String fallback) {
-        String normalized = normalizeOptional(primary);
-        return normalized == null || normalized.isBlank() ? fallback : normalized;
     }
 
     private <T> List<T> defaultList(List<T> value) {

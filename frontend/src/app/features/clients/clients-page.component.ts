@@ -13,6 +13,8 @@ import { Client, ClientListItem, ClientRepairHistoryItem } from '../../shared/mo
 import { Repair } from '../../shared/models/repair.model';
 import { RepairDetailDialogComponent } from '../../shared/components/repair-detail-dialog.component';
 import { repairStatusClass, repairStatusLabel } from '../../shared/utils/repair-status.util';
+import { beginColumnResize, persistColumnWidths, resolveColumnWidth, restoreColumnWidths } from '../../shared/utils/resizable-columns.util';
+import { phoneDigits } from '../../shared/utils/contact.util';
 
 type ClientTableColumnKey = 'name' | 'deviceCount' | 'repairCount' | 'phone' | 'actions';
 type ClientSortColumn = Exclude<ClientTableColumnKey, 'actions'>;
@@ -204,9 +206,6 @@ export class ClientsPageComponent implements OnInit, OnDestroy {
     { key: 'actions', label: 'Acciones', width: '11rem', sortable: false }
   ];
   private readonly columnWidthStorageKey = 'taller.clients.columnWidths';
-  private resizingColumnKey: ClientTableColumnKey | null = null;
-  private resizeStartX = 0;
-  private resizeStartWidth = 0;
   private pageRequest?: Subscription;
 
   constructor(private readonly api: ApiService, private readonly messages: MessageService, private readonly confirmations: ConfirmationService, private readonly changeDetector: ChangeDetectorRef) {}
@@ -270,7 +269,7 @@ export class ClientsPageComponent implements OnInit, OnDestroy {
   previousHistoryPage(): void { if (this.historyPage > 0) { this.historyPage--; this.loadHistory(); } }
   nextHistoryPage(): void { if (this.historyPage + 1 < this.historyTotalPages) { this.historyPage++; this.loadHistory(); } }
   stop(event: Event): void { event.stopPropagation(); }
-  whatsAppLink(phone: string): string { return `https://wa.me/${(phone || '').replace(/\D/g, '')}`; }
+  whatsAppLink(phone: string): string { return `https://wa.me/${phoneDigits(phone)}`; }
   deviceLabel(repair: ClientRepairHistoryItem): string { return [repair.deviceBrand, repair.deviceModel].filter(Boolean).join(' ') || '-'; }
   statusLabel(status: Repair['status']): string { return repairStatusLabel(status); }
   statusClass(status: Repair['status']): string { return repairStatusClass(status); }
@@ -281,38 +280,14 @@ export class ClientsPageComponent implements OnInit, OnDestroy {
   get historyPaginationLabel(): string { if (!this.historyTotalElements) return '0 reparaciones'; const start = this.historyPage * this.historyPageSize + 1; return `${start}-${Math.min(start + this.clientRepairs.length - 1, this.historyTotalElements)} de ${this.historyTotalElements} reparaciones`; }
 
   columnWidth(columnKey: ClientTableColumnKey): string {
-    return this.clientColumns.find((column) => column.key === columnKey)?.width || 'auto';
+    return resolveColumnWidth(this.clientColumns, columnKey);
   }
 
   startColumnResize(event: MouseEvent, columnKey: ClientTableColumnKey): void {
-    event.preventDefault();
-    event.stopPropagation();
-    const header = (event.currentTarget as HTMLElement).closest('th');
-    if (!header) return;
-
-    this.resizingColumnKey = columnKey;
-    this.resizeStartX = event.clientX;
-    this.resizeStartWidth = header.getBoundingClientRect().width;
-
-    const onMouseMove = (moveEvent: MouseEvent) => {
-      if (!this.resizingColumnKey) return;
-      const nextWidth = Math.max(96, Math.round(this.resizeStartWidth + (moveEvent.clientX - this.resizeStartX)));
-      const column = this.clientColumns.find((item) => item.key === this.resizingColumnKey);
-      if (column) {
-        column.width = `${nextWidth}px`;
-        this.persistColumnWidths();
-        this.changeDetector.detectChanges();
-      }
-    };
-
-    const onMouseUp = () => {
-      this.resizingColumnKey = null;
-      window.removeEventListener('mousemove', onMouseMove);
-      window.removeEventListener('mouseup', onMouseUp);
-    };
-
-    window.addEventListener('mousemove', onMouseMove);
-    window.addEventListener('mouseup', onMouseUp);
+    beginColumnResize(event, columnKey, this.clientColumns, () => {
+      this.persistColumnWidths();
+      this.changeDetector.detectChanges();
+    });
   }
 
   private reload(): void {
@@ -333,23 +308,11 @@ export class ClientsPageComponent implements OnInit, OnDestroy {
     });
   }
   private restoreColumnWidths(): void {
-    const stored = localStorage.getItem(this.columnWidthStorageKey);
-    if (!stored) return;
-    try {
-      const widths = JSON.parse(stored) as Partial<Record<ClientTableColumnKey, string>>;
-      this.clientColumns.forEach((column) => {
-        if (widths[column.key]) column.width = widths[column.key]!;
-      });
-    } catch {
-      localStorage.removeItem(this.columnWidthStorageKey);
-    }
+    restoreColumnWidths(this.clientColumns, this.columnWidthStorageKey);
   }
 
   private persistColumnWidths(): void {
-    localStorage.setItem(
-      this.columnWidthStorageKey,
-      JSON.stringify(Object.fromEntries(this.clientColumns.map((column) => [column.key, column.width])))
-    );
+    persistColumnWidths(this.clientColumns, this.columnWidthStorageKey);
   }
 
   private emptyClient(): Client { return { name: '', lastName: '', reference: '', email: '', phone: '' }; }

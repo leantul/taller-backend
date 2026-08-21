@@ -9,6 +9,7 @@ import { ApiService } from '../../core/services/api.service';
 import { Repair } from '../../shared/models/repair.model';
 import { StatusBoardRepair } from '../../shared/models/repair.model';
 import { DeliveryReportDialogComponent } from '../../shared/components/delivery-report-dialog.component';
+import { repairStatusClass } from '../../shared/utils/repair-status.util';
 
 @Component({
   selector: 'app-status-page',
@@ -119,15 +120,7 @@ export class StatusPageComponent implements OnInit {
   }
 
   statusClass(status: Repair['status']): string {
-    switch (status) {
-      case 'POR_RECIBIR': return 'is-muted';
-      case 'RECIBIDA': return 'is-info';
-      case 'PRESUPUESTADA_ESPERANDO_RESPUESTA': return 'is-warning';
-      case 'HACIENDO': return 'is-active';
-      case 'ESPERANDO_RETIRO': return 'is-success';
-      case 'RETIRADA': return 'is-closed';
-      default: return 'is-muted';
-    }
+    return repairStatusClass(status) || 'is-muted';
   }
 
   private reload(): void {

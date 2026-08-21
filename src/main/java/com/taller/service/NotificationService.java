@@ -4,7 +4,6 @@ import com.taller.model.AppMetadata;
 import com.taller.model.DeviceObservation;
 import com.taller.model.Notification;
 import com.taller.model.Repair;
-import com.taller.model.RepairPart;
 import com.taller.model.enums.RepairStatusEnum;
 import com.taller.model.repository.AppMetadataRepository;
 import com.taller.model.repository.ClientRepository;
@@ -17,6 +16,7 @@ import com.taller.model.repository.projection.ClientBasicView;
 import com.taller.model.repository.projection.DeviceBasicView;
 import com.taller.resource.dto.NotificationDTO;
 import com.taller.resource.dto.RepairPartDTO;
+import com.taller.resource.mapper.RepairPartMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -341,7 +341,7 @@ public class NotificationService {
         Map<String, List<RepairPartDTO>> partsByRepairId = repairIds.isEmpty()
                 ? Map.of()
                 : repairPartRepository.findByRepairIdIn(repairIds).stream()
-                .map(this::toPartDto)
+                .map(RepairPartMapper::toDto)
                 .collect(Collectors.groupingBy(RepairPartDTO::getRepairId));
 
         Set<String> clientIds = repairsById.values().stream()
@@ -480,18 +480,6 @@ public class NotificationService {
                 dto.setClientEmail(client.getEmail());
             }
         }
-    }
-
-    private RepairPartDTO toPartDto(RepairPart part) {
-        RepairPartDTO dto = new RepairPartDTO();
-        dto.setId(part.getId());
-        dto.setRepairId(part.getRepairId());
-        dto.setName(part.getName());
-        dto.setQuantity(part.getQuantity());
-        dto.setProvider(part.getProvider());
-        dto.setCost(part.getCost());
-        dto.setSalePrice(part.getSalePrice());
-        return dto;
     }
 
     private record WarrantyCandidate(Repair repair, String type, LocalDateTime eventDate) {

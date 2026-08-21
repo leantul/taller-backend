@@ -7,6 +7,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import static com.taller.service.support.TextSupport.normalizeOptional;
+import static com.taller.service.support.TextSupport.normalizeRequired;
+
 @Service
 @RequiredArgsConstructor
 public class WorkshopSettingsService {
@@ -60,12 +63,4 @@ public class WorkshopSettingsService {
         return dto;
     }
 
-    private String normalizeOptional(String value) {
-        return value == null ? null : value.trim();
-    }
-
-    private String normalizeRequired(String value, String fallback) {
-        String normalized = normalizeOptional(value);
-        return normalized == null || normalized.isBlank() ? fallback : normalized;
-    }
 }

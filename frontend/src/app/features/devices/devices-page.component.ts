@@ -15,6 +15,7 @@ import { Device, DeviceObservation, DevicePasswordHistory, DeviceRepairHistoryIt
 import { Client } from '../../shared/models/client.model';
 import { RepairDetailDialogComponent } from '../../shared/components/repair-detail-dialog.component';
 import { repairStatusClass, repairStatusLabel } from '../../shared/utils/repair-status.util';
+import { beginColumnResize, persistColumnWidths, resolveColumnWidth, restoreColumnWidths } from '../../shared/utils/resizable-columns.util';
 
 const ARGENTINA_TIME_ZONE = 'America/Argentina/Buenos_Aires';
 const HISTORY_DATE_HAS_TIME_ZONE = /(?:z|[+-]\d{2}:?\d{2})$/i;
@@ -471,9 +472,6 @@ export class DevicesPageComponent implements OnInit, OnDestroy {
     { key: 'actions', label: 'Acciones', width: '13rem', sortable: false }
   ];
   private readonly columnWidthStorageKey = 'taller.devices.columnWidths';
-  private resizingColumnKey: DeviceTableColumnKey | null = null;
-  private resizeStartX = 0;
-  private resizeStartWidth = 0;
   private pageRequest?: Subscription;
   private readonly searchChanges = new Subject<string>();
   private searchSubscription?: Subscription;
@@ -883,38 +881,14 @@ export class DevicesPageComponent implements OnInit, OnDestroy {
   }
 
   columnWidth(columnKey: DeviceTableColumnKey): string {
-    return this.deviceColumns.find((column) => column.key === columnKey)?.width || 'auto';
+    return resolveColumnWidth(this.deviceColumns, columnKey);
   }
 
   startColumnResize(event: MouseEvent, columnKey: DeviceTableColumnKey): void {
-    event.preventDefault();
-    event.stopPropagation();
-    const header = (event.currentTarget as HTMLElement).closest('th');
-    if (!header) return;
-
-    this.resizingColumnKey = columnKey;
-    this.resizeStartX = event.clientX;
-    this.resizeStartWidth = header.getBoundingClientRect().width;
-
-    const onMouseMove = (moveEvent: MouseEvent) => {
-      if (!this.resizingColumnKey) return;
-      const nextWidth = Math.max(96, Math.round(this.resizeStartWidth + (moveEvent.clientX - this.resizeStartX)));
-      const column = this.deviceColumns.find((item) => item.key === this.resizingColumnKey);
-      if (column) {
-        column.width = `${nextWidth}px`;
-        this.persistColumnWidths();
-        this.changeDetector.detectChanges();
-      }
-    };
-
-    const onMouseUp = () => {
-      this.resizingColumnKey = null;
-      window.removeEventListener('mousemove', onMouseMove);
-      window.removeEventListener('mouseup', onMouseUp);
-    };
-
-    window.addEventListener('mousemove', onMouseMove);
-    window.addEventListener('mouseup', onMouseUp);
+    beginColumnResize(event, columnKey, this.deviceColumns, () => {
+      this.persistColumnWidths();
+      this.changeDetector.detectChanges();
+    });
   }
 
   previousPage(): void {
@@ -987,23 +961,11 @@ export class DevicesPageComponent implements OnInit, OnDestroy {
   }
 
   private restoreColumnWidths(): void {
-    const stored = localStorage.getItem(this.columnWidthStorageKey);
-    if (!stored) return;
-    try {
-      const widths = JSON.parse(stored) as Partial<Record<DeviceTableColumnKey, string>>;
-      this.deviceColumns.forEach((column) => {
-        if (widths[column.key]) column.width = widths[column.key]!;
-      });
-    } catch {
-      localStorage.removeItem(this.columnWidthStorageKey);
-    }
+    restoreColumnWidths(this.deviceColumns, this.columnWidthStorageKey);
   }
 
   private persistColumnWidths(): void {
-    localStorage.setItem(
-      this.columnWidthStorageKey,
-      JSON.stringify(Object.fromEntries(this.deviceColumns.map((column) => [column.key, column.width])))
-    );
+    persistColumnWidths(this.deviceColumns, this.columnWidthStorageKey);
   }
 
   private parseHistoryDate(value: string | undefined): Date | null {

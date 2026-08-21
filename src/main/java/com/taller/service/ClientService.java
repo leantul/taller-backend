@@ -15,11 +15,15 @@ import com.taller.resource.dto.ClientRepairHistoryItemDTO;
 import com.taller.resource.dto.PageDTO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+
+import static com.taller.service.support.PageSupport.boundedPageRequest;
+import static com.taller.service.support.PageSupport.normalizeSortDirection;
+import static com.taller.service.support.PageSupport.normalizeTerm;
+import static com.taller.service.support.PageSupport.toPageDto;
 
 @Service
 @RequiredArgsConstructor
@@ -33,18 +37,18 @@ public class ClientService {
         Page<ClientListView> result = clientRepository.findPage(
                 normalizeTerm(term),
                 normalizeSortBy(sortBy),
-                normalizeSortDir(sortDir),
-                pageRequest(page, size, 100));
-        return toPage(result, result.getContent().stream().map(this::toListItemDto).toList());
+                normalizeSortDirection(sortDir),
+                boundedPageRequest(page, size, 100));
+        return toPageDto(result, result.getContent().stream().map(this::toListItemDto).toList());
     }
 
     @Transactional(readOnly = true)
     public ClientHistoryDTO findHistory(String id, int page, int size, boolean includeClient) {
         ClientDetailDTO client = includeClient ? findDetail(id) : null;
-        Page<ClientRepairHistoryView> result = repairRepository.findClientHistory(id, pageRequest(page, size, 50));
+        Page<ClientRepairHistoryView> result = repairRepository.findClientHistory(id, boundedPageRequest(page, size, 50));
         return new ClientHistoryDTO(
                 client,
-                toPage(result, result.getContent().stream().map(this::toHistoryItemDto).toList())
+                toPageDto(result, result.getContent().stream().map(this::toHistoryItemDto).toList())
         );
     }
 
@@ -149,14 +153,6 @@ public class ClientService {
         );
     }
 
-    private <T> PageDTO<T> toPage(Page<?> page, List<T> content) {
-        return new PageDTO<>(content, page.getNumber(), page.getSize(), page.getTotalElements(), page.getTotalPages());
-    }
-
-    private String normalizeTerm(String term) {
-        return term == null ? "" : term.trim();
-    }
-
     private String normalizeSortBy(String sortBy) {
         return switch (sortBy == null ? "" : sortBy.trim()) {
             case "name", "deviceCount", "repairCount", "phone" -> sortBy.trim();
@@ -164,11 +160,4 @@ public class ClientService {
         };
     }
 
-    private String normalizeSortDir(String sortDir) {
-        return "asc".equalsIgnoreCase(sortDir) ? "asc" : "desc";
-    }
-
-    private PageRequest pageRequest(int page, int size, int maximumSize) {
-        return PageRequest.of(Math.max(0, page), Math.min(Math.max(1, size), maximumSize));
-    }
 }

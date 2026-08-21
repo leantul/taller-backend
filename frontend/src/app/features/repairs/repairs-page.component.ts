@@ -21,6 +21,8 @@ import { MessageService } from 'primeng/api';
 import { RepairDetailDialogComponent } from '../../shared/components/repair-detail-dialog.component';
 import { DeliveryReportDialogComponent } from '../../shared/components/delivery-report-dialog.component';
 import { fromDateTimeLocal, REPAIR_STATUS_OPTIONS, repairStatusClass, repairStatusLabel, toDateTimeLocal } from '../../shared/utils/repair-status.util';
+import { beginColumnResize, persistColumnWidths, resolveColumnWidth, restoreColumnWidths } from '../../shared/utils/resizable-columns.util';
+import { phoneDigits } from '../../shared/utils/contact.util';
 
 type RepairTableRow = {
   repair: Repair;
@@ -117,9 +119,6 @@ export class RepairsPageComponent implements OnInit, OnDestroy {
   ];
   sortColumn: Exclude<RepairTableColumnKey, 'actions'> | null = null;
   sortDirection: 'asc' | 'desc' = 'desc';
-  private resizingColumnKey: RepairTableColumnKey | null = null;
-  private resizeStartX = 0;
-  private resizeStartWidth = 0;
   private readonly columnWidthStorageKey = 'taller.repairs.columnWidths';
   private pageRequest?: Subscription;
   private readonly searchChanges = new Subject<string>();
@@ -509,7 +508,7 @@ export class RepairsPageComponent implements OnInit, OnDestroy {
   }
 
   whatsAppLink(phone: string): string {
-    const digits = (phone || "").replace(/\D/g, "");
+    const digits = phoneDigits(phone);
     return digits ? `https://wa.me/${digits}` : '';
   }
   filterClientSuggestions(query: string): void {
@@ -629,42 +628,14 @@ export class RepairsPageComponent implements OnInit, OnDestroy {
   }
 
   columnWidth(columnKey: RepairTableColumnKey): string {
-    return this.repairColumns.find((column) => column.key === columnKey)?.width || 'auto';
+    return resolveColumnWidth(this.repairColumns, columnKey);
   }
 
   startColumnResize(event: MouseEvent, columnKey: RepairTableColumnKey): void {
-    event.preventDefault();
-    event.stopPropagation();
-    const header = (event.currentTarget as HTMLElement).closest('th');
-    if (!header) {
-      return;
-    }
-
-    this.resizingColumnKey = columnKey;
-    this.resizeStartX = event.clientX;
-    this.resizeStartWidth = header.getBoundingClientRect().width;
-
-    const onMouseMove = (moveEvent: MouseEvent) => {
-      if (!this.resizingColumnKey) {
-        return;
-      }
-      const nextWidth = Math.max(96, Math.round(this.resizeStartWidth + (moveEvent.clientX - this.resizeStartX)));
-      const column = this.repairColumns.find((item) => item.key === this.resizingColumnKey);
-      if (column) {
-        column.width = `${nextWidth}px`;
-        this.persistColumnWidths();
-        this.changeDetector.detectChanges();
-      }
-    };
-
-    const onMouseUp = () => {
-      this.resizingColumnKey = null;
-      window.removeEventListener('mousemove', onMouseMove);
-      window.removeEventListener('mouseup', onMouseUp);
-    };
-
-    window.addEventListener('mousemove', onMouseMove);
-    window.addEventListener('mouseup', onMouseUp);
+    beginColumnResize(event, columnKey, this.repairColumns, () => {
+      this.persistColumnWidths();
+      this.changeDetector.detectChanges();
+    });
   }
 
   onDraftDeviceChange(): void {
@@ -828,22 +799,10 @@ export class RepairsPageComponent implements OnInit, OnDestroy {
   }
 
   private restoreColumnWidths(): void {
-    const stored = localStorage.getItem(this.columnWidthStorageKey);
-    if (!stored) return;
-    try {
-      const widths = JSON.parse(stored) as Partial<Record<RepairTableColumnKey, string>>;
-      this.repairColumns.forEach((column) => {
-        if (widths[column.key]) column.width = widths[column.key]!;
-      });
-    } catch {
-      localStorage.removeItem(this.columnWidthStorageKey);
-    }
+    restoreColumnWidths(this.repairColumns, this.columnWidthStorageKey);
   }
 
   private persistColumnWidths(): void {
-    localStorage.setItem(
-      this.columnWidthStorageKey,
-      JSON.stringify(Object.fromEntries(this.repairColumns.map((column) => [column.key, column.width])))
-    );
+    persistColumnWidths(this.repairColumns, this.columnWidthStorageKey);
   }
 }

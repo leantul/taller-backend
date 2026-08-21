@@ -38,7 +38,8 @@ type RepairTableRow = {
 type RepairTableColumnKey = 'orderLabel' | 'clientLabel' | 'deviceLabel' | 'statusLabel' | 'finalAmountValue' | 'actions';
 type RepairSortField = 'orderNumber' | 'clientName' | 'deviceLabel' | 'status' | 'price';
 type RepairStatusFilter = Repair['status'] | '';
-type ClientSearchTarget = 'create' | 'modal' | 'edit';
+type ClientSearchTarget = 'create' | 'modal';
+type ClientSearchContext = 'create' | 'edit';
 
 type ClientOption = {
   label: string;
@@ -81,8 +82,6 @@ export class RepairsPageComponent implements OnInit, OnDestroy {
   showEditingDevicePassword = false;
   showDraftDevicePassword = false;
   editingClientName = '';
-  editingSelectedClientLabel = '';
-  editClientSuggestions: ClientOption[] = [];
   editDeviceOptions: { label: string; value: string }[] = [];
   draftDevice: Device = { brand: '', model: '', serialNumber: '', clientId: '', deviceTypeId: '', currentPassword: '' };
   showClientModal = false;
@@ -90,12 +89,12 @@ export class RepairsPageComponent implements OnInit, OnDestroy {
   showStatusModal = false;
   showEditModal = false;
   showNewClientModal = false;
+  clientSearchContext: ClientSearchContext = 'create';
   clientSearch = '';
   selectedClientName = '';
   clientSuggestions: ClientOption[] = [];
   isClientAutocompleteLoading = false;
   isClientModalLoading = false;
-  isEditClientLoading = false;
   clientModalSearchFailed = false;
   draft: Repair = { idDevice: '', idClient: '', orderNumber: '', description: '', status: 'POR_RECIBIR', price: 0, laborAmount: null, quotedAmount: 0, quoteNotes: '', repairNotes: '', parts: [], observations: [] };
   editingRepair: Repair = { idDevice: '', idClient: '', orderNumber: '', description: '', status: 'POR_RECIBIR', price: 0, laborAmount: null, quotedAmount: 0, quoteNotes: '', parts: [], observations: [] };
@@ -374,8 +373,6 @@ export class RepairsPageComponent implements OnInit, OnDestroy {
           observations: (detail.observations || []).map((observation) => ({ ...observation }))
         };
         this.editingClientName = repair.clientName || detail.idClient;
-        this.editingSelectedClientLabel = this.editingClientName;
-        this.editClientSuggestions = [];
         this.loadEditDevices(detail.idClient, () => {
           queueMicrotask(() => {
             this.showEditModal = true;
@@ -656,28 +653,17 @@ export class RepairsPageComponent implements OnInit, OnDestroy {
     this.refreshSelectionSummaries();
   }
 
-  filterEditClientSuggestions(query: string): void {
-    this.requestClientSearch('edit', query);
-  }
-
-  onEditClientInputChange(value: string | ClientOption): void {
-    if (typeof value !== 'string') return;
-    this.editingClientName = value;
-    if (this.editingSelectedClientLabel === value.trim()) return;
-    this.editingSelectedClientLabel = '';
-    this.editingRepair.idClient = '';
-    this.editingRepair.idDevice = '';
-    this.editDeviceOptions = [];
-    this.refreshEditingDevicePassword();
-  }
-
-  onEditClientAutocompleteSelect(selection: ClientOption): void {
-    const clientId = selection.client.id || '';
+  selectClientFromModal(client: Client): void {
+    if (this.clientSearchContext === 'create') {
+      this.selectClient(client);
+      return;
+    }
+    const clientId = client.id || '';
     if (!clientId) return;
     const clientChanged = clientId !== this.editingRepair.idClient;
     this.editingRepair.idClient = clientId;
-    this.editingClientName = selection.label;
-    this.editingSelectedClientLabel = selection.label;
+    this.editingClientName = this.clientOptionLabel(client);
+    this.showClientModal = false;
     if (clientChanged) {
       this.editingRepair.idDevice = '';
       this.editDeviceOptions = [];
@@ -692,7 +678,8 @@ export class RepairsPageComponent implements OnInit, OnDestroy {
     this.refreshEditingDevicePassword();
   }
 
-  openClientSearchModal(): void {
+  openClientSearchModal(context: ClientSearchContext = 'create'): void {
+    this.clientSearchContext = context;
     this.clientSearch = '';
     this.filteredClientsList = [];
     this.clientModalSearchFailed = false;
@@ -788,10 +775,6 @@ export class RepairsPageComponent implements OnInit, OnDestroy {
       this.clientSuggestions = this.toClientOptions(clients);
       return;
     }
-    if (target === 'edit') {
-      this.editClientSuggestions = this.toClientOptions(clients);
-      return;
-    }
     this.filteredClientsList = clients;
     this.clientModalSearchFailed = failed;
   }
@@ -799,7 +782,6 @@ export class RepairsPageComponent implements OnInit, OnDestroy {
   private setClientSearchLoading(target: ClientSearchTarget, loading: boolean): void {
     if (target === 'create') this.isClientAutocompleteLoading = loading;
     if (target === 'modal') this.isClientModalLoading = loading;
-    if (target === 'edit') this.isEditClientLoading = loading;
   }
 
   private toClientOptions(clients: Client[]): ClientOption[] {

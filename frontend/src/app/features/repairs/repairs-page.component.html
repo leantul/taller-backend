@@ -24,7 +24,7 @@
           <div class="inline-row">
             <p-autoComplete [(ngModel)]="selectedClientName" (ngModelChange)="onClientInputChange($event)" name="selectedClientName" [suggestions]="clientSuggestions" (completeMethod)="filterClientSuggestions($event.query)" (onSelect)="onClientAutocompleteSelect($event.value)" optionLabel="label" [minLength]="2" [delay]="0" [forceSelection]="false" placeholder="Escribí al menos 2 caracteres" styleClass="client-autocomplete"></p-autoComplete>
             @if (isClientAutocompleteLoading) { <i class="pi pi-spin pi-spinner" aria-label="Buscando clientes"></i> }
-            <button pButton type="button" size="small" class="p-button-sm" icon="pi pi-search" [rounded]="true" [text]="true" (click)="openClientSearchModal()"></button>
+            <button pButton type="button" size="small" class="p-button-sm" icon="pi pi-search" [rounded]="true" [text]="true" (click)="openClientSearchModal('create')"></button>
             <button pButton type="button" size="small" class="p-button-sm" icon="pi pi-user-plus" [rounded]="true" [text]="true" (click)="showNewClientModal=true"></button>
           </div>
         </div>
@@ -218,8 +218,8 @@
   <div class="field">
     <label>Cliente</label>
     <div class="inline-row">
-      <p-autoComplete [(ngModel)]="editingClientName" (ngModelChange)="onEditClientInputChange($event)" [suggestions]="editClientSuggestions" (completeMethod)="filterEditClientSuggestions($event.query)" (onSelect)="onEditClientAutocompleteSelect($event.value)" optionLabel="label" [minLength]="2" [delay]="0" [forceSelection]="false" placeholder="Escribí al menos 2 caracteres" styleClass="client-autocomplete"></p-autoComplete>
-      @if (isEditClientLoading) { <i class="pi pi-spin pi-spinner" aria-label="Buscando clientes"></i> }
+      <input pInputText [value]="editingClientName" readonly aria-label="Cliente actual" />
+      <button pButton type="button" icon="pi pi-search" label="Cambiar cliente" class="p-button-sm" (click)="openClientSearchModal('edit')"></button>
     </div>
   </div>
   <div class="field"><label>Falla reportada</label><textarea class="p-inputtext" rows="4" [(ngModel)]="editingRepair.description"></textarea></div>
@@ -270,7 +270,7 @@
 </p-dialog>
 }
 
-<p-dialog header="Seleccionar cliente" [(visible)]="showClientModal" [modal]="true" [style]="{width:'60rem'}">
+<p-dialog [header]="clientSearchContext === 'edit' ? 'Cambiar cliente' : 'Seleccionar cliente'" [(visible)]="showClientModal" [modal]="true" [style]="{width:'60rem'}">
   <div class="field"><label>Buscar cliente</label><input pInputText [(ngModel)]="clientSearch" (ngModelChange)="onClientModalSearchChange()" autocomplete="off" placeholder="Nombre, apellido, referencia, teléfono o email" /></div>
   <div class="native-table-wrap">
     <table class="native-table">
@@ -289,7 +289,7 @@
               <td>{{ c.lastName }}</td>
               <td><span>{{ c.phone }}</span> <a [href]="whatsAppLink(c.phone)" target="_blank" rel="noopener" class="wa-link"><i class="pi pi-whatsapp"></i></a></td>
               <td>{{ c.email }}</td>
-              <td><button class="secondary-button" type="button" (click)="selectClient(c)">Seleccionar</button></td>
+              <td><button class="secondary-button" type="button" (click)="selectClientFromModal(c)">Seleccionar</button></td>
             </tr>
           } @empty {
             <tr><td class="empty-cell" colspan="5">No hay clientes que coincidan con la búsqueda.</td></tr>

@@ -17,13 +17,30 @@ export interface RepairStatusHistory {
   changedAt?: string;
 }
 
+export interface RepairPayment {
+  id?: string;
+  repairId?: string;
+  amount: number;
+  currency: 'ARS';
+  paymentDate?: string;
+  notes?: string;
+}
+
+export interface RepairStatusUpdate {
+  status: Repair['status'];
+  receiveDateTime?: string;
+  returnDateTime?: string;
+  paymentType?: 'FULL' | 'PARTIAL';
+  paymentAmount?: number;
+}
+
 export interface Repair {
   id?: string;
   idDevice: string;
   idClient: string;
   orderNumber: string;
   description: string;
-  status: 'POR_RECIBIR' | 'RECIBIDA' | 'PRESUPUESTADA_ESPERANDO_RESPUESTA' | 'HACIENDO' | 'ESPERANDO_RETIRO' | 'RETIRADA';
+  status: 'POR_RECIBIR' | 'RECIBIDA' | 'PRESUPUESTADA_ESPERANDO_RESPUESTA' | 'HACIENDO' | 'ESPERANDO_RETIRO' | 'COBRADO_ESPERANDO_RETIRO' | 'RETIRADA';
   price: number;
   laborAmount: number | null;
   quotedAmount?: number;
@@ -34,6 +51,9 @@ export interface Repair {
   parts?: RepairPart[];
   statusHistory?: RepairStatusHistory[];
   observations?: DeviceObservation[];
+  payments?: RepairPayment[];
+  totalPaid?: number;
+  outstandingBalance?: number;
   clientName?: string;
   clientPhone?: string;
   deviceLabel?: string;

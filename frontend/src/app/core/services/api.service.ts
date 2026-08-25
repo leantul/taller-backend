@@ -51,11 +51,13 @@ export class ApiService {
   getRepairs = this.repairs.getAll.bind(this.repairs);
   getRepairPage = this.repairs.getPage.bind(this.repairs);
   getStatusBoardRepairs = this.repairs.getStatusBoard.bind(this.repairs);
+  getStatusBoardPage = this.repairs.getStatusBoardPage.bind(this.repairs);
   getRepairById = this.repairs.getById.bind(this.repairs);
   searchRepairs = this.repairs.search.bind(this.repairs);
   createRepair = this.repairs.create.bind(this.repairs);
   updateRepair = this.repairs.update.bind(this.repairs);
   updateRepairStatus = this.repairs.updateStatus.bind(this.repairs);
+  replaceRepairPayments = this.repairs.replacePayments.bind(this.repairs);
   deleteRepair = this.repairs.delete.bind(this.repairs);
   getDeliveryReport = this.deliveryReports.getByRepairId.bind(this.deliveryReports);
   saveDeliveryReport = this.deliveryReports.save.bind(this.deliveryReports);

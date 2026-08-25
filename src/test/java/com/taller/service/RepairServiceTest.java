@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.taller.model.Repair;
 import com.taller.model.RepairStatusHistory;
+import com.taller.model.RepairPayment;
 import com.taller.model.enums.RepairStatusEnum;
 import com.taller.model.repository.DeviceObservationRepository;
 import com.taller.model.repository.RepairPartRepository;
@@ -14,6 +15,7 @@ import com.taller.model.repository.projection.RepairListView;
 import com.taller.model.repository.projection.RepairStatusHistoryView;
 import com.taller.model.repository.projection.StatusBoardRepairView;
 import com.taller.resource.dto.RepairDTO;
+import com.taller.resource.dto.RepairStatusUpdateDTO;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -315,6 +317,42 @@ class RepairServiceTest {
     }
 
     @Test
+    void updateStatus_partialPaymentThenRetiradaOnlyChargesRemainingBalance() {
+        Repair existing = existingRepair(null);
+        existing.setPrice(new BigDecimal("100000"));
+        when(repairRepository.findById("id-1")).thenReturn(Optional.of(existing));
+        when(repairRepository.save(existing)).thenReturn(existing);
+        when(repairPaymentRepository.findByRepairId("id-1"))
+                .thenReturn(List.of())
+                .thenReturn(List.of(RepairPayment.builder().repairId("id-1").amount(new BigDecimal("40000")).build()));
+
+        repairService.updateStatus("id-1", new RepairStatusUpdateDTO(
+                RepairStatusEnum.COBRADO_ESPERANDO_RETIRO, null, null,
+                RepairStatusUpdateDTO.PaymentType.PARTIAL, new BigDecimal("40000")));
+        repairService.updateStatus("id-1", RepairStatusEnum.RETIRADA);
+
+        ArgumentCaptor<RepairPayment> captor = ArgumentCaptor.forClass(RepairPayment.class);
+        verify(repairPaymentRepository, org.mockito.Mockito.times(2)).save(captor.capture());
+        assertEquals(new BigDecimal("40000"), captor.getAllValues().get(0).getAmount());
+        assertEquals(new BigDecimal("60000"), captor.getAllValues().get(1).getAmount());
+        assertEquals(RepairStatusEnum.RETIRADA, existing.getStatus());
+    }
+
+    @Test
+    void updateStatus_rejectsPartialPaymentAboveRemainingBalance() {
+        Repair existing = existingRepair(null);
+        existing.setPrice(new BigDecimal("100000"));
+        when(repairRepository.findById("id-1")).thenReturn(Optional.of(existing));
+        when(repairPaymentRepository.findByRepairId("id-1")).thenReturn(List.of(
+                RepairPayment.builder().amount(new BigDecimal("40000")).build()));
+
+        assertThrows(IllegalArgumentException.class, () -> repairService.updateStatus("id-1",
+                new RepairStatusUpdateDTO(RepairStatusEnum.COBRADO_ESPERANDO_RETIRO, null, null,
+                        RepairStatusUpdateDTO.PaymentType.PARTIAL, new BigDecimal("70000"))));
+        verify(repairPaymentRepository, never()).save(any());
+    }
+
+    @Test
     void updateStatus_toRecibidaUsesSelectedReceiveDate() {
         Repair existing = existingRepair(null);
         existing.setReceiveDateTime(LocalDateTime.of(2026, 6, 19, 8, 0));
@@ -458,8 +496,9 @@ class RepairServiceTest {
         String sort = pageableCaptor.getValue().getSort().toString();
 
         assertTrue(sort.contains("RepairStatusEnum.RECIBIDA THEN 0"));
-        assertTrue(sort.contains("RepairStatusEnum.POR_RECIBIR THEN 4"));
-        assertTrue(sort.contains("RepairStatusEnum.RETIRADA THEN 5"));
+        assertTrue(sort.contains("RepairStatusEnum.COBRADO_ESPERANDO_RETIRO THEN 4"));
+        assertTrue(sort.contains("RepairStatusEnum.POR_RECIBIR THEN 5"));
+        assertTrue(sort.contains("RepairStatusEnum.RETIRADA THEN 6"));
     }
 
     @Test

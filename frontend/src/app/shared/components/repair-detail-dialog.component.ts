@@ -1,6 +1,8 @@
 import { CommonModule } from '@angular/common';
 import { ChangeDetectorRef, Component } from '@angular/core';
 import { DialogModule } from 'primeng/dialog';
+import { FormsModule } from '@angular/forms';
+import { InputNumberModule } from 'primeng/inputnumber';
 import { MessageService } from 'primeng/api';
 import { ApiService } from '../../core/services/api.service';
 import { Repair } from '../models/repair.model';
@@ -14,7 +16,7 @@ interface StatusTimelineItem {
 @Component({
   selector: 'app-repair-detail-dialog',
   standalone: true,
-  imports: [CommonModule, DialogModule],
+  imports: [CommonModule, DialogModule, FormsModule, InputNumberModule],
   template: `
     <p-dialog
       header="Detalle de reparación"
@@ -43,6 +45,23 @@ interface StatusTimelineItem {
             <div class="detail-item"><label>Presupuesto</label><strong>{{ repair.quotedAmount || 0 | currency:'ARS':'symbol':'1.2-2':'es-AR' }}</strong></div>
             <div class="detail-item"><label>Mano de obra</label><strong>{{ repair.laborAmount || 0 | currency:'ARS':'symbol':'1.2-2':'es-AR' }}</strong></div>
             <div class="detail-item detail-wide"><label>Monto final</label><strong>{{ repair.price || 0 | currency:'ARS':'symbol':'1.2-2':'es-AR' }}</strong></div>
+            <div class="detail-item"><label>Total cobrado</label><strong>{{ repair.totalPaid || 0 | currency:'ARS':'symbol':'1.2-2':'es-AR' }}</strong></div>
+            <div class="detail-item"><label>Saldo pendiente</label><strong>{{ repair.outstandingBalance || 0 | currency:'ARS':'symbol':'1.2-2':'es-AR' }}</strong></div>
+            <div class="detail-item detail-wide">
+              <label>Historial de pagos</label>
+              @for (payment of repair.payments || []; track payment.id || $index) {
+                <div class="inline-row" style="gap:.5rem;margin-bottom:.5rem">
+                  <p-inputnumber [(ngModel)]="payment.amount" mode="currency" currency="ARS" locale="es-AR" [min]="0.01"></p-inputnumber>
+                  <input class="control" type="datetime-local" [ngModel]="toLocalDate(payment.paymentDate)" (ngModelChange)="payment.paymentDate = $event" />
+                  <input class="control" [(ngModel)]="payment.notes" placeholder="Nota" />
+                  <button class="icon-button" type="button" (click)="removePayment($index)"><i class="pi pi-trash"></i></button>
+                </div>
+              } @empty { <strong>Sin pagos registrados</strong> }
+              <div class="dialog-actions">
+                <button class="secondary-button" type="button" (click)="addPayment()">Agregar pago</button>
+                <button class="primary-button" type="button" [disabled]="savingPayments" (click)="savePayments()">Guardar pagos</button>
+              </div>
+            </div>
             <div class="detail-item detail-wide detail-text-block"><label>Falla reportada</label><div class="detail-scrollable">{{ repair.description || 'Sin descripción' }}</div></div>
             <div class="detail-item detail-wide detail-text-block"><label>Detalle del presupuesto</label><div class="detail-scrollable">{{ repair.quoteNotes || 'Sin detalle cargado' }}</div></div>
             <div class="detail-item detail-wide detail-text-block"><label>Observaciones de la reparación</label><div class="detail-scrollable">{{ repair.repairNotes || 'Sin observaciones cargadas' }}</div></div>
@@ -82,13 +101,14 @@ export class RepairDetailDialogComponent {
   repair: Repair | null = null;
   clientLabel = '-';
   deviceLabel = '-';
+  savingPayments = false;
 
   constructor(private readonly api: ApiService, private readonly messages: MessageService, private readonly changeDetector: ChangeDetectorRef) {}
 
   open(repairId: string, clientLabel: string, deviceLabel: string): void {
     this.api.getRepairById(repairId).subscribe({
       next: (repair) => {
-        this.repair = repair;
+        this.repair = { ...repair, payments: (repair.payments || []).map(payment => ({ ...payment })) };
         this.clientLabel = clientLabel || repair.idClient || '-';
         this.deviceLabel = deviceLabel || repair.idDevice || '-';
         this.visible = true;
@@ -96,6 +116,25 @@ export class RepairDetailDialogComponent {
       },
       error: () => this.messages.add({ severity: 'error', summary: 'Error', detail: 'No se pudo cargar el detalle de la reparación.' })
     });
+  }
+
+  addPayment(): void { this.repair?.payments?.push({ amount: 0, currency: 'ARS', paymentDate: this.toLocalDate(new Date().toISOString()), notes: '' }); }
+  removePayment(index: number): void { if (this.repair) this.repair.payments = (this.repair.payments || []).filter((_, i) => i !== index); }
+  savePayments(): void {
+    if (!this.repair?.id) return;
+    this.savingPayments = true;
+    this.api.replaceRepairPayments(this.repair.id, this.repair.payments || []).subscribe({
+      next: repair => { this.savingPayments = false; this.repair = { ...repair, payments: (repair.payments || []).map(payment => ({ ...payment })) }; this.messages.add({ severity: 'success', summary: 'Pagos actualizados', detail: 'El saldo fue recalculado.' }); },
+      error: error => { this.savingPayments = false; this.messages.add({ severity: 'error', summary: 'Error', detail: error?.error?.error || 'No se pudieron actualizar los pagos.' }); }
+    });
+  }
+
+  toLocalDate(value?: string): string {
+    if (!value) return '';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value.slice(0, 16);
+    const offset = date.getTimezoneOffset() * 60000;
+    return new Date(date.getTime() - offset).toISOString().slice(0, 16);
   }
 
   statusLabel(status: Repair['status']): string {

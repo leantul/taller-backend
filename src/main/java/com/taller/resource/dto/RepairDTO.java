@@ -38,6 +38,8 @@ public class RepairDTO {
     private LocalDateTime readyNotifiedAt;
     private List<RepairPartDTO> parts;
     private List<RepairPaymentDTO> payments;
+    private BigDecimal totalPaid;
+    private BigDecimal outstandingBalance;
     private List<DeviceObservationDTO> observations;
     @JsonInclude(JsonInclude.Include.NON_NULL)
     private List<RepairStatusHistoryDTO> statusHistory;

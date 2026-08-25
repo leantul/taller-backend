@@ -14,7 +14,7 @@ import { DialogModule } from 'primeng/dialog';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { ConfirmationService } from 'primeng/api';
 import { ApiService } from '../../core/services/api.service';
-import { Repair } from '../../shared/models/repair.model';
+import { Repair, RepairStatusUpdate } from '../../shared/models/repair.model';
 import { Client } from '../../shared/models/client.model';
 import { Device, DeviceType } from '../../shared/models/device.model';
 import { MessageService } from 'primeng/api';
@@ -23,6 +23,7 @@ import { DeliveryReportDialogComponent } from '../../shared/components/delivery-
 import { fromDateTimeLocal, REPAIR_STATUS_OPTIONS, repairStatusClass, repairStatusLabel, toDateTimeLocal } from '../../shared/utils/repair-status.util';
 import { beginColumnResize, persistColumnWidths, resolveColumnWidth, restoreColumnWidths } from '../../shared/utils/resizable-columns.util';
 import { phoneDigits } from '../../shared/utils/contact.util';
+import { RepairPaymentDialogComponent } from '../../shared/components/repair-payment-dialog.component';
 
 type RepairTableRow = {
   repair: Repair;
@@ -56,7 +57,7 @@ type RepairTableColumn = {
 @Component({
   selector: 'app-repairs-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, CardModule, InputTextModule, ButtonModule, SelectModule, AutoCompleteModule, InputNumberModule, DatePickerModule, DialogModule, ConfirmDialogModule, RepairDetailDialogComponent, DeliveryReportDialogComponent],
+  imports: [CommonModule, FormsModule, CardModule, InputTextModule, ButtonModule, SelectModule, AutoCompleteModule, InputNumberModule, DatePickerModule, DialogModule, ConfirmDialogModule, RepairDetailDialogComponent, DeliveryReportDialogComponent, RepairPaymentDialogComponent],
   providers: [ConfirmationService],
   templateUrl: './repairs-page.component.html'
 })
@@ -89,6 +90,8 @@ export class RepairsPageComponent implements OnInit, OnDestroy {
   showDeviceModal = false;
   showStatusModal = false;
   showEditModal = false;
+  showPaymentDialog = false;
+  paymentRepair: Repair | null = null;
   showNewClientModal = false;
   clientSearch = '';
   selectedClientName = '';
@@ -348,6 +351,14 @@ export class RepairsPageComponent implements OnInit, OnDestroy {
 
   saveStatus(): void {
     if (!this.statusEditingRepair?.id) return;
+    if (this.statusEditingRepair.status === 'COBRADO_ESPERANDO_RETIRO') {
+      this.isUpdating = true;
+      this.api.getRepairById(this.statusEditingRepair.id).subscribe({
+        next: detail => { this.isUpdating = false; this.paymentRepair = detail; this.showStatusModal = false; this.showPaymentDialog = true; },
+        error: error => { this.isUpdating = false; this.messageService.add({ severity: 'error', summary: 'Error', detail: this.errorDetail(error, 'No se pudo cargar el saldo.') }); }
+      });
+      return;
+    }
     this.isUpdating = true;
     this.api.updateRepairStatus(this.statusEditingRepair.id, {
       status: this.statusEditingRepair.status,
@@ -359,6 +370,17 @@ export class RepairsPageComponent implements OnInit, OnDestroy {
       error: (error) => { this.isUpdating = false; this.messageService.add({ severity: 'error', summary: 'Error', detail: this.errorDetail(error, 'No se pudo actualizar el estado.') }); }
     });
   }
+
+  savePaymentStatus(payload: RepairStatusUpdate): void {
+    if (!this.paymentRepair?.id) return;
+    this.isUpdating = true;
+    this.api.updateRepairStatus(this.paymentRepair.id, payload).subscribe({
+      next: () => { this.isUpdating = false; this.showPaymentDialog = false; this.paymentRepair = null; this.statusEditingRepair = null; this.messageService.add({ severity: 'success', summary: 'Cobro registrado', detail: 'El pago fue registrado correctamente.' }); this.reload(); },
+      error: error => { this.isUpdating = false; this.messageService.add({ severity: 'error', summary: 'Error', detail: this.errorDetail(error, 'No se pudo registrar el cobro.') }); }
+    });
+  }
+
+  cancelPaymentStatus(): void { this.showPaymentDialog = false; this.paymentRepair = null; this.statusEditingRepair = null; }
 
   openEditModal(repair: Repair): void {
     if (!repair.id) return;
@@ -402,7 +424,7 @@ export class RepairsPageComponent implements OnInit, OnDestroy {
   }
 
   canOpenDeliveryReport(repair: Repair): boolean {
-    return repair.status === 'ESPERANDO_RETIRO' || repair.status === 'RETIRADA';
+    return repair.status === 'ESPERANDO_RETIRO' || repair.status === 'COBRADO_ESPERANDO_RETIRO' || repair.status === 'RETIRADA';
   }
 
   onEditStatusChange(): void {

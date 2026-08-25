@@ -11,7 +11,8 @@ public enum RepairStatusEnum {
     PRESUPUESTADA_ESPERANDO_RESPUESTA(3, "Presupuestada y esperando respuesta"),
     HACIENDO(4, "Haciendo"),
     ESPERANDO_RETIRO(5, "Esperando retiro"),
-    RETIRADA(6, "Retirada");
+    RETIRADA(6, "Retirada"),
+    COBRADO_ESPERANDO_RETIRO(7, "Cobrado esperando retiro");
 
     private final int code;
     private final String status;

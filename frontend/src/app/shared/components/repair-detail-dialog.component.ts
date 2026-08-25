@@ -46,7 +46,7 @@ interface StatusTimelineItem {
             <div class="detail-item"><label>Mano de obra</label><strong>{{ repair.laborAmount || 0 | currency:'ARS':'symbol':'1.2-2':'es-AR' }}</strong></div>
             <div class="detail-item detail-wide"><label>Monto final</label><strong>{{ repair.price || 0 | currency:'ARS':'symbol':'1.2-2':'es-AR' }}</strong></div>
             <div class="detail-item"><label>Total cobrado</label><strong>{{ repair.totalPaid || 0 | currency:'ARS':'symbol':'1.2-2':'es-AR' }}</strong></div>
-            <div class="detail-item"><label>Saldo pendiente</label><strong>{{ repair.outstandingBalance || 0 | currency:'ARS':'symbol':'1.2-2':'es-AR' }}</strong></div>
+            <div class="detail-item payment-balance-item"><label>Saldo pendiente</label><strong>{{ repair.outstandingBalance || 0 | currency:'ARS':'symbol':'1.2-2':'es-AR' }}</strong></div>
             <div class="detail-item detail-wide">
               <label>Historial de pagos</label>
               @for (payment of repair.payments || []; track payment.id || $index) {

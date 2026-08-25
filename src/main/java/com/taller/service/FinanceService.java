@@ -1,7 +1,7 @@
 package com.taller.service;
 
 import com.taller.model.repository.RepairRepository;
-import com.taller.model.repository.projection.FinanceMonthlyView;
+import com.taller.model.repository.projection.FinancePaymentSummaryView;
 import com.taller.model.repository.projection.FinancePartsSummaryView;
 import com.taller.model.repository.projection.FinanceRepairSummaryView;
 import com.taller.model.repository.projection.FinanceRowView;
@@ -40,12 +40,13 @@ public class FinanceService {
         LocalDateTime fromDateTime = startOfDay(from);
         LocalDateTime toDateTime = endOfDay(to);
         FinanceRepairSummaryView repairSummary = repairRepository.summarizePaymentFinanceRepairs(fromDateTime, toDateTime);
+        FinancePaymentSummaryView paymentSummary = repairRepository.summarizePayments(fromDateTime, toDateTime);
         FinancePartsSummaryView partsSummary = repairRepository.summarizePaymentFinanceParts(fromDateTime, toDateTime);
 
-        long repairCount = repairSummary != null && repairSummary.getRepairCount() != null
-                ? repairSummary.getRepairCount()
+        long repairCount = paymentSummary != null && paymentSummary.getRepairCount() != null
+                ? paymentSummary.getRepairCount()
                 : 0L;
-        BigDecimal totalIncome = repairSummary != null ? safeMoney(repairSummary.getTotalIncome()) : BigDecimal.ZERO;
+        BigDecimal totalIncome = paymentSummary != null ? safeMoney(paymentSummary.getTotalIncome()) : BigDecimal.ZERO;
         BigDecimal totalLabor = repairSummary != null ? safeMoney(repairSummary.getTotalLabor()) : BigDecimal.ZERO;
         BigDecimal totalQuoted = repairSummary != null ? safeMoney(repairSummary.getTotalQuoted()) : BigDecimal.ZERO;
         BigDecimal totalPartsCost = partsSummary != null ? safeMoney(partsSummary.getTotalPartsCost()) : BigDecimal.ZERO;
@@ -103,25 +104,17 @@ public class FinanceService {
             cursor = cursor.plusMonths(1);
         }
 
-        mergeMonthlyValues(monthlyNet, repairRepository.summarizeMonthlyPaymentIncome(from), false);
-        mergeMonthlyValues(monthlyNet, repairRepository.summarizeMonthlyPaymentPartsCost(from), true);
+        for (YearMonth month : monthlyNet.keySet()) {
+            LocalDateTime monthStart = month.atDay(1).atStartOfDay();
+            LocalDateTime nextMonth = month.plusMonths(1).atDay(1).atStartOfDay();
+            BigDecimal income = safeMoney(repairRepository.sumPaymentIncomeBetween(monthStart, nextMonth));
+            BigDecimal partsCost = safeMoney(repairRepository.sumFirstPaymentPartsCostBetween(monthStart, nextMonth));
+            monthlyNet.put(month, income.subtract(partsCost));
+        }
 
         return monthlyNet.entrySet().stream()
                 .map(entry -> new DashboardSeriesItemDTO(formatMonth(entry.getKey()), entry.getValue()))
                 .toList();
-    }
-
-    private void mergeMonthlyValues(
-            Map<YearMonth, BigDecimal> monthlyNet,
-            List<FinanceMonthlyView> values,
-            boolean subtract) {
-        for (FinanceMonthlyView value : values) {
-            if (value.getMonth() == null) continue;
-            YearMonth month = YearMonth.from(value.getMonth());
-            if (!monthlyNet.containsKey(month)) continue;
-            BigDecimal amount = safeMoney(value.getValue());
-            monthlyNet.put(month, subtract ? monthlyNet.get(month).subtract(amount) : monthlyNet.get(month).add(amount));
-        }
     }
 
     private FinanceRowDTO toRowDto(FinanceRowView row) {

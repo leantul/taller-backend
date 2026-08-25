@@ -186,14 +186,19 @@
     @if (statusEditingRepair.status === 'RETIRADA') {
       <div class="field"><label>Fecha y hora de retiro</label><input class="control" type="datetime-local" [(ngModel)]="statusReturnDateTimeLocal" /></div>
     }
+    @if (statusEditingRepair.status === 'COBRADO_ESPERANDO_RETIRO') {
+      <div class="field"><label>Saldo pendiente</label><strong>{{ paymentRemaining(paymentRepair) | currency:'ARS':'symbol':'1.2-2':'es-AR' }}</strong></div>
+      <div class="field"><label>Tipo de cobro</label><select class="control" [(ngModel)]="statusPaymentType" (ngModelChange)="onStatusPaymentTypeChange()"><option value="FULL">Total</option><option value="PARTIAL">Parcial</option></select></div>
+      @if (statusPaymentType === 'PARTIAL') {
+        <div class="field"><label>Monto recibido</label><p-inputNumber [(ngModel)]="statusPaymentAmount" mode="currency" currency="ARS" locale="es-AR" [min]="0.01" [max]="paymentRemaining(paymentRepair)"></p-inputNumber></div>
+      }
+    }
     <button pButton type="button" label="Guardar" icon="pi pi-check" [disabled]="isUpdating" [loading]="isUpdating" (click)="saveStatus()"></button>
   }
 </p-dialog>
 
 <app-repair-detail-dialog></app-repair-detail-dialog>
 <app-delivery-report-dialog></app-delivery-report-dialog>
-<app-repair-payment-dialog [(visible)]="showPaymentDialog" [repair]="paymentRepair" [saving]="isUpdating"
-  (submitted)="savePaymentStatus($event)" (cancelled)="cancelPaymentStatus()"></app-repair-payment-dialog>
 
 @if (showEditModal) {
 <p-dialog header="Editar reparación" [(visible)]="showEditModal" [modal]="true" [style]="{width:'36rem'}">
@@ -239,9 +244,20 @@
   </div>
   <div class="field">
     <label>Estado</label>
-    <span class="status-pill" [ngClass]="statusClass(editingRepair.status)">{{ statusLabel(editingRepair.status) }}</span>
-    <small>Usá la acción “Estado” para cambiarlo y registrar correctamente los cobros.</small>
+    <select class="control" [(ngModel)]="editingRepair.status" (ngModelChange)="onEditStatusChange()">
+      @for (option of statusOptions; track option.value) { <option [value]="option.value">{{ option.label }}</option> }
+    </select>
   </div>
+  @if (editingRepair.status === 'RETIRADA') {
+    <div class="field"><label>Fecha y hora de retiro</label><input class="control" type="datetime-local" [(ngModel)]="editReturnDateTimeLocal" /></div>
+  }
+  @if (editingRepair.status === 'COBRADO_ESPERANDO_RETIRO' && originalEditingStatus !== editingRepair.status) {
+    <div class="field"><label>Saldo pendiente</label><strong>{{ paymentRemaining(editingRepair) | currency:'ARS':'symbol':'1.2-2':'es-AR' }}</strong></div>
+    <div class="field"><label>Tipo de cobro</label><select class="control" [(ngModel)]="editPaymentType" (ngModelChange)="onEditPaymentTypeChange()"><option value="FULL">Total</option><option value="PARTIAL">Parcial</option></select></div>
+    @if (editPaymentType === 'PARTIAL') {
+      <div class="field"><label>Monto recibido</label><p-inputNumber [(ngModel)]="editPaymentAmount" mode="currency" currency="ARS" locale="es-AR" [min]="0.01" [max]="paymentRemaining(editingRepair)"></p-inputNumber></div>
+    }
+  }
   <div class="field"><label>Presupuesto enviado</label><p-inputNumber [(ngModel)]="editingRepair.quotedAmount" mode="currency" currency="ARS" locale="es-AR" [min]="0"></p-inputNumber></div>
   <div class="field"><label>Detalle del presupuesto</label><textarea class="p-inputtext" rows="4" [(ngModel)]="editingRepair.quoteNotes"></textarea></div>
   <div class="field"><label>Observaciones de la reparación</label><textarea class="p-inputtext" rows="6" [(ngModel)]="editingRepair.repairNotes" placeholder="Observaciones propias de esta reparación"></textarea></div>

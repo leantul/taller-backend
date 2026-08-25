@@ -133,6 +133,15 @@ public class RepairService {
         repair.setRejected(repairDTO.getRejected());
         repair.setReadyNotifiedAt(repairDTO.getReadyNotifiedAt());
 
+        if (!isNew && previousStatus != repair.getStatus()) {
+            if (repair.getStatus() == RepairStatusEnum.COBRADO_ESPERANDO_RETIRO) {
+                registerRequestedPayment(repair, repairDTO.getPaymentType(), repairDTO.getPaymentAmount());
+            }
+            if (repair.getStatus() == RepairStatusEnum.RETIRADA) {
+                registerRemainingBalance(repair, "Saldo cobrado al retirar");
+            }
+        }
+
         List<RepairPaymentDTO> effectivePayments = repairDTO.getPayments() != null
                 ? repairDTO.getPayments()
                 : repair.getId() != null ? repairPaymentRepository.findByRepairId(repair.getId()).stream().map(this::toPaymentDto).toList() : List.of();

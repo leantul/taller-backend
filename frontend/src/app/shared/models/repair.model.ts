@@ -54,6 +54,8 @@ export interface Repair {
   payments?: RepairPayment[];
   totalPaid?: number;
   outstandingBalance?: number;
+  paymentType?: 'FULL' | 'PARTIAL';
+  paymentAmount?: number;
   clientName?: string;
   clientPhone?: string;
   deviceLabel?: string;

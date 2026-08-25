@@ -40,6 +40,8 @@ public class RepairDTO {
     private List<RepairPaymentDTO> payments;
     private BigDecimal totalPaid;
     private BigDecimal outstandingBalance;
+    private RepairStatusUpdateDTO.PaymentType paymentType;
+    private BigDecimal paymentAmount;
     private List<DeviceObservationDTO> observations;
     @JsonInclude(JsonInclude.Include.NON_NULL)
     private List<RepairStatusHistoryDTO> statusHistory;

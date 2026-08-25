@@ -353,6 +353,40 @@ class RepairServiceTest {
     }
 
     @Test
+    void save_samePaidStatusRegistersAnAdditionalPartialPayment() {
+        Repair existing = existingRepair(null);
+        existing.setStatus(RepairStatusEnum.COBRADO_ESPERANDO_RETIRO);
+        existing.setPrice(new BigDecimal("100000"));
+        existing.setLaborAmount(BigDecimal.ZERO);
+        RepairPayment firstPayment = RepairPayment.builder().repairId("id-1").amount(new BigDecimal("40000")).build();
+        RepairPayment secondPayment = RepairPayment.builder().repairId("id-1").amount(new BigDecimal("20000")).build();
+        when(repairRepository.findById("id-1")).thenReturn(Optional.of(existing));
+        when(repairRepository.save(existing)).thenReturn(existing);
+        when(repairPaymentRepository.findByRepairId("id-1"))
+                .thenReturn(List.of(firstPayment))
+                .thenReturn(List.of(firstPayment, secondPayment));
+        when(repairPaymentRepository.save(any(RepairPayment.class))).thenReturn(secondPayment);
+        when(repairPartRepository.findByRepairId("id-1")).thenReturn(List.of());
+        when(deviceObservationRepository.findByRepairIdOrderByObservedAtDesc("id-1")).thenReturn(List.of());
+        when(repairStatusHistoryRepository.findByRepairIdOrderByChangedAtAscCreationDateTimeAsc("id-1")).thenReturn(List.of());
+
+        RepairDTO dto = new RepairDTO();
+        dto.setId("id-1"); dto.setIdClient("c1"); dto.setIdDevice("d1"); dto.setDescription("Test");
+        dto.setStatus(RepairStatusEnum.COBRADO_ESPERANDO_RETIRO); dto.setPrice(new BigDecimal("100000"));
+        dto.setLaborAmount(BigDecimal.ZERO); dto.setPaymentType(com.taller.resource.dto.RepairStatusUpdateDTO.PaymentType.PARTIAL);
+        dto.setPaymentAmount(new BigDecimal("20000"));
+
+        RepairDTO result = repairService.save(dto);
+
+        ArgumentCaptor<RepairPayment> paymentCaptor = ArgumentCaptor.forClass(RepairPayment.class);
+        verify(repairPaymentRepository).save(paymentCaptor.capture());
+        assertEquals(new BigDecimal("20000"), paymentCaptor.getValue().getAmount());
+        assertEquals(new BigDecimal("60000"), result.getTotalPaid());
+        assertEquals(new BigDecimal("40000"), result.getOutstandingBalance());
+        verify(repairStatusHistoryRepository, never()).save(any());
+    }
+
+    @Test
     void updateStatus_toRecibidaUsesSelectedReceiveDate() {
         Repair existing = existingRepair(null);
         existing.setReceiveDateTime(LocalDateTime.of(2026, 6, 19, 8, 0));

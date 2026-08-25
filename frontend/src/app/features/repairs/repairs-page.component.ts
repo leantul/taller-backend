@@ -94,6 +94,8 @@ export class RepairsPageComponent implements OnInit, OnDestroy {
   editPaymentType: 'FULL' | 'PARTIAL' = 'FULL';
   editPaymentAmount: number | null = null;
   originalEditingStatus: Repair['status'] = 'POR_RECIBIR';
+  originalStatusModalStatus: Repair['status'] = 'POR_RECIBIR';
+  showEditPaymentFields = false;
   showNewClientModal = false;
   clientSearchContext: ClientSearchContext = 'create';
   clientSearch = '';
@@ -334,6 +336,7 @@ export class RepairsPageComponent implements OnInit, OnDestroy {
 
   openStatusModal(repair: Repair): void {
     this.statusEditingRepair = { ...repair };
+    this.originalStatusModalStatus = repair.status;
     this.paymentRepair = null;
     this.statusPaymentType = 'FULL';
     this.statusPaymentAmount = null;
@@ -366,6 +369,11 @@ export class RepairsPageComponent implements OnInit, OnDestroy {
     if (!repair) return 0;
     return Math.max(0, Number(repair.price || 0) - Number(repair.totalPaid || 0));
   }
+  statusSaveLabel(): string {
+    return this.statusEditingRepair?.status === 'COBRADO_ESPERANDO_RETIRO' && this.originalStatusModalStatus === 'COBRADO_ESPERANDO_RETIRO'
+      ? 'Registrar nuevo pago' : 'Guardar';
+  }
+  startEditPayment(): void { this.showEditPaymentFields = true; this.onEditPaymentTypeChange(); }
 
   saveStatus(): void {
     if (!this.statusEditingRepair?.id) return;
@@ -403,6 +411,7 @@ export class RepairsPageComponent implements OnInit, OnDestroy {
         this.originalEditingStatus = detail.status;
         this.editPaymentType = 'FULL';
         this.editPaymentAmount = null;
+        this.showEditPaymentFields = false;
         this.editingClientName = repair.clientName || detail.idClient;
         this.loadEditDevices(detail.idClient, () => {
           queueMicrotask(() => {
@@ -440,7 +449,8 @@ export class RepairsPageComponent implements OnInit, OnDestroy {
     if (this.editingRepair.status !== 'RETIRADA') {
       this.editingRepair.returnDateTime = undefined;
     }
-    if (this.editingRepair.status === 'COBRADO_ESPERANDO_RETIRO') this.onEditPaymentTypeChange();
+    this.showEditPaymentFields = this.editingRepair.status === 'COBRADO_ESPERANDO_RETIRO' && this.originalEditingStatus !== this.editingRepair.status;
+    if (this.showEditPaymentFields) this.onEditPaymentTypeChange();
   }
 
   saveRepairChanges(): void {
@@ -452,14 +462,14 @@ export class RepairsPageComponent implements OnInit, OnDestroy {
       this.showLaborAmountRequiredMessage();
       return;
     }
-    if (this.editingRepair.status === 'COBRADO_ESPERANDO_RETIRO' && this.originalEditingStatus !== this.editingRepair.status &&
+    if (this.editingRepair.status === 'COBRADO_ESPERANDO_RETIRO' && this.showEditPaymentFields &&
         this.editPaymentType === 'PARTIAL' && (!this.editPaymentAmount || this.editPaymentAmount > this.paymentRemaining(this.editingRepair))) {
       this.messageService.add({ severity: 'warn', summary: 'Monto inválido', detail: 'Ingresá un monto parcial mayor que cero y no superior al saldo.' }); return;
     }
     const payload: Repair = { ...this.editingRepair,
       payments: undefined,
-      paymentType: this.editingRepair.status === 'COBRADO_ESPERANDO_RETIRO' && this.originalEditingStatus !== this.editingRepair.status ? this.editPaymentType : undefined,
-      paymentAmount: this.editingRepair.status === 'COBRADO_ESPERANDO_RETIRO' && this.originalEditingStatus !== this.editingRepair.status && this.editPaymentType === 'PARTIAL' ? this.editPaymentAmount || undefined : undefined
+      paymentType: this.editingRepair.status === 'COBRADO_ESPERANDO_RETIRO' && this.showEditPaymentFields ? this.editPaymentType : undefined,
+      paymentAmount: this.editingRepair.status === 'COBRADO_ESPERANDO_RETIRO' && this.showEditPaymentFields && this.editPaymentType === 'PARTIAL' ? this.editPaymentAmount || undefined : undefined
     };
     if (payload.status !== 'RETIRADA') {
       payload.returnDateTime = undefined;

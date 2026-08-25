@@ -133,11 +133,11 @@ public class RepairService {
         repair.setRejected(repairDTO.getRejected());
         repair.setReadyNotifiedAt(repairDTO.getReadyNotifiedAt());
 
-        if (!isNew && previousStatus != repair.getStatus()) {
-            if (repair.getStatus() == RepairStatusEnum.COBRADO_ESPERANDO_RETIRO) {
+        if (!isNew) {
+            if (repair.getStatus() == RepairStatusEnum.COBRADO_ESPERANDO_RETIRO && repairDTO.getPaymentType() != null) {
                 registerRequestedPayment(repair, repairDTO.getPaymentType(), repairDTO.getPaymentAmount());
             }
-            if (repair.getStatus() == RepairStatusEnum.RETIRADA) {
+            if (previousStatus != repair.getStatus() && repair.getStatus() == RepairStatusEnum.RETIRADA) {
                 registerRemainingBalance(repair, "Saldo cobrado al retirar");
             }
         }

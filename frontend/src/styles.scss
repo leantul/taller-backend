@@ -1397,6 +1397,7 @@ textarea.p-inputtext {
 .status-pill.is-active { color: var(--brand-500); }
 .status-pill.is-success { color: var(--success-500); }
 .status-pill.is-paid { color: #0f766e; background: #ccfbf1; }
+.status-pill.is-payment-due { color: #b91c1c; background: #fee2e2; }
 .payment-summary-grid { margin: .75rem 0 1rem; }
 .payment-balance-item strong { color: #b45309; font-size: 1.05rem; }
 .status-pill.is-closed { color: var(--danger-500); }
@@ -1710,6 +1711,11 @@ textarea.p-inputtext {
 .notification-tag.is-observation {
   background: color-mix(in srgb, var(--warning-500), transparent 84%);
   color: color-mix(in srgb, var(--warning-500), #000 18%);
+}
+
+.notification-tag.is-payment-due {
+  color: #b91c1c;
+  background: #fee2e2;
 }
 
 .notification-meta {

@@ -1,6 +1,7 @@
 package com.taller.resource.controller;
 
 import com.taller.resource.dto.NotificationDTO;
+import com.taller.resource.dto.PageDTO;
 import com.taller.service.NotificationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -20,6 +21,12 @@ public class NotificationController {
     public List<NotificationDTO> latest() {
         notificationService.synchronizeIfNeeded();
         return notificationService.latest();
+    }
+
+    @GetMapping("/page")
+    public PageDTO<NotificationDTO> latestPage(@RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int size) {
+        notificationService.synchronizeIfNeeded();
+        return notificationService.latestPage(page, size);
     }
 
     @GetMapping("/unread-count")

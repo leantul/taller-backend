@@ -12,6 +12,8 @@ import com.taller.model.repository.DeviceRepository;
 import com.taller.model.repository.NotificationRepository;
 import com.taller.model.repository.RepairPartRepository;
 import com.taller.model.repository.RepairRepository;
+import com.taller.model.repository.RepairPaymentRepository;
+import com.taller.model.repository.RepairStatusHistoryRepository;
 import com.taller.model.repository.projection.ClientBasicView;
 import com.taller.model.repository.projection.DeviceBasicView;
 import com.taller.resource.dto.NotificationDTO;
@@ -31,6 +33,9 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.math.BigDecimal;
+import org.springframework.data.domain.PageRequest;
+import com.taller.resource.dto.PageDTO;
 
 @Service
 @RequiredArgsConstructor
@@ -39,6 +44,7 @@ public class NotificationService {
     private static final String TYPE_WARRANTY_6_MONTHS = "WARRANTY_6_MONTHS";
     private static final String TYPE_WARRANTY_1_YEAR = "WARRANTY_1_YEAR";
     private static final String TYPE_DEVICE_OBSERVATION_3_MONTHS = "DEVICE_OBSERVATION_3_MONTHS";
+    private static final String TYPE_REPAIR_PAYMENT_OVERDUE = "REPAIR_PAYMENT_OVERDUE";
     private static final String LAST_GENERATED_DATE_KEY = "notifications_warranty_last_generated_date";
     private static final String LAST_OBSERVATIONS_GENERATED_DATE_KEY = "notifications_observations_last_generated_date";
     private static final Set<String> WARRANTY_TYPES = Set.of(TYPE_WARRANTY_6_MONTHS, TYPE_WARRANTY_1_YEAR);
@@ -50,11 +56,20 @@ public class NotificationService {
     private final DeviceRepository deviceRepository;
     private final AppMetadataRepository appMetadataRepository;
     private final DeviceObservationRepository deviceObservationRepository;
+    private final RepairPaymentRepository repairPaymentRepository;
+    private final RepairStatusHistoryRepository repairStatusHistoryRepository;
     private volatile LocalDate lastSynchronizedDate;
 
     @Transactional(readOnly = true)
     public List<NotificationDTO> latest() {
         return toDtos(notificationRepository.findByReadedFalseOrderByEventDateDesc());
+    }
+
+    @Transactional(readOnly = true)
+    public PageDTO<NotificationDTO> latestPage(int page, int size) {
+        var result = notificationRepository.findByReadedFalse(PageRequest.of(Math.max(0, page), Math.min(Math.max(1, size), 50),
+                org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "eventDate")));
+        return new PageDTO<>(toDtos(result.getContent()), result.getNumber(), result.getSize(), result.getTotalElements(), result.getTotalPages());
     }
 
     @Transactional(readOnly = true)
@@ -66,6 +81,7 @@ public class NotificationService {
     public void synchronize() {
         synchronizeWarrantyNotifications();
         synchronizeObservationNotifications();
+        synchronizePaymentReminders();
     }
 
     /**
@@ -176,6 +192,29 @@ public class NotificationService {
         saveLastGeneratedDate(LAST_OBSERVATIONS_GENERATED_DATE_KEY, today);
     }
 
+    private void synchronizePaymentReminders() {
+        LocalDate today = LocalDate.now();
+        LocalDateTime eventDate = today.atStartOfDay();
+        LocalDateTime endOfDay = today.plusDays(1).atStartOfDay().minusNanos(1);
+        notificationRepository.closeResolvedPaymentReminders(TYPE_REPAIR_PAYMENT_OVERDUE);
+        int page = 0;
+        org.springframework.data.domain.Page<com.taller.model.repository.projection.OverdueRepairPaymentView> candidates;
+        do {
+            candidates = repairStatusHistoryRepository.findOverduePaymentRepairs(today.minusDays(15).atTime(23, 59, 59), PageRequest.of(page++, 200));
+            Set<String> repairIds = candidates.getContent().stream().map(com.taller.model.repository.projection.OverdueRepairPaymentView::getRepairId).collect(Collectors.toSet());
+            Set<String> existing = repairIds.isEmpty() ? Set.of() : notificationRepository
+                    .findByEntityIdInAndTypeInAndEventDateBetween(repairIds, Set.of(TYPE_REPAIR_PAYMENT_OVERDUE), eventDate, endOfDay)
+                    .stream().map(Notification::getEntityId).collect(Collectors.toSet());
+            List<Notification> reminders = repairIds.stream().filter(id -> !existing.contains(id)).map(id -> Notification.builder()
+                    .title("Cobro pendiente de reparación")
+                    .message("La reparación lleva 15 días o más retirada con saldo pendiente.")
+                    .readed(false).eventDate(eventDate).type(TYPE_REPAIR_PAYMENT_OVERDUE).entityId(id).repairId(id).build()).toList();
+            if (!reminders.isEmpty()) {
+                notificationRepository.saveAll(reminders);
+            }
+        } while (candidates.hasNext());
+    }
+
     private List<WarrantyCandidate> warrantyCandidates(Repair repair, LocalDate startDate, LocalDate endDate) {
         LocalDate returnDate = toLocalDate(repair.getReturnDateTime());
         if (returnDate == null || repair.getIdDevice() == null) {
@@ -229,7 +268,8 @@ public class NotificationService {
     }
 
     private List<Repair> findLatestDeliveredRepairByDevice() {
-        return repairRepository.findByStatusAndReturnDateTimeIsNotNullOrderByReturnDateTimeDesc(RepairStatusEnum.RETIRADA).stream()
+        return repairRepository.findByStatusInAndReturnDateTimeIsNotNullOrderByReturnDateTimeDesc(
+                Set.of(RepairStatusEnum.RETIRADA, RepairStatusEnum.RETIRADA_FALTA_COBRAR)).stream()
                 .filter(repair -> repair.getIdDevice() != null)
                 .collect(Collectors.toMap(
                         Repair::getIdDevice,
@@ -337,6 +377,9 @@ public class NotificationService {
 
         Map<String, Repair> repairsById = repairRepository.findAllById(repairIds).stream()
                 .collect(Collectors.toMap(Repair::getId, Function.identity()));
+        Map<String, BigDecimal> paidByRepairId = repairIds.isEmpty() ? Map.of() : repairPaymentRepository.findByRepairIdIn(repairIds).stream()
+                .collect(Collectors.groupingBy(com.taller.model.RepairPayment::getRepairId,
+                        Collectors.reducing(BigDecimal.ZERO, payment -> payment.getAmount() != null ? payment.getAmount() : BigDecimal.ZERO, BigDecimal::add)));
 
         Map<String, List<RepairPartDTO>> partsByRepairId = repairIds.isEmpty()
                 ? Map.of()
@@ -373,7 +416,7 @@ public class NotificationService {
                 .collect(Collectors.toMap(ClientBasicView::getId, Function.identity()));
 
         return notifications.stream()
-                .map(notification -> toDto(notification, repairsById, partsByRepairId, clientsById, devicesById, observationsById))
+                .map(notification -> toDto(notification, repairsById, partsByRepairId, clientsById, devicesById, observationsById, paidByRepairId))
                 .toList();
     }
 
@@ -383,7 +426,8 @@ public class NotificationService {
             Map<String, List<RepairPartDTO>> partsByRepairId,
             Map<String, ClientBasicView> clientsById,
             Map<String, DeviceBasicView> devicesById,
-            Map<String, DeviceObservation> observationsById
+            Map<String, DeviceObservation> observationsById,
+            Map<String, BigDecimal> paidByRepairId
     ) {
         NotificationDTO dto = new NotificationDTO();
         dto.setId(notification.getId());
@@ -398,6 +442,9 @@ public class NotificationService {
         Repair repair = notification.getRepairId() != null ? repairsById.get(notification.getRepairId()) : null;
         if (repair != null) {
             enrichDto(dto, repair, partsByRepairId, clientsById, devicesById);
+            BigDecimal paid = paidByRepairId.getOrDefault(repair.getId(), BigDecimal.ZERO);
+            dto.setTotalPaid(paid);
+            dto.setOutstandingBalance((repair.getPrice() != null ? repair.getPrice() : BigDecimal.ZERO).subtract(paid).max(BigDecimal.ZERO));
         }
         DeviceObservation observation = TYPE_DEVICE_OBSERVATION_3_MONTHS.equals(notification.getType())
                 ? observationsById.get(notification.getEntityId())

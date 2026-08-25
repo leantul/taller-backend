@@ -69,6 +69,7 @@ export class ApiService {
   updateWorkshopSettings = this.workshopSettings.update.bind(this.workshopSettings);
 
   getNotifications = this.notifications.getAll.bind(this.notifications);
+  getNotificationPage = this.notifications.getPage.bind(this.notifications);
   getUnreadNotificationCount = this.notifications.getUnreadCount.bind(this.notifications);
   markNotificationAsRead = this.notifications.markAsRead.bind(this.notifications);
 

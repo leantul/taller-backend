@@ -12,12 +12,16 @@ import com.taller.model.repository.DeviceRepository;
 import com.taller.model.repository.NotificationRepository;
 import com.taller.model.repository.RepairPartRepository;
 import com.taller.model.repository.RepairRepository;
+import com.taller.model.repository.RepairPaymentRepository;
+import com.taller.model.repository.RepairStatusHistoryRepository;
+import com.taller.model.repository.projection.OverdueRepairPaymentView;
 import com.taller.resource.dto.NotificationDTO;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
+import org.springframework.data.domain.PageImpl;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDate;
@@ -54,6 +58,8 @@ class NotificationServiceTest {
     private AppMetadataRepository appMetadataRepository;
     @Mock
     private DeviceObservationRepository deviceObservationRepository;
+    @Mock private RepairPaymentRepository repairPaymentRepository;
+    @Mock private RepairStatusHistoryRepository repairStatusHistoryRepository;
 
     private NotificationService notificationService;
 
@@ -66,7 +72,9 @@ class NotificationServiceTest {
                 clientRepository,
                 deviceRepository,
                 appMetadataRepository,
-                deviceObservationRepository
+                deviceObservationRepository,
+                repairPaymentRepository,
+                repairStatusHistoryRepository
         );
 
         lenient().when(repairPartRepository.findByRepairIdIn(anyList())).thenReturn(List.of());
@@ -79,6 +87,8 @@ class NotificationServiceTest {
         lenient().when(notificationRepository.findByEntityIdInAndTypeInAndEventDateBetween(any(), any(), any(), any())).thenReturn(List.of());
         lenient().when(notificationRepository.save(any(Notification.class))).thenAnswer(invocation -> invocation.getArgument(0));
         lenient().when(notificationRepository.saveAll(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        lenient().when(repairPaymentRepository.findByRepairIdIn(any())).thenReturn(List.of());
+        lenient().when(repairStatusHistoryRepository.findOverduePaymentRepairs(any(), any())).thenReturn(new org.springframework.data.domain.PageImpl<>(List.of()));
     }
 
     @Test
@@ -88,7 +98,7 @@ class NotificationServiceTest {
         Repair repair = deliveredRepair("repair-1", "device-1", retiredAtNight);
 
         when(appMetadataRepository.findById(anyString())).thenReturn(Optional.of(metadata(today.minusDays(1))));
-        when(repairRepository.findByStatusAndReturnDateTimeIsNotNullOrderByReturnDateTimeDesc(RepairStatusEnum.RETIRADA))
+        when(repairRepository.findByStatusInAndReturnDateTimeIsNotNullOrderByReturnDateTimeDesc(any()))
                 .thenReturn(List.of(repair));
         notificationService.synchronize();
 
@@ -115,7 +125,7 @@ class NotificationServiceTest {
                 .build();
 
         when(appMetadataRepository.findById(anyString())).thenReturn(Optional.of(metadata(today.minusDays(3))));
-        when(repairRepository.findByStatusAndReturnDateTimeIsNotNullOrderByReturnDateTimeDesc(RepairStatusEnum.RETIRADA))
+        when(repairRepository.findByStatusInAndReturnDateTimeIsNotNullOrderByReturnDateTimeDesc(any()))
                 .thenReturn(List.of(repair));
         when(notificationRepository.findByReadedFalseOrderByEventDateDesc()).thenReturn(List.of(existingUnread));
         when(repairRepository.findAllById(any())).thenReturn(List.of(repair));
@@ -151,7 +161,7 @@ class NotificationServiceTest {
                 .build();
 
         when(appMetadataRepository.findById(anyString())).thenReturn(Optional.of(metadata(today.minusDays(1))));
-        when(repairRepository.findByStatusAndReturnDateTimeIsNotNullOrderByReturnDateTimeDesc(RepairStatusEnum.RETIRADA))
+        when(repairRepository.findByStatusInAndReturnDateTimeIsNotNullOrderByReturnDateTimeDesc(any()))
                 .thenReturn(List.of(repair));
         when(notificationRepository.findByEntityIdInAndTypeInAndEventDateBetween(any(), any(), any(), any()))
                 .thenReturn(List.of(existing));
@@ -173,7 +183,7 @@ class NotificationServiceTest {
         observation.setFollowUpAt(today.atTime(10, 0));
 
         when(appMetadataRepository.findById(anyString())).thenReturn(Optional.empty());
-        when(repairRepository.findByStatusAndReturnDateTimeIsNotNullOrderByReturnDateTimeDesc(RepairStatusEnum.RETIRADA))
+        when(repairRepository.findByStatusInAndReturnDateTimeIsNotNullOrderByReturnDateTimeDesc(any()))
                 .thenReturn(List.of());
         when(deviceObservationRepository.findByResolvedAtIsNullAndFollowUpAtLessThanEqualOrderByFollowUpAtAsc(any(LocalDateTime.class)))
                 .thenReturn(List.of(observation));
@@ -185,6 +195,29 @@ class NotificationServiceTest {
         assertEquals("DEVICE_OBSERVATION_3_MONTHS", notification.getType());
         assertEquals("observation-1", notification.getEntityId());
         assertEquals("repair-1", notification.getRepairId());
+    }
+
+    @Test
+    void synchronize_createsOnePaymentReminderForTodayStartingAtDayFifteen() {
+        LocalDate today = LocalDate.now();
+        OverdueRepairPaymentView overdue = org.mockito.Mockito.mock(OverdueRepairPaymentView.class);
+        when(overdue.getRepairId()).thenReturn("repair-overdue");
+        when(repairStatusHistoryRepository.findOverduePaymentRepairs(any(LocalDateTime.class), any()))
+                .thenReturn(new PageImpl<>(List.of(overdue)));
+        when(appMetadataRepository.findById(anyString())).thenReturn(Optional.of(metadata(today)));
+
+        notificationService.synchronize();
+
+        ArgumentCaptor<LocalDateTime> threshold = ArgumentCaptor.forClass(LocalDateTime.class);
+        verify(repairStatusHistoryRepository).findOverduePaymentRepairs(threshold.capture(), any());
+        assertEquals(today.minusDays(15).atTime(23, 59, 59), threshold.getValue());
+        ArgumentCaptor<Iterable> notifications = ArgumentCaptor.forClass(Iterable.class);
+        verify(notificationRepository).saveAll(notifications.capture());
+        Notification reminder = (Notification) notifications.getValue().iterator().next();
+        assertEquals("REPAIR_PAYMENT_OVERDUE", reminder.getType());
+        assertEquals("repair-overdue", reminder.getRepairId());
+        assertEquals(today.atStartOfDay(), reminder.getEventDate());
+        verify(notificationRepository).closeResolvedPaymentReminders("REPAIR_PAYMENT_OVERDUE");
     }
 
     private Repair deliveredRepair(String repairId, String deviceId, LocalDateTime returnDateTime) {

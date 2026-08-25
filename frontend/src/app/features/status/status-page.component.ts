@@ -27,7 +27,8 @@ export class StatusPageComponent implements OnInit {
     { title: 'Presupuestada', status: 'PRESUPUESTADA_ESPERANDO_RESPUESTA', items: [], page: 0, totalPages: 1, loading: false },
     { title: 'En proceso', status: 'HACIENDO', items: [], page: 0, totalPages: 1, loading: false },
     { title: 'Esperando retiro', status: 'ESPERANDO_RETIRO', items: [], page: 0, totalPages: 1, loading: false },
-    { title: 'Cobrado esperando retiro', status: 'COBRADO_ESPERANDO_RETIRO', items: [], page: 0, totalPages: 1, loading: false }
+    { title: 'Cobrado esperando retiro', status: 'COBRADO_ESPERANDO_RETIRO', items: [], page: 0, totalPages: 1, loading: false },
+    { title: 'Retirada falta cobrar', status: 'RETIRADA_FALTA_COBRAR', items: [], page: 0, totalPages: 1, loading: false }
   ];
 
   selectedRepair: Repair | null = null;
@@ -36,6 +37,7 @@ export class StatusPageComponent implements OnInit {
   showPaymentDialog = false;
   paymentRepair: Repair | null = null;
   private pendingPaidRepair: Repair | null = null;
+  paymentTargetStatus: Repair['status'] = 'COBRADO_ESPERANDO_RETIRO';
   statusOptions = [
     { label: 'Por recibir', value: 'POR_RECIBIR' },
     { label: 'Recibida', value: 'RECIBIDA' },
@@ -43,6 +45,7 @@ export class StatusPageComponent implements OnInit {
     { label: 'En proceso', value: 'HACIENDO' },
     { label: 'Esperando retiro', value: 'ESPERANDO_RETIRO' },
     { label: 'Cobrado esperando retiro', value: 'COBRADO_ESPERANDO_RETIRO' },
+    { label: 'Retirada falta cobrar', value: 'RETIRADA_FALTA_COBRAR' },
     { label: 'Retirada', value: 'RETIRADA' }
   ];
 
@@ -56,8 +59,8 @@ export class StatusPageComponent implements OnInit {
       return;
     }
     const moved = event.previousContainer.data[event.previousIndex];
-    if (status === 'COBRADO_ESPERANDO_RETIRO') {
-      this.preparePayment(moved);
+    if (status === 'COBRADO_ESPERANDO_RETIRO' || status === 'RETIRADA_FALTA_COBRAR') {
+      this.preparePayment(moved, status);
       return;
     }
     const updated = { ...moved, status };
@@ -67,10 +70,10 @@ export class StatusPageComponent implements OnInit {
     this.updateStatus(updated);
   }
 
-  private preparePayment(repair: Repair): void {
+  private preparePayment(repair: Repair, targetStatus: Repair['status'] = 'COBRADO_ESPERANDO_RETIRO'): void {
     if (!repair.id) return;
     this.api.getRepairById(repair.id).subscribe({
-      next: detail => { this.pendingPaidRepair = repair; this.paymentRepair = detail; this.showPaymentDialog = true; },
+      next: detail => { this.pendingPaidRepair = repair; this.paymentRepair = detail; this.paymentTargetStatus = targetStatus; this.showPaymentDialog = true; },
       error: () => this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudo cargar el saldo de la reparación.' })
     });
   }
@@ -106,12 +109,12 @@ export class StatusPageComponent implements OnInit {
   }
 
   canOpenDeliveryReport(repair: Repair): boolean {
-    return repair.status === 'ESPERANDO_RETIRO' || repair.status === 'COBRADO_ESPERANDO_RETIRO' || repair.status === 'RETIRADA';
+    return repair.status === 'ESPERANDO_RETIRO' || repair.status === 'COBRADO_ESPERANDO_RETIRO' || repair.status === 'RETIRADA_FALTA_COBRAR' || repair.status === 'RETIRADA';
   }
 
   saveDetailStatus(): void {
     if (!this.selectedRepair) return;
-    if (this.selectedRepair.status === 'COBRADO_ESPERANDO_RETIRO') { this.showDetailModal = false; this.preparePayment(this.selectedRepair); return; }
+    if (this.selectedRepair.status === 'COBRADO_ESPERANDO_RETIRO' || this.selectedRepair.status === 'RETIRADA_FALTA_COBRAR') { this.showDetailModal = false; this.preparePayment(this.selectedRepair, this.selectedRepair.status); return; }
     this.isSavingStatus = true;
     if (!this.selectedRepair.id) {
       this.isSavingStatus = false;
@@ -147,6 +150,7 @@ export class StatusPageComponent implements OnInit {
       case 'HACIENDO': return 'En proceso';
       case 'ESPERANDO_RETIRO': return 'Esperando retiro';
       case 'COBRADO_ESPERANDO_RETIRO': return 'Cobrado esperando retiro';
+      case 'RETIRADA_FALTA_COBRAR': return 'Retirada falta cobrar';
       case 'RETIRADA': return 'Entregada';
       default: return status;
     }

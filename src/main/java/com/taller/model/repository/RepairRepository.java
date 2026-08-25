@@ -23,10 +23,12 @@ import org.springframework.data.repository.query.Param;
 import java.time.LocalDateTime;
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Collection;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
 public interface RepairRepository extends JpaRepository<Repair, String> {
+    List<Repair> findByStatusInAndReturnDateTimeIsNotNullOrderByReturnDateTimeDesc(Collection<RepairStatusEnum> statuses);
     @Query("SELECT r FROM Repair r WHERE r.status = com.taller.model.enums.RepairStatusEnum.RETIRADA AND NOT EXISTS (SELECT p.id FROM RepairPayment p WHERE p.repairId = r.id)")
     List<Repair> findLegacyRetiredWithoutPayments();
     @Query(value = """

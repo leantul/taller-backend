@@ -26,6 +26,8 @@ export interface NotificationItem {
   returnDateTime?: string;
   quotedAmount?: number;
   price?: number;
+  totalPaid?: number;
+  outstandingBalance?: number;
   quoteNotes?: string;
   parts?: RepairPart[];
   observationId?: string;

@@ -9,6 +9,7 @@ export const REPAIR_STATUS_OPTIONS: ReadonlyArray<{ label: string; value: Repair
   { label: 'Haciendo', value: 'HACIENDO' },
   { label: 'Esperando retiro', value: 'ESPERANDO_RETIRO' },
   { label: 'Cobrado esperando retiro', value: 'COBRADO_ESPERANDO_RETIRO' },
+  { label: 'Retirada falta cobrar', value: 'RETIRADA_FALTA_COBRAR' },
   { label: 'Retirada', value: 'RETIRADA' }
 ];
 
@@ -24,6 +25,7 @@ export function repairStatusClass(status: RepairStatus): string {
     HACIENDO: 'is-active',
     ESPERANDO_RETIRO: 'is-success',
     COBRADO_ESPERANDO_RETIRO: 'is-paid',
+    RETIRADA_FALTA_COBRAR: 'is-payment-due',
     RETIRADA: 'is-closed'
   }[status];
 }

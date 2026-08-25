@@ -10,6 +10,7 @@ import static org.mockito.Mockito.when;
 
 import com.taller.model.repository.RepairRepository;
 import com.taller.model.repository.projection.FinancePartsSummaryView;
+import com.taller.model.repository.projection.FinancePaymentSummaryView;
 import com.taller.model.repository.projection.FinanceRepairSummaryView;
 import com.taller.model.repository.projection.FinanceRowView;
 import com.taller.resource.dto.FinanceSummaryDTO;
@@ -40,8 +41,9 @@ class FinanceServiceTest {
         LocalDate to = LocalDate.of(2026, 6, 30);
         FinanceRepairSummaryView repairSummary = mock(FinanceRepairSummaryView.class);
         FinancePartsSummaryView partsSummary = mock(FinancePartsSummaryView.class);
-        when(repairSummary.getRepairCount()).thenReturn(3L);
-        when(repairSummary.getTotalIncome()).thenReturn(BigDecimal.valueOf(2400));
+        FinancePaymentSummaryView paymentSummary = mock(FinancePaymentSummaryView.class);
+        when(paymentSummary.getRepairCount()).thenReturn(3L);
+        when(paymentSummary.getTotalIncome()).thenReturn(BigDecimal.valueOf(2400));
         when(repairSummary.getTotalLabor()).thenReturn(BigDecimal.valueOf(900));
         when(repairSummary.getTotalQuoted()).thenReturn(BigDecimal.valueOf(2700));
         when(repairSummary.getZeroFinalAmountCount()).thenReturn(1L);
@@ -56,8 +58,12 @@ class FinanceServiceTest {
                 LocalDateTime.of(2026, 6, 1, 0, 0),
                 LocalDateTime.of(2026, 6, 30, 23, 59, 59, 999999999)))
                 .thenReturn(partsSummary);
-        when(repairRepository.summarizeMonthlyPaymentIncome(any())).thenReturn(List.of());
-        when(repairRepository.summarizeMonthlyPaymentPartsCost(any())).thenReturn(List.of());
+        when(repairRepository.summarizePayments(
+                LocalDateTime.of(2026, 6, 1, 0, 0),
+                LocalDateTime.of(2026, 6, 30, 23, 59, 59, 999999999)))
+                .thenReturn(paymentSummary);
+        when(repairRepository.sumPaymentIncomeBetween(any(), any())).thenReturn(BigDecimal.ZERO);
+        when(repairRepository.sumFirstPaymentPartsCostBetween(any(), any())).thenReturn(BigDecimal.ZERO);
 
         FinanceSummaryDTO summary = new FinanceService(repairRepository).getSummary(from, to);
 

@@ -15,13 +15,20 @@ class RepairRepositoryFinanceQueryTest {
             "summarizeFinanceRepairs",
             "summarizeFinanceParts",
             "summarizeMonthlyFinanceIncome",
-            "summarizeMonthlyFinancePartsCost");
+            "summarizeMonthlyFinancePartsCost",
+            "findPaymentFinancePage",
+            "summarizePaymentFinanceRepairs",
+            "summarizePayments",
+            "summarizePaymentFinanceParts",
+            "sumPaymentIncomeBetween",
+            "sumFirstPaymentPartsCostBetween");
 
     @Test
     void financeQueriesHaveValidHqlSyntax() {
         for (Method method : RepairRepository.class.getDeclaredMethods()) {
             if (!FINANCE_QUERY_METHODS.contains(method.getName())) continue;
             Query query = method.getAnnotation(Query.class);
+            org.junit.jupiter.api.Assertions.assertFalse(query.nativeQuery(), () -> method.getName() + " must use JPQL/HQL, not native SQL");
             assertDoesNotThrow(
                     () -> HqlParseTreeBuilder.INSTANCE.buildHqlParser(query.value()).statement(),
                     () -> method.getName() + " has invalid HQL");

@@ -40,7 +40,7 @@ export interface Repair {
   idClient: string;
   orderNumber: string;
   description: string;
-  status: 'POR_RECIBIR' | 'RECIBIDA' | 'PRESUPUESTADA_ESPERANDO_RESPUESTA' | 'HACIENDO' | 'ESPERANDO_RETIRO' | 'COBRADO_ESPERANDO_RETIRO' | 'RETIRADA';
+  status: 'POR_RECIBIR' | 'RECIBIDA' | 'PRESUPUESTADA_ESPERANDO_RESPUESTA' | 'HACIENDO' | 'ESPERANDO_RETIRO' | 'COBRADO_ESPERANDO_RETIRO' | 'RETIRADA_FALTA_COBRAR' | 'RETIRADA';
   price: number;
   laborAmount: number | null;
   quotedAmount?: number;

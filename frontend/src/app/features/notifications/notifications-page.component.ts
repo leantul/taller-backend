@@ -58,6 +58,7 @@ import { phoneDigits } from '../../shared/utils/contact.util';
           </div>
         </section>
       }
+      @if (currentPage + 1 < totalPages) { <button pButton type="button" label="Cargar más" [disabled]="loading" (click)="loadMore()"></button> }
     </section>
 
     <p-dialog
@@ -82,6 +83,8 @@ import { phoneDigits } from '../../shared/utils/contact.util';
             <div class="detail-item"><label>Retiro</label><strong>{{ formatDateTime(selectedNotification.returnDateTime) }}</strong></div>
             <div class="detail-item"><label>Presupuesto</label><strong>{{ selectedNotification.quotedAmount || 0 | currency:'ARS':'symbol':'1.2-2':'es-AR' }}</strong></div>
             <div class="detail-item"><label>Monto final</label><strong>{{ selectedNotification.price || 0 | currency:'ARS':'symbol':'1.2-2':'es-AR' }}</strong></div>
+            <div class="detail-item"><label>Total cobrado</label><strong>{{ selectedNotification.totalPaid || 0 | currency:'ARS':'symbol':'1.2-2':'es-AR' }}</strong></div>
+            <div class="detail-item payment-balance-item"><label>Saldo pendiente</label><strong>{{ selectedNotification.outstandingBalance || 0 | currency:'ARS':'symbol':'1.2-2':'es-AR' }}</strong></div>
             @if (selectedNotification.observationNote) {
               <div class="detail-item detail-wide detail-text-block">
                 <label>Observación</label>
@@ -140,6 +143,9 @@ export class NotificationsPageComponent implements OnInit {
   notifications: NotificationItem[] = [];
   selectedNotification: NotificationItem | null = null;
   showDetail = false;
+  currentPage = 0;
+  totalPages = 1;
+  loading = false;
 
   constructor(
     private readonly api: ApiService,
@@ -196,6 +202,7 @@ export class NotificationsPageComponent implements OnInit {
       case 'WARRANTY_6_MONTHS': return 'Garantía 6 meses';
       case 'WARRANTY_1_YEAR': return 'Seguimiento 1 año';
       case 'DEVICE_OBSERVATION_3_MONTHS': return 'Observación 3 meses';
+      case 'REPAIR_PAYMENT_OVERDUE': return 'Cobro pendiente';
       default: return 'Aviso';
     }
   }
@@ -203,6 +210,7 @@ export class NotificationsPageComponent implements OnInit {
   notificationTypeClass(type: string): string {
     switch (type) {
       case 'DEVICE_OBSERVATION_3_MONTHS': return 'is-observation';
+      case 'REPAIR_PAYMENT_OVERDUE': return 'is-payment-due';
       case 'WARRANTY_6_MONTHS':
       case 'WARRANTY_1_YEAR': return 'is-warranty';
       default: return '';
@@ -225,14 +233,18 @@ export class NotificationsPageComponent implements OnInit {
   }
 
   private loadNotifications(): void {
-    this.api.getNotifications().subscribe({
-      next: (notifications) => {
-        this.notifications = notifications;
+    this.loading = true;
+    this.api.getNotificationPage(this.currentPage, 20).subscribe({
+      next: (page) => {
+        this.notifications = this.currentPage === 0 ? page.content : [...this.notifications, ...page.content];
+        this.totalPages = page.totalPages;
+        this.loading = false;
         this.notificationState.refreshUnreadCount();
       },
-      error: () => {
+      error: () => { this.loading = false;
         this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudieron cargar los avisos.' });
       }
     });
   }
+  loadMore(): void { if (!this.loading && this.currentPage + 1 < this.totalPages) { this.currentPage++; this.loadNotifications(); } }
 }

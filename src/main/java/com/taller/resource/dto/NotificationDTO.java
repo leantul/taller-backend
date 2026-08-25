@@ -37,6 +37,8 @@ public class NotificationDTO {
     private LocalDateTime returnDateTime;
     private BigDecimal quotedAmount;
     private BigDecimal price;
+    private BigDecimal totalPaid;
+    private BigDecimal outstandingBalance;
     private String quoteNotes;
     private List<RepairPartDTO> parts;
     private String observationId;

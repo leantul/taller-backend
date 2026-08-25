@@ -183,7 +183,7 @@
     @if (statusEditingRepair.status === 'RECIBIDA') {
       <div class="field"><label>Fecha y hora de ingreso</label><input class="control" type="datetime-local" [(ngModel)]="statusReceiveDateTimeLocal" /></div>
     }
-    @if (statusEditingRepair.status === 'RETIRADA') {
+    @if (statusEditingRepair.status === 'RETIRADA' || statusEditingRepair.status === 'RETIRADA_FALTA_COBRAR') {
       <div class="field"><label>Fecha y hora de retiro</label><input class="control" type="datetime-local" [(ngModel)]="statusReturnDateTimeLocal" /></div>
     }
     @if (statusEditingRepair.status === 'COBRADO_ESPERANDO_RETIRO') {
@@ -192,6 +192,11 @@
       @if (statusPaymentType === 'PARTIAL') {
         <div class="field"><label>Monto recibido</label><p-inputNumber [(ngModel)]="statusPaymentAmount" mode="currency" currency="ARS" locale="es-AR" [min]="0.01" [max]="paymentRemaining(paymentRepair)"></p-inputNumber></div>
       }
+    }
+    @if (statusEditingRepair.status === 'RETIRADA_FALTA_COBRAR') {
+      <div class="field"><label>Saldo pendiente</label><strong>{{ paymentRemaining(paymentRepair) | currency:'ARS':'symbol':'1.2-2':'es-AR' }}</strong></div>
+      <div class="field"><label>Cobro al retirar</label><select class="control" [(ngModel)]="statusPaymentType" (ngModelChange)="onStatusPaymentTypeChange()"><option value="NONE">No registrar pago ahora</option><option value="PARTIAL">Pago parcial</option><option value="FULL">Pago total</option></select></div>
+      @if (statusPaymentType === 'PARTIAL') { <div class="field"><label>Monto recibido</label><p-inputNumber [(ngModel)]="statusPaymentAmount" mode="currency" currency="ARS" locale="es-AR" [min]="0.01" [max]="paymentRemaining(paymentRepair)"></p-inputNumber></div> }
     }
     <button pButton type="button" [label]="statusSaveLabel()" icon="pi pi-check" [disabled]="isUpdating || (statusEditingRepair.status === 'COBRADO_ESPERANDO_RETIRO' && paymentRemaining(paymentRepair) <= 0)" [loading]="isUpdating" (click)="saveStatus()"></button>
   }
@@ -248,25 +253,24 @@
       @for (option of statusOptions; track option.value) { <option [value]="option.value">{{ option.label }}</option> }
     </select>
   </div>
-  @if (editingRepair.status === 'RETIRADA') {
+  @if (editingRepair.status === 'RETIRADA' || editingRepair.status === 'RETIRADA_FALTA_COBRAR') {
     <div class="field"><label>Fecha y hora de retiro</label><input class="control" type="datetime-local" [(ngModel)]="editReturnDateTimeLocal" /></div>
   }
   <div class="detail-grid payment-summary-grid">
-    <div class="detail-item"><label>Total cobrado</label><strong>{{ (editingRepair.totalPaid || 0) | currency:'ARS':'symbol':'1.2-2':'es-AR' }}</strong></div>
+    <div class="detail-item"><label>Total cobrado</label><strong>{{ paymentTotal(editingRepair) | currency:'ARS':'symbol':'1.2-2':'es-AR' }}</strong></div>
     <div class="detail-item payment-balance-item"><label>Saldo pendiente</label><strong>{{ paymentRemaining(editingRepair) | currency:'ARS':'symbol':'1.2-2':'es-AR' }}</strong></div>
   </div>
-  @if (editingRepair.status === 'COBRADO_ESPERANDO_RETIRO' && originalEditingStatus === editingRepair.status && !showEditPaymentFields && paymentRemaining(editingRepair) > 0) {
-    <div class="field"><button pButton type="button" label="Registrar nuevo pago" icon="pi pi-wallet" class="p-button-sm" (click)="startEditPayment()"></button></div>
-  }
-  @if (editingRepair.status === 'COBRADO_ESPERANDO_RETIRO' && showEditPaymentFields) {
-    <div class="field"><label>Tipo de cobro</label><select class="control" [(ngModel)]="editPaymentType" (ngModelChange)="onEditPaymentTypeChange()"><option value="FULL">Total</option><option value="PARTIAL">Parcial</option></select></div>
-    @if (editPaymentType === 'PARTIAL') {
-      <div class="field"><label>Monto recibido</label><p-inputNumber [(ngModel)]="editPaymentAmount" mode="currency" currency="ARS" locale="es-AR" [min]="0.01" [max]="paymentRemaining(editingRepair)"></p-inputNumber></div>
-    }
-    @if (originalEditingStatus === editingRepair.status) {
-      <button class="secondary-button" type="button" (click)="showEditPaymentFields = false">Cancelar nuevo pago</button>
-    }
-  }
+  <div class="field">
+    <div class="inline-row" style="justify-content:space-between;align-items:center;"><label>Pagos</label><button pButton type="button" icon="pi pi-plus" class="p-button-sm" label="Agregar pago" (click)="addEditingPayment()"></button></div>
+    @for (payment of editingRepair.payments || []; track payment.id || $index) {
+      <div class="inline-row" style="gap:.5rem;margin-bottom:.5rem">
+        <p-inputNumber [(ngModel)]="payment.amount" [ngModelOptions]="{standalone:true}" mode="currency" currency="ARS" locale="es-AR" [min]="0.01"></p-inputNumber>
+        <input class="control" type="datetime-local" [(ngModel)]="payment.paymentDate" [ngModelOptions]="{standalone:true}" />
+        <input class="control" [(ngModel)]="payment.notes" [ngModelOptions]="{standalone:true}" placeholder="Nota" />
+        <button class="icon-button" type="button" (click)="removeEditingPayment($index)"><i class="pi pi-trash"></i></button>
+      </div>
+    } @empty { <small>Sin pagos registrados.</small> }
+  </div>
   <div class="field"><label>Presupuesto enviado</label><p-inputNumber [(ngModel)]="editingRepair.quotedAmount" mode="currency" currency="ARS" locale="es-AR" [min]="0"></p-inputNumber></div>
   <div class="field"><label>Detalle del presupuesto</label><textarea class="p-inputtext" rows="4" [(ngModel)]="editingRepair.quoteNotes"></textarea></div>
   <div class="field"><label>Observaciones de la reparación</label><textarea class="p-inputtext" rows="6" [(ngModel)]="editingRepair.repairNotes" placeholder="Observaciones propias de esta reparación"></textarea></div>

@@ -7,6 +7,7 @@ import com.taller.model.RepairStatusHistory;
 import com.taller.model.RepairPayment;
 import com.taller.model.enums.RepairStatusEnum;
 import com.taller.model.repository.DeviceObservationRepository;
+import com.taller.model.repository.NotificationRepository;
 import com.taller.model.repository.RepairPartRepository;
 import com.taller.model.repository.RepairPaymentRepository;
 import com.taller.model.repository.RepairRepository;
@@ -63,12 +64,14 @@ class RepairServiceTest {
     private DeviceObservationRepository deviceObservationRepository;
     @Mock
     private RepairStatusHistoryRepository repairStatusHistoryRepository;
+    @Mock
+    private NotificationRepository notificationRepository;
 
     private RepairService repairService;
 
     @BeforeEach
     void setUp() {
-        repairService = new RepairService(repairRepository, repairPartRepository, repairPaymentRepository, deviceObservationRepository, repairStatusHistoryRepository, FIXED_CLOCK);
+        repairService = new RepairService(repairRepository, repairPartRepository, repairPaymentRepository, deviceObservationRepository, repairStatusHistoryRepository, notificationRepository, FIXED_CLOCK);
     }
 
     @Test
@@ -339,6 +342,58 @@ class RepairServiceTest {
     }
 
     @Test
+    void updateStatus_toRetiradaFaltaCobrarAllowsLeavingEntireBalancePending() {
+        Repair existing = existingRepair(null);
+        existing.setPrice(new BigDecimal("100000"));
+        when(repairRepository.findById("id-1")).thenReturn(Optional.of(existing));
+        when(repairPaymentRepository.findByRepairId("id-1")).thenReturn(List.of());
+        when(repairRepository.save(existing)).thenReturn(existing);
+
+        repairService.updateStatus("id-1", new RepairStatusUpdateDTO(
+                RepairStatusEnum.RETIRADA_FALTA_COBRAR, null, null, null, null));
+
+        assertEquals(RepairStatusEnum.RETIRADA_FALTA_COBRAR, existing.getStatus());
+        assertEquals(LocalDateTime.of(2026, 6, 20, 17, 0), existing.getReturnDateTime());
+        verify(repairPaymentRepository, never()).save(any());
+    }
+
+    @Test
+    void updateStatus_toRetiradaFaltaCobrarKeepsPartialPaymentAndDebt() {
+        Repair existing = existingRepair(null);
+        existing.setPrice(new BigDecimal("100000"));
+        RepairPayment partial = RepairPayment.builder().repairId("id-1").amount(new BigDecimal("40000")).build();
+        when(repairRepository.findById("id-1")).thenReturn(Optional.of(existing));
+        when(repairPaymentRepository.findByRepairId("id-1")).thenReturn(List.of(), List.of(partial));
+        when(repairRepository.save(existing)).thenReturn(existing);
+
+        repairService.updateStatus("id-1", new RepairStatusUpdateDTO(
+                RepairStatusEnum.RETIRADA_FALTA_COBRAR, null, null,
+                RepairStatusUpdateDTO.PaymentType.PARTIAL, new BigDecimal("40000")));
+
+        assertEquals(RepairStatusEnum.RETIRADA_FALTA_COBRAR, existing.getStatus());
+        ArgumentCaptor<RepairPayment> captor = ArgumentCaptor.forClass(RepairPayment.class);
+        verify(repairPaymentRepository).save(captor.capture());
+        assertEquals(new BigDecimal("40000"), captor.getValue().getAmount());
+    }
+
+    @Test
+    void updateStatus_toRetiradaFaltaCobrarBecomesRetiradaWhenPaymentCompletesBalance() {
+        Repair existing = existingRepair(null);
+        existing.setPrice(new BigDecimal("100000"));
+        RepairPayment full = RepairPayment.builder().repairId("id-1").amount(new BigDecimal("100000")).build();
+        when(repairRepository.findById("id-1")).thenReturn(Optional.of(existing));
+        when(repairPaymentRepository.findByRepairId("id-1")).thenReturn(List.of(), List.of(full), List.of(full));
+        when(repairRepository.save(existing)).thenReturn(existing);
+
+        repairService.updateStatus("id-1", new RepairStatusUpdateDTO(
+                RepairStatusEnum.RETIRADA_FALTA_COBRAR, null, null,
+                RepairStatusUpdateDTO.PaymentType.FULL, null));
+
+        assertEquals(RepairStatusEnum.RETIRADA, existing.getStatus());
+        verify(repairPaymentRepository, org.mockito.Mockito.times(1)).save(any());
+    }
+
+    @Test
     void updateStatus_rejectsPartialPaymentAboveRemainingBalance() {
         Repair existing = existingRepair(null);
         existing.setPrice(new BigDecimal("100000"));
@@ -358,8 +413,10 @@ class RepairServiceTest {
         existing.setStatus(RepairStatusEnum.COBRADO_ESPERANDO_RETIRO);
         existing.setPrice(new BigDecimal("100000"));
         existing.setLaborAmount(BigDecimal.ZERO);
-        RepairPayment firstPayment = RepairPayment.builder().repairId("id-1").amount(new BigDecimal("40000")).build();
-        RepairPayment secondPayment = RepairPayment.builder().repairId("id-1").amount(new BigDecimal("20000")).build();
+        RepairPayment firstPayment = RepairPayment.builder().repairId("id-1").amount(new BigDecimal("40000"))
+                .paymentDate(LocalDateTime.of(2026, 6, 19, 10, 0)).build();
+        RepairPayment secondPayment = RepairPayment.builder().repairId("id-1").amount(new BigDecimal("20000"))
+                .paymentDate(LocalDateTime.of(2026, 6, 20, 10, 0)).build();
         when(repairRepository.findById("id-1")).thenReturn(Optional.of(existing));
         when(repairRepository.save(existing)).thenReturn(existing);
         when(repairPaymentRepository.findByRepairId("id-1"))
@@ -529,10 +586,11 @@ class RepairServiceTest {
         verify(repairRepository).findPage(any(), pageableCaptor.capture());
         String sort = pageableCaptor.getValue().getSort().toString();
 
-        assertTrue(sort.contains("RepairStatusEnum.RECIBIDA THEN 0"));
-        assertTrue(sort.contains("RepairStatusEnum.COBRADO_ESPERANDO_RETIRO THEN 4"));
-        assertTrue(sort.contains("RepairStatusEnum.POR_RECIBIR THEN 5"));
-        assertTrue(sort.contains("RepairStatusEnum.RETIRADA THEN 6"));
+        assertTrue(sort.contains("RepairStatusEnum.RETIRADA_FALTA_COBRAR THEN 0"));
+        assertTrue(sort.contains("RepairStatusEnum.RECIBIDA THEN 1"));
+        assertTrue(sort.contains("RepairStatusEnum.COBRADO_ESPERANDO_RETIRO THEN 5"));
+        assertTrue(sort.contains("RepairStatusEnum.POR_RECIBIR THEN 6"));
+        assertTrue(sort.contains("RepairStatusEnum.RETIRADA THEN 7"));
     }
 
     @Test

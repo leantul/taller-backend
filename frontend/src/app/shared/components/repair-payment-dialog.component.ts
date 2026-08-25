@@ -20,6 +20,7 @@ import { Repair, RepairStatusUpdate } from '../models/repair.model';
           <div class="detail-item detail-wide">
             <label>Tipo de cobro</label>
             <select class="control" [(ngModel)]="paymentType" (ngModelChange)="onTypeChange()">
+              @if (allowNoPayment) { <option value="NONE">No registrar pago ahora</option> }
               <option value="FULL">Cobro total</option><option value="PARTIAL">Cobro parcial</option>
             </select>
           </div>
@@ -32,7 +33,7 @@ import { Repair, RepairStatusUpdate } from '../models/repair.model';
         </div>
         <div class="dialog-actions">
           <button class="secondary-button" type="button" [disabled]="saving" (click)="close()">Cancelar</button>
-          <button class="primary-button" type="button" [disabled]="saving || remaining <= 0" (click)="confirm()">Registrar cobro</button>
+          <button class="primary-button" type="button" [disabled]="saving || (remaining <= 0 && paymentType !== 'NONE')" (click)="confirm()">{{ paymentType === 'NONE' ? 'Confirmar retiro' : 'Registrar cobro' }}</button>
         </div>
       }
     </p-dialog>`
@@ -41,10 +42,12 @@ export class RepairPaymentDialogComponent {
   @Input() visible = false;
   @Input() repair: Repair | null = null;
   @Input() saving = false;
+  @Input() targetStatus: Repair['status'] = 'COBRADO_ESPERANDO_RETIRO';
+  @Input() allowNoPayment = false;
   @Output() visibleChange = new EventEmitter<boolean>();
   @Output() submitted = new EventEmitter<RepairStatusUpdate>();
   @Output() cancelled = new EventEmitter<void>();
-  paymentType: 'FULL' | 'PARTIAL' = 'FULL';
+  paymentType: 'NONE' | 'FULL' | 'PARTIAL' = 'FULL';
   amount: number | null = null;
   error = '';
 
@@ -56,7 +59,7 @@ export class RepairPaymentDialogComponent {
     if (this.paymentType === 'PARTIAL' && (amount <= 0 || amount > this.remaining)) {
       this.error = 'Ingresá un monto mayor que cero y no superior al saldo.'; return;
     }
-    this.submitted.emit({ status: 'COBRADO_ESPERANDO_RETIRO', paymentType: this.paymentType,
+    this.submitted.emit({ status: this.targetStatus, paymentType: this.paymentType === 'NONE' ? undefined : this.paymentType,
       paymentAmount: this.paymentType === 'PARTIAL' ? amount : undefined });
   }
   close(): void { this.visible = false; this.visibleChange.emit(false); this.cancelled.emit(); }

@@ -12,6 +12,7 @@ import java.time.LocalDateTime;
 @Table(name = "notifications", indexes = {
         @Index(name = "idx_notifications_unread_event_date", columnList = "readed, event_date"),
         @Index(name = "idx_notifications_repair_id", columnList = "repair_id"),
+        @Index(name = "idx_notifications_type_repair_read", columnList = "type, repair_id, readed"),
         @Index(name = "idx_notifications_entity_type_event", columnList = "entity_id, type, event_date")
 })
 @AllArgsConstructor

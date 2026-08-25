@@ -8,6 +8,7 @@ import com.taller.model.RepairStatusHistory;
 import com.taller.model.enums.RepairStatusEnum;
 import com.taller.model.enums.CurrencyEnum;
 import com.taller.model.repository.DeviceObservationRepository;
+import com.taller.model.repository.NotificationRepository;
 import com.taller.model.repository.RepairPaymentRepository;
 import com.taller.model.repository.RepairPartRepository;
 import com.taller.model.repository.RepairRepository;
@@ -55,6 +56,7 @@ public class RepairService {
     private final RepairPaymentRepository repairPaymentRepository;
     private final DeviceObservationRepository deviceObservationRepository;
     private final RepairStatusHistoryRepository repairStatusHistoryRepository;
+    private final NotificationRepository notificationRepository;
     private final Clock clock;
 
     @Transactional(readOnly = true)
@@ -117,8 +119,11 @@ public class RepairService {
         LocalDateTime returnDateTime = repairDTO.getReturnDateTime() != null
                 ? repairDTO.getReturnDateTime()
                 : repair.getReturnDateTime();
-        if (returnDateTime == null && repairDTO.getStatus() == RepairStatusEnum.RETIRADA) {
+        if (returnDateTime == null && isPhysicallyRetired(repairDTO.getStatus())) {
             returnDateTime = now();
+        }
+        if (!isNew && previousStatus != repairDTO.getStatus() && !isPhysicallyRetired(repairDTO.getStatus())) {
+            returnDateTime = null;
         }
         repair.setReturnDateTime(returnDateTime);
         repair.setPrice(repairDTO.getPrice());
@@ -134,17 +139,32 @@ public class RepairService {
         repair.setReadyNotifiedAt(repairDTO.getReadyNotifiedAt());
 
         if (!isNew) {
-            if (repair.getStatus() == RepairStatusEnum.COBRADO_ESPERANDO_RETIRO && repairDTO.getPaymentType() != null) {
+            if ((repair.getStatus() == RepairStatusEnum.COBRADO_ESPERANDO_RETIRO || repair.getStatus() == RepairStatusEnum.RETIRADA_FALTA_COBRAR)
+                    && repairDTO.getPaymentType() != null) {
                 registerRequestedPayment(repair, repairDTO.getPaymentType(), repairDTO.getPaymentAmount());
             }
-            if (previousStatus != repair.getStatus() && repair.getStatus() == RepairStatusEnum.RETIRADA) {
+            if (previousStatus != repair.getStatus() && repair.getStatus() == RepairStatusEnum.RETIRADA
+                    && repairDTO.getPayments() == null) {
                 registerRemainingBalance(repair, "Saldo cobrado al retirar");
             }
         }
 
-        List<RepairPaymentDTO> effectivePayments = repairDTO.getPayments() != null
+        List<RepairPaymentDTO> effectivePayments = new java.util.ArrayList<>(repairDTO.getPayments() != null
                 ? repairDTO.getPayments()
-                : repair.getId() != null ? repairPaymentRepository.findByRepairId(repair.getId()).stream().map(this::toPaymentDto).toList() : List.of();
+                : repair.getId() != null ? repairPaymentRepository.findByRepairId(repair.getId()).stream().map(this::toPaymentDto).toList() : List.of());
+        if (!isNew && previousStatus != RepairStatusEnum.RETIRADA && repair.getStatus() == RepairStatusEnum.RETIRADA
+                && repairDTO.getPayments() != null && paymentTotal(effectivePayments).compareTo(price(repair)) < 0) {
+            RepairPaymentDTO balancePayment = new RepairPaymentDTO();
+            balancePayment.setAmount(price(repair).subtract(paymentTotal(effectivePayments)));
+            balancePayment.setCurrency(CurrencyEnum.ARS);
+            balancePayment.setPaymentDate(now());
+            balancePayment.setNotes("Saldo cobrado al retirar");
+            effectivePayments.add(balancePayment);
+        }
+        if (repair.getStatus() == RepairStatusEnum.RETIRADA_FALTA_COBRAR
+                && paymentTotal(effectivePayments).compareTo(price(repair)) == 0) {
+            repair.setStatus(RepairStatusEnum.RETIRADA);
+        }
         validatePayments(repair, effectivePayments);
 
         if (repairDTO.getId() != null) {
@@ -153,13 +173,14 @@ public class RepairService {
 
         Repair saved = repairRepository.save(repair);
         recordStatusHistory(saved, previousStatus, isNew);
+        closePaymentReminderIfResolved(saved);
 
         if (repairDTO.getParts() != null) {
             syncParts(saved, repairDTO.getParts());
         }
 
         if (repairDTO.getPayments() != null) {
-            syncPayments(saved, repairDTO.getPayments());
+            syncPayments(saved, effectivePayments);
         }
 
         if (repairDTO.getObservations() != null) {
@@ -188,6 +209,12 @@ public class RepairService {
         if (status == RepairStatusEnum.COBRADO_ESPERANDO_RETIRO) {
             registerRequestedPayment(repair, request.paymentType(), request.paymentAmount());
         }
+        if (status == RepairStatusEnum.RETIRADA_FALTA_COBRAR) {
+            if (request.paymentType() != null) {
+                registerRequestedPayment(repair, request.paymentType(), request.paymentAmount());
+            }
+            if (remainingBalance(repair).signum() == 0) status = RepairStatusEnum.RETIRADA;
+        }
         if (status == RepairStatusEnum.RETIRADA) {
             registerRemainingBalance(repair, "Saldo cobrado al retirar");
         }
@@ -195,13 +222,14 @@ public class RepairService {
         if (status == RepairStatusEnum.RECIBIDA) {
             repair.setReceiveDateTime(request.receiveDateTime() != null ? request.receiveDateTime() : repair.getReceiveDateTime() != null ? repair.getReceiveDateTime() : now());
         }
-        if (status == RepairStatusEnum.RETIRADA) {
+        if (isPhysicallyRetired(status)) {
             repair.setReturnDateTime(request.returnDateTime() != null ? request.returnDateTime() : repair.getReturnDateTime() != null ? repair.getReturnDateTime() : now());
         } else {
             repair.setReturnDateTime(null);
         }
         repairRepository.save(repair);
         recordStatusHistory(repair, previousStatus, false);
+        closePaymentReminderIfResolved(repair);
     }
 
     @Transactional
@@ -212,9 +240,15 @@ public class RepairService {
             repair.setStatus(RepairStatusEnum.ESPERANDO_RETIRO);
             repairRepository.save(repair);
         }
+        if (repair.getStatus() == RepairStatusEnum.RETIRADA_FALTA_COBRAR
+                && paymentTotal(paymentDtos).compareTo(price(repair)) == 0) {
+            repair.setStatus(RepairStatusEnum.RETIRADA);
+            repairRepository.save(repair);
+        }
         validatePayments(repair, paymentDtos);
         syncPayments(repair, paymentDtos);
         recordStatusHistory(repair, previousStatus, false);
+        closePaymentReminderIfResolved(repair);
         return toDto(repair);
     }
 
@@ -323,7 +357,7 @@ public class RepairService {
         if (repair.getStatus() == RepairStatusEnum.RECIBIDA) {
             return repair.getReceiveDateTime();
         }
-        if (repair.getStatus() == RepairStatusEnum.RETIRADA) {
+        if (isPhysicallyRetired(repair.getStatus())) {
             return repair.getReturnDateTime();
         }
         return now();
@@ -457,7 +491,7 @@ public class RepairService {
             payment.setRepairId(repair.getId());
             payment.setAmount(dto.getAmount());
             payment.setCurrency(CurrencyEnum.ARS);
-            payment.setPaymentDate(dto.getPaymentDate() != null ? dto.getPaymentDate() : now());
+            payment.setPaymentDate(dto.getPaymentDate());
             payment.setNotes(dto.getNotes());
             return payment;
         }).toList());
@@ -495,6 +529,7 @@ public class RepairService {
         BigDecimal total = BigDecimal.ZERO;
         for (RepairPaymentDTO payment : paymentDtos) {
             if (payment.getAmount() == null || payment.getAmount().signum() <= 0) throw new IllegalArgumentException("Todos los pagos deben ser mayores que cero");
+            if (payment.getPaymentDate() == null) throw new IllegalArgumentException("Todos los pagos deben tener fecha");
             if (payment.getCurrency() != null && payment.getCurrency() != CurrencyEnum.ARS) throw new IllegalArgumentException("Los cobros de reparaciones deben registrarse en ARS");
             total = total.add(payment.getAmount());
         }
@@ -509,6 +544,21 @@ public class RepairService {
 
     private BigDecimal positive(BigDecimal value) {
         return value.signum() > 0 ? value : BigDecimal.ZERO;
+    }
+
+    private BigDecimal paymentTotal(List<RepairPaymentDTO> payments) {
+        return payments == null ? BigDecimal.ZERO : payments.stream().map(RepairPaymentDTO::getAmount)
+                .filter(java.util.Objects::nonNull).reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    private boolean isPhysicallyRetired(RepairStatusEnum status) {
+        return status == RepairStatusEnum.RETIRADA || status == RepairStatusEnum.RETIRADA_FALTA_COBRAR;
+    }
+
+    private void closePaymentReminderIfResolved(Repair repair) {
+        if (repair.getStatus() != RepairStatusEnum.RETIRADA_FALTA_COBRAR && repair.getId() != null) {
+            notificationRepository.markPaymentRemindersAsRead("REPAIR_PAYMENT_OVERDUE", repair.getId());
+        }
     }
 
     private DeviceObservation toObservation(Repair repair, DeviceObservationDTO dto, DeviceObservation observation) {
@@ -602,14 +652,15 @@ public class RepairService {
                 direction,
                 """
                 (CASE r.status
-                  WHEN com.taller.model.enums.RepairStatusEnum.RECIBIDA THEN 0
-                  WHEN com.taller.model.enums.RepairStatusEnum.PRESUPUESTADA_ESPERANDO_RESPUESTA THEN 1
-                  WHEN com.taller.model.enums.RepairStatusEnum.HACIENDO THEN 2
-                  WHEN com.taller.model.enums.RepairStatusEnum.ESPERANDO_RETIRO THEN 3
-                  WHEN com.taller.model.enums.RepairStatusEnum.COBRADO_ESPERANDO_RETIRO THEN 4
-                  WHEN com.taller.model.enums.RepairStatusEnum.POR_RECIBIR THEN 5
-                  WHEN com.taller.model.enums.RepairStatusEnum.RETIRADA THEN 6
-                  ELSE 7
+                  WHEN com.taller.model.enums.RepairStatusEnum.RETIRADA_FALTA_COBRAR THEN 0
+                  WHEN com.taller.model.enums.RepairStatusEnum.RECIBIDA THEN 1
+                  WHEN com.taller.model.enums.RepairStatusEnum.PRESUPUESTADA_ESPERANDO_RESPUESTA THEN 2
+                  WHEN com.taller.model.enums.RepairStatusEnum.HACIENDO THEN 3
+                  WHEN com.taller.model.enums.RepairStatusEnum.ESPERANDO_RETIRO THEN 4
+                  WHEN com.taller.model.enums.RepairStatusEnum.COBRADO_ESPERANDO_RETIRO THEN 5
+                  WHEN com.taller.model.enums.RepairStatusEnum.POR_RECIBIR THEN 6
+                  WHEN com.taller.model.enums.RepairStatusEnum.RETIRADA THEN 7
+                  ELSE 8
                 END)
                 """
         );

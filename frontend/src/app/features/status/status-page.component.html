@@ -79,4 +79,5 @@
 
 <app-delivery-report-dialog></app-delivery-report-dialog>
 <app-repair-payment-dialog [(visible)]="showPaymentDialog" [repair]="paymentRepair" [saving]="isSavingStatus"
+  [targetStatus]="paymentTargetStatus" [allowNoPayment]="paymentTargetStatus === 'RETIRADA_FALTA_COBRAR'"
   (submitted)="savePaymentStatus($event)" (cancelled)="cancelPayment()"></app-repair-payment-dialog>

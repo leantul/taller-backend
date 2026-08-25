@@ -192,6 +192,8 @@
 
 <app-repair-detail-dialog></app-repair-detail-dialog>
 <app-delivery-report-dialog></app-delivery-report-dialog>
+<app-repair-payment-dialog [(visible)]="showPaymentDialog" [repair]="paymentRepair" [saving]="isUpdating"
+  (submitted)="savePaymentStatus($event)" (cancelled)="cancelPaymentStatus()"></app-repair-payment-dialog>
 
 @if (showEditModal) {
 <p-dialog header="Editar reparación" [(visible)]="showEditModal" [modal]="true" [style]="{width:'36rem'}">
@@ -237,15 +239,9 @@
   </div>
   <div class="field">
     <label>Estado</label>
-    <select class="control" [(ngModel)]="editingRepair.status" (ngModelChange)="onEditStatusChange()">
-      @for (option of statusOptions; track option.value) {
-        <option [value]="option.value">{{ option.label }}</option>
-      }
-    </select>
+    <span class="status-pill" [ngClass]="statusClass(editingRepair.status)">{{ statusLabel(editingRepair.status) }}</span>
+    <small>Usá la acción “Estado” para cambiarlo y registrar correctamente los cobros.</small>
   </div>
-  @if (editingRepair.status === 'RETIRADA') {
-    <div class="field"><label>Fecha y hora de retiro</label><input class="control" type="datetime-local" [(ngModel)]="editReturnDateTimeLocal" /></div>
-  }
   <div class="field"><label>Presupuesto enviado</label><p-inputNumber [(ngModel)]="editingRepair.quotedAmount" mode="currency" currency="ARS" locale="es-AR" [min]="0"></p-inputNumber></div>
   <div class="field"><label>Detalle del presupuesto</label><textarea class="p-inputtext" rows="4" [(ngModel)]="editingRepair.quoteNotes"></textarea></div>
   <div class="field"><label>Observaciones de la reparación</label><textarea class="p-inputtext" rows="6" [(ngModel)]="editingRepair.repairNotes" placeholder="Observaciones propias de esta reparación"></textarea></div>

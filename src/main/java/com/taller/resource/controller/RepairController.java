@@ -50,6 +50,14 @@ public class RepairController {
         return repairService.getStatusBoard();
     }
 
+    @GetMapping("/status-board/page")
+    public PageDTO<StatusBoardRepairDTO> getStatusBoardPage(
+            @RequestParam RepairStatusEnum status,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return repairService.getStatusBoardPage(status, page, size);
+    }
+
     @GetMapping("/{id}")
     public RepairDTO getRepairById(@PathVariable String id) {
         return repairService.getRepairById(id);
@@ -72,8 +80,13 @@ public class RepairController {
 
     @PatchMapping("/{id}/status")
     public ResponseEntity<Void> updateStatus(@PathVariable String id, @RequestBody RepairStatusUpdateDTO request) {
-        repairService.updateStatus(id, request.status(), request.receiveDateTime(), request.returnDateTime());
+        repairService.updateStatus(id, request);
         return ResponseEntity.ok().build();
+    }
+
+    @PutMapping("/{id}/payments")
+    public RepairDTO replacePayments(@PathVariable String id, @RequestBody List<com.taller.resource.dto.RepairPaymentDTO> payments) {
+        return repairService.replacePayments(id, payments);
     }
 
     @GetMapping("/{id}/delivery-report")

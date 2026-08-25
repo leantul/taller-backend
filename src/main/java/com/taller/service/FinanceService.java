@@ -39,8 +39,8 @@ public class FinanceService {
     public FinanceSummaryDTO getSummary(LocalDate from, LocalDate to) {
         LocalDateTime fromDateTime = startOfDay(from);
         LocalDateTime toDateTime = endOfDay(to);
-        FinanceRepairSummaryView repairSummary = repairRepository.summarizeFinanceRepairs(fromDateTime, toDateTime);
-        FinancePartsSummaryView partsSummary = repairRepository.summarizeFinanceParts(fromDateTime, toDateTime);
+        FinanceRepairSummaryView repairSummary = repairRepository.summarizePaymentFinanceRepairs(fromDateTime, toDateTime);
+        FinancePartsSummaryView partsSummary = repairRepository.summarizePaymentFinanceParts(fromDateTime, toDateTime);
 
         long repairCount = repairSummary != null && repairSummary.getRepairCount() != null
                 ? repairSummary.getRepairCount()
@@ -86,7 +86,7 @@ public class FinanceService {
                 Math.max(0, page),
                 Math.min(Math.max(1, size), MAXIMUM_PAGE_SIZE),
                 Sort.by(new Sort.Order(direction, safeSortBy), new Sort.Order(Sort.Direction.ASC, "repairId")));
-        Page<FinanceRowView> result = repairRepository.findFinancePage(startOfDay(from), endOfDay(to), pageRequest);
+        Page<FinanceRowView> result = repairRepository.findPaymentFinancePage(startOfDay(from), endOfDay(to), pageRequest);
         List<FinanceRowDTO> content = result.getContent().stream().map(this::toRowDto).toList();
         return new PageDTO<>(content, result.getNumber(), result.getSize(), result.getTotalElements(), result.getTotalPages());
     }
@@ -103,8 +103,8 @@ public class FinanceService {
             cursor = cursor.plusMonths(1);
         }
 
-        mergeMonthlyValues(monthlyNet, repairRepository.summarizeMonthlyFinanceIncome(from), false);
-        mergeMonthlyValues(monthlyNet, repairRepository.summarizeMonthlyFinancePartsCost(from), true);
+        mergeMonthlyValues(monthlyNet, repairRepository.summarizeMonthlyPaymentIncome(from), false);
+        mergeMonthlyValues(monthlyNet, repairRepository.summarizeMonthlyPaymentPartsCost(from), true);
 
         return monthlyNet.entrySet().stream()
                 .map(entry -> new DashboardSeriesItemDTO(formatMonth(entry.getKey()), entry.getValue()))

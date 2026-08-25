@@ -37,6 +37,9 @@
         } @empty {
           <div class="status-empty">Sin ordenes en esta etapa.</div>
         }
+        @if (col.page + 1 < col.totalPages) {
+          <button class="secondary-button status-load-more" type="button" [disabled]="col.loading" (click)="loadMore(col)">Cargar más</button>
+        }
       </div>
     </p-card>
   }
@@ -75,3 +78,5 @@
 </p-dialog>
 
 <app-delivery-report-dialog></app-delivery-report-dialog>
+<app-repair-payment-dialog [(visible)]="showPaymentDialog" [repair]="paymentRepair" [saving]="isSavingStatus"
+  (submitted)="savePaymentStatus($event)" (cancelled)="cancelPayment()"></app-repair-payment-dialog>

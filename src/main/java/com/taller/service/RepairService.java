@@ -6,6 +6,7 @@ import com.taller.model.RepairPart;
 import com.taller.model.RepairPayment;
 import com.taller.model.RepairStatusHistory;
 import com.taller.model.enums.RepairStatusEnum;
+import com.taller.model.enums.CurrencyEnum;
 import com.taller.model.repository.DeviceObservationRepository;
 import com.taller.model.repository.RepairPaymentRepository;
 import com.taller.model.repository.RepairPartRepository;
@@ -21,6 +22,7 @@ import com.taller.resource.dto.RepairDTO;
 import com.taller.resource.dto.RepairPartDTO;
 import com.taller.resource.dto.RepairPaymentDTO;
 import com.taller.resource.dto.RepairStatusHistoryDTO;
+import com.taller.resource.dto.RepairStatusUpdateDTO;
 import com.taller.resource.dto.StatusBoardRepairDTO;
 import com.taller.resource.mapper.DeviceObservationMapper;
 import com.taller.resource.mapper.RepairPartMapper;
@@ -70,6 +72,14 @@ public class RepairService {
     @Transactional(readOnly = true)
     public List<StatusBoardRepairDTO> getStatusBoard() {
         return repairRepository.findStatusBoardRows().stream().map(this::toStatusBoardDto).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public PageDTO<StatusBoardRepairDTO> getStatusBoardPage(RepairStatusEnum status, int page, int size) {
+        if (status == null || status == RepairStatusEnum.RETIRADA) throw new IllegalArgumentException("Seleccioná un estado activo");
+        Page<StatusBoardRepairView> result = repairRepository.findStatusBoardPage(status,
+                boundedPageRequest(page, size, 50, Sort.by(Sort.Direction.DESC, "creationDateTime")));
+        return toPageDto(result, result.getContent().stream().map(this::toStatusBoardDto).toList());
     }
 
     @Transactional(readOnly = true)
@@ -123,6 +133,11 @@ public class RepairService {
         repair.setRejected(repairDTO.getRejected());
         repair.setReadyNotifiedAt(repairDTO.getReadyNotifiedAt());
 
+        List<RepairPaymentDTO> effectivePayments = repairDTO.getPayments() != null
+                ? repairDTO.getPayments()
+                : repair.getId() != null ? repairPaymentRepository.findByRepairId(repair.getId()).stream().map(this::toPaymentDto).toList() : List.of();
+        validatePayments(repair, effectivePayments);
+
         if (repairDTO.getId() != null) {
             repair.setId(repairDTO.getId());
         }
@@ -152,19 +167,46 @@ public class RepairService {
 
     @Transactional
     public void updateStatus(String id, RepairStatusEnum status, LocalDateTime receiveDateTime, LocalDateTime returnDateTime) {
+        updateStatus(id, new RepairStatusUpdateDTO(status, receiveDateTime, returnDateTime, null, null));
+    }
+
+    @Transactional
+    public void updateStatus(String id, RepairStatusUpdateDTO request) {
         Repair repair = repairRepository.findById(id).orElseThrow();
         RepairStatusEnum previousStatus = repair.getStatus();
-        repair.setStatus(status);
-        if (status == RepairStatusEnum.RECIBIDA) {
-            repair.setReceiveDateTime(receiveDateTime != null ? receiveDateTime : repair.getReceiveDateTime() != null ? repair.getReceiveDateTime() : now());
+        RepairStatusEnum status = request.status();
+        if (status == null) throw new IllegalArgumentException("Seleccioná un estado");
+        if (status == RepairStatusEnum.COBRADO_ESPERANDO_RETIRO) {
+            registerRequestedPayment(repair, request.paymentType(), request.paymentAmount());
         }
         if (status == RepairStatusEnum.RETIRADA) {
-            repair.setReturnDateTime(returnDateTime != null ? returnDateTime : repair.getReturnDateTime() != null ? repair.getReturnDateTime() : now());
+            registerRemainingBalance(repair, "Saldo cobrado al retirar");
+        }
+        repair.setStatus(status);
+        if (status == RepairStatusEnum.RECIBIDA) {
+            repair.setReceiveDateTime(request.receiveDateTime() != null ? request.receiveDateTime() : repair.getReceiveDateTime() != null ? repair.getReceiveDateTime() : now());
+        }
+        if (status == RepairStatusEnum.RETIRADA) {
+            repair.setReturnDateTime(request.returnDateTime() != null ? request.returnDateTime() : repair.getReturnDateTime() != null ? repair.getReturnDateTime() : now());
         } else {
             repair.setReturnDateTime(null);
         }
         repairRepository.save(repair);
         recordStatusHistory(repair, previousStatus, false);
+    }
+
+    @Transactional
+    public RepairDTO replacePayments(String id, List<RepairPaymentDTO> paymentDtos) {
+        Repair repair = repairRepository.findById(id).orElseThrow();
+        RepairStatusEnum previousStatus = repair.getStatus();
+        if (repair.getStatus() == RepairStatusEnum.COBRADO_ESPERANDO_RETIRO && (paymentDtos == null || paymentDtos.isEmpty())) {
+            repair.setStatus(RepairStatusEnum.ESPERANDO_RETIRO);
+            repairRepository.save(repair);
+        }
+        validatePayments(repair, paymentDtos);
+        syncPayments(repair, paymentDtos);
+        recordStatusHistory(repair, previousStatus, false);
+        return toDto(repair);
     }
 
     @Transactional
@@ -231,7 +273,12 @@ public class RepairService {
         dto.setRejected(repair.getRejected());
         dto.setReadyNotifiedAt(repair.getReadyNotifiedAt());
         dto.setParts(repairPartRepository.findByRepairId(repair.getId()).stream().map(RepairPartMapper::toDto).toList());
-        dto.setPayments(repairPaymentRepository.findByRepairId(repair.getId()).stream().map(this::toPaymentDto).toList());
+        List<RepairPayment> payments = repairPaymentRepository.findByRepairId(repair.getId());
+        dto.setPayments(payments.stream().map(this::toPaymentDto).toList());
+        BigDecimal totalPaid = payments.stream().map(RepairPayment::getAmount).filter(java.util.Objects::nonNull)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        dto.setTotalPaid(totalPaid);
+        dto.setOutstandingBalance(positive(price(repair).subtract(totalPaid)));
         dto.setObservations(deviceObservationRepository.findByRepairIdOrderByObservedAtDesc(repair.getId()).stream().map(DeviceObservationMapper::toDto).toList());
         dto.setStatusHistory(repairStatusHistoryRepository.findByRepairIdOrderByChangedAtAscCreationDateTimeAsc(repair.getId()).stream().map(this::toStatusHistoryDto).toList());
         return dto;
@@ -400,11 +447,59 @@ public class RepairService {
             RepairPayment payment = existingById.getOrDefault(dto.getId(), new RepairPayment());
             payment.setRepairId(repair.getId());
             payment.setAmount(dto.getAmount());
-            payment.setCurrency(dto.getCurrency());
-            payment.setPaymentDate(dto.getPaymentDate());
+            payment.setCurrency(CurrencyEnum.ARS);
+            payment.setPaymentDate(dto.getPaymentDate() != null ? dto.getPaymentDate() : now());
             payment.setNotes(dto.getNotes());
             return payment;
         }).toList());
+    }
+
+    private void registerRequestedPayment(Repair repair, RepairStatusUpdateDTO.PaymentType type, BigDecimal partialAmount) {
+        if (type == null) throw new IllegalArgumentException("Indicá si el cobro es total o parcial");
+        BigDecimal remaining = remainingBalance(repair);
+        if (remaining.signum() <= 0) return;
+        BigDecimal amount = type == RepairStatusUpdateDTO.PaymentType.FULL ? remaining : partialAmount;
+        if (amount == null || amount.signum() <= 0) throw new IllegalArgumentException("El monto cobrado debe ser mayor que cero");
+        if (amount.compareTo(remaining) > 0) throw new IllegalArgumentException("El monto cobrado no puede superar el saldo pendiente");
+        savePayment(repair, amount, type == RepairStatusUpdateDTO.PaymentType.FULL ? "Cobro total antes del retiro" : "Cobro parcial");
+    }
+
+    private void registerRemainingBalance(Repair repair, String notes) {
+        BigDecimal remaining = remainingBalance(repair);
+        if (remaining.signum() > 0) savePayment(repair, remaining, notes);
+    }
+
+    private void savePayment(Repair repair, BigDecimal amount, String notes) {
+        if (price(repair).signum() <= 0) throw new IllegalArgumentException("La reparación debe tener un monto final mayor que cero para registrar un cobro");
+        repairPaymentRepository.save(RepairPayment.builder().repairId(repair.getId()).amount(amount)
+                .currency(CurrencyEnum.ARS).paymentDate(now()).notes(notes).build());
+    }
+
+    private BigDecimal remainingBalance(Repair repair) {
+        BigDecimal paid = repairPaymentRepository.findByRepairId(repair.getId()).stream()
+                .map(RepairPayment::getAmount).filter(java.util.Objects::nonNull).reduce(BigDecimal.ZERO, BigDecimal::add);
+        return positive(price(repair).subtract(paid));
+    }
+
+    private void validatePayments(Repair repair, List<RepairPaymentDTO> paymentDtos) {
+        if (paymentDtos == null) throw new IllegalArgumentException("La lista de pagos es obligatoria");
+        BigDecimal total = BigDecimal.ZERO;
+        for (RepairPaymentDTO payment : paymentDtos) {
+            if (payment.getAmount() == null || payment.getAmount().signum() <= 0) throw new IllegalArgumentException("Todos los pagos deben ser mayores que cero");
+            if (payment.getCurrency() != null && payment.getCurrency() != CurrencyEnum.ARS) throw new IllegalArgumentException("Los cobros de reparaciones deben registrarse en ARS");
+            total = total.add(payment.getAmount());
+        }
+        if (total.compareTo(price(repair)) > 0) throw new IllegalArgumentException("El total cobrado no puede superar el monto final");
+        if (repair.getStatus() == RepairStatusEnum.RETIRADA && total.compareTo(price(repair)) != 0) throw new IllegalArgumentException("Una reparación retirada debe quedar completamente pagada");
+        if (repair.getStatus() == RepairStatusEnum.COBRADO_ESPERANDO_RETIRO && total.signum() <= 0) throw new IllegalArgumentException("El estado cobrado esperando retiro requiere al menos un pago");
+    }
+
+    private BigDecimal price(Repair repair) {
+        return repair.getPrice() != null ? repair.getPrice() : BigDecimal.ZERO;
+    }
+
+    private BigDecimal positive(BigDecimal value) {
+        return value.signum() > 0 ? value : BigDecimal.ZERO;
     }
 
     private DeviceObservation toObservation(Repair repair, DeviceObservationDTO dto, DeviceObservation observation) {
@@ -502,9 +597,10 @@ public class RepairService {
                   WHEN com.taller.model.enums.RepairStatusEnum.PRESUPUESTADA_ESPERANDO_RESPUESTA THEN 1
                   WHEN com.taller.model.enums.RepairStatusEnum.HACIENDO THEN 2
                   WHEN com.taller.model.enums.RepairStatusEnum.ESPERANDO_RETIRO THEN 3
-                  WHEN com.taller.model.enums.RepairStatusEnum.POR_RECIBIR THEN 4
-                  WHEN com.taller.model.enums.RepairStatusEnum.RETIRADA THEN 5
-                  ELSE 6
+                  WHEN com.taller.model.enums.RepairStatusEnum.COBRADO_ESPERANDO_RETIRO THEN 4
+                  WHEN com.taller.model.enums.RepairStatusEnum.POR_RECIBIR THEN 5
+                  WHEN com.taller.model.enums.RepairStatusEnum.RETIRADA THEN 6
+                  ELSE 7
                 END)
                 """
         );

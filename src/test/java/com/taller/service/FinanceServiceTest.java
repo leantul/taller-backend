@@ -48,16 +48,16 @@ class FinanceServiceTest {
         when(repairSummary.getPositiveFinalAmountCount()).thenReturn(2L);
         when(partsSummary.getTotalPartsCost()).thenReturn(BigDecimal.valueOf(600));
         when(partsSummary.getTotalPartsProfit()).thenReturn(null);
-        when(repairRepository.summarizeFinanceRepairs(
+        when(repairRepository.summarizePaymentFinanceRepairs(
                 LocalDateTime.of(2026, 6, 1, 0, 0),
                 LocalDateTime.of(2026, 6, 30, 23, 59, 59, 999999999)))
                 .thenReturn(repairSummary);
-        when(repairRepository.summarizeFinanceParts(
+        when(repairRepository.summarizePaymentFinanceParts(
                 LocalDateTime.of(2026, 6, 1, 0, 0),
                 LocalDateTime.of(2026, 6, 30, 23, 59, 59, 999999999)))
                 .thenReturn(partsSummary);
-        when(repairRepository.summarizeMonthlyFinanceIncome(any())).thenReturn(List.of());
-        when(repairRepository.summarizeMonthlyFinancePartsCost(any())).thenReturn(List.of());
+        when(repairRepository.summarizeMonthlyPaymentIncome(any())).thenReturn(List.of());
+        when(repairRepository.summarizeMonthlyPaymentPartsCost(any())).thenReturn(List.of());
 
         FinanceSummaryDTO summary = new FinanceService(repairRepository).getSummary(from, to);
 
@@ -82,7 +82,7 @@ class FinanceServiceTest {
         when(row.getPartsCost()).thenReturn(BigDecimal.valueOf(400));
         when(row.getNet()).thenReturn(BigDecimal.valueOf(1100));
         ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
-        when(repairRepository.findFinancePage(eq(null), eq(null), pageableCaptor.capture()))
+        when(repairRepository.findPaymentFinancePage(eq(null), eq(null), pageableCaptor.capture()))
                 .thenReturn(new PageImpl<>(List.of(row), PageRequest.of(0, 100), 101));
 
         PageDTO<?> result = new FinanceService(repairRepository)
@@ -99,7 +99,7 @@ class FinanceServiceTest {
     @Test
     void getDetails_forwardsEveryAllowedSortToTheRepository() {
         List<String> sortFields = List.of("clientName", "date", "income", "partsCost", "net");
-        when(repairRepository.findFinancePage(any(), any(), any(Pageable.class)))
+        when(repairRepository.findPaymentFinancePage(any(), any(), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of()));
 
         FinanceService service = new FinanceService(repairRepository);
@@ -114,7 +114,7 @@ class FinanceServiceTest {
         }
 
         ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
-        verify(repairRepository, times(sortFields.size())).findFinancePage(
+        verify(repairRepository, times(sortFields.size())).findPaymentFinancePage(
                 eq(LocalDateTime.of(2026, 6, 1, 0, 0)),
                 eq(LocalDateTime.of(2026, 6, 30, 23, 59, 59, 999999999)),
                 pageableCaptor.capture());

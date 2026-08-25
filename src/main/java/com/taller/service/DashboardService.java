@@ -99,7 +99,8 @@ public class DashboardService {
         for (RepairStatusCountView countView : repairRepository.countByStatus()) {
             statusCounts.put(countView.getStatus(), countView.getTotal());
         }
-        dto.setWaitingPickupCount(statusCounts.getOrDefault(RepairStatusEnum.ESPERANDO_RETIRO, 0L));
+        dto.setWaitingPickupCount(statusCounts.getOrDefault(RepairStatusEnum.ESPERANDO_RETIRO, 0L)
+                + statusCounts.getOrDefault(RepairStatusEnum.COBRADO_ESPERANDO_RETIRO, 0L));
         dto.setInProgressCount(
                 statusCounts.getOrDefault(RepairStatusEnum.HACIENDO, 0L)
                         + statusCounts.getOrDefault(RepairStatusEnum.RECIBIDA, 0L)

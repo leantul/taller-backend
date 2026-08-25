@@ -11,7 +11,11 @@ import java.time.LocalDateTime;
 @Setter
 @Builder
 @Entity
-@Table(name = "repair_payments", indexes = @Index(name = "idx_repair_payments_repair_id", columnList = "repair_id"))
+@Table(name = "repair_payments", indexes = {
+        @Index(name = "idx_repair_payments_repair_id", columnList = "repair_id"),
+        @Index(name = "idx_repair_payments_payment_date", columnList = "payment_date"),
+        @Index(name = "idx_repair_payments_repair_date", columnList = "repair_id,payment_date")
+})
 @AllArgsConstructor
 @NoArgsConstructor
 @AttributeOverride(name = "id", column = @Column(name = "id_repair_payment"))

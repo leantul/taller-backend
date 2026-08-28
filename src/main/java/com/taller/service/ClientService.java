@@ -79,8 +79,15 @@ public class ClientService {
         client.setPhone(clientDTO.getPhone());
         client.setBirthDate(clientDTO.getBirthDate());
         client.setNotes(clientDTO.getNotes());
-        client.setPhones(clientDTO.getPhones() == null ? List.of() : List.copyOf(clientDTO.getPhones()));
-        client.setEmails(clientDTO.getEmails() == null ? List.of() : List.copyOf(clientDTO.getEmails()));
+        replaceContents(client.getPhones(), clientDTO.getPhones());
+        replaceContents(client.getEmails(), clientDTO.getEmails());
+    }
+
+    private void replaceContents(List<String> target, List<String> source) {
+        target.clear();
+        if (source != null) {
+            target.addAll(source);
+        }
     }
 
     @Transactional

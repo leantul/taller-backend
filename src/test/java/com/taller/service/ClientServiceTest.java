@@ -20,11 +20,13 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
@@ -135,16 +137,25 @@ class ClientServiceTest {
         Client existing = new Client();
         existing.setId("c1");
         existing.setName("Anterior");
+        List<String> managedPhones = new ArrayList<>(List.of("111"));
+        List<String> managedEmails = new ArrayList<>(List.of("anterior@example.com"));
+        existing.setPhones(managedPhones);
+        existing.setEmails(managedEmails);
         ClientDTO update = new ClientDTO();
         update.setId("c1");
         update.setName("Ada");
+        update.setPhones(List.of("222", "333"));
+        update.setEmails(List.of("ada@example.com"));
         when(clientRepository.findById("c1")).thenReturn(Optional.of(existing));
         when(clientRepository.save(existing)).thenReturn(existing);
 
         ClientDTO result = service.save(update);
 
         assertEquals("Ada", result.getName());
-        assertEquals(List.of(), result.getPhones());
+        assertSame(managedPhones, existing.getPhones());
+        assertSame(managedEmails, existing.getEmails());
+        assertEquals(List.of("222", "333"), result.getPhones());
+        assertEquals(List.of("ada@example.com"), result.getEmails());
         verify(clientRepository).save(existing);
     }
 }

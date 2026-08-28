@@ -256,10 +256,12 @@
   @if (editingRepair.status === 'RETIRADA' || editingRepair.status === 'RETIRADA_FALTA_COBRAR') {
     <div class="field"><label>Fecha y hora de retiro</label><input class="control" type="datetime-local" [(ngModel)]="editReturnDateTimeLocal" /></div>
   }
-  <div class="detail-grid payment-summary-grid">
-    <div class="detail-item"><label>Total cobrado</label><strong>{{ paymentTotal(editingRepair) | currency:'ARS':'symbol':'1.2-2':'es-AR' }}</strong></div>
-    <div class="detail-item payment-balance-item"><label>Saldo pendiente</label><strong>{{ paymentRemaining(editingRepair) | currency:'ARS':'symbol':'1.2-2':'es-AR' }}</strong></div>
-  </div>
+  @if (editingRepair.status === 'COBRADO_ESPERANDO_RETIRO' || editingRepair.status === 'RETIRADA_FALTA_COBRAR') {
+    <div class="detail-grid payment-summary-grid">
+      <div class="detail-item"><label>Total cobrado</label><strong>{{ paymentTotal(editingRepair) | currency:'ARS':'symbol':'1.2-2':'es-AR' }}</strong></div>
+      <div class="detail-item payment-balance-item"><label>Saldo pendiente</label><strong>{{ paymentRemaining(editingRepair) | currency:'ARS':'symbol':'1.2-2':'es-AR' }}</strong></div>
+    </div>
+  }
   <div class="field">
     <div class="inline-row" style="justify-content:space-between;align-items:center;"><label>Pagos</label><button pButton type="button" icon="pi pi-plus" class="p-button-sm" label="Agregar pago" (click)="addEditingPayment()"></button></div>
     @for (payment of editingRepair.payments || []; track payment.id || $index) {

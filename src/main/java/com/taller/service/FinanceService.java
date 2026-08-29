@@ -39,13 +39,14 @@ public class FinanceService {
     public FinanceSummaryDTO getSummary(LocalDate from, LocalDate to) {
         LocalDateTime fromDateTime = startOfDay(from);
         LocalDateTime toDateTime = endOfDay(to);
-        FinanceRepairSummaryView repairSummary = repairRepository.summarizePaymentFinanceRepairs(fromDateTime, toDateTime);
-        FinancePaymentSummaryView paymentSummary = repairRepository.summarizePayments(fromDateTime, toDateTime);
-        FinancePartsSummaryView partsSummary = repairRepository.summarizePaymentFinanceParts(fromDateTime, toDateTime);
+        FinanceRepairSummaryView repairSummary = repairRepository.summarizeRetiredFinanceRepairs(fromDateTime, toDateTime);
+        FinancePaymentSummaryView paymentSummary = repairRepository.summarizeRetiredPayments(fromDateTime, toDateTime);
+        FinancePartsSummaryView partsSummary = repairRepository.summarizeRetiredFinanceParts(fromDateTime, toDateTime);
 
-        long repairCount = paymentSummary != null && paymentSummary.getRepairCount() != null
-                ? paymentSummary.getRepairCount()
+        long repairCount = repairSummary != null && repairSummary.getRepairCount() != null
+                ? repairSummary.getRepairCount()
                 : 0L;
+        long paidRepairCount = safeLong(repairRepository.countPaidRetiredRepairs(fromDateTime, toDateTime));
         BigDecimal totalIncome = paymentSummary != null ? safeMoney(paymentSummary.getTotalIncome()) : BigDecimal.ZERO;
         BigDecimal totalLabor = repairSummary != null ? safeMoney(repairSummary.getTotalLabor()) : BigDecimal.ZERO;
         BigDecimal totalQuoted = repairSummary != null ? safeMoney(repairSummary.getTotalQuoted()) : BigDecimal.ZERO;
@@ -63,7 +64,7 @@ public class FinanceService {
         summary.setTotalPartsProfit(totalPartsProfit);
         summary.setTotalQuoted(totalQuoted);
         summary.setZeroFinalAmountCount(repairSummary != null ? safeLong(repairSummary.getZeroFinalAmountCount()) : 0L);
-        summary.setPositiveFinalAmountCount(repairSummary != null ? safeLong(repairSummary.getPositiveFinalAmountCount()) : 0L);
+        summary.setPositiveFinalAmountCount(paidRepairCount);
         summary.setNetIncome(netIncome);
         summary.setAverageNet(repairCount == 0
                 ? BigDecimal.ZERO
@@ -87,7 +88,7 @@ public class FinanceService {
                 Math.max(0, page),
                 Math.min(Math.max(1, size), MAXIMUM_PAGE_SIZE),
                 Sort.by(new Sort.Order(direction, safeSortBy), new Sort.Order(Sort.Direction.ASC, "repairId")));
-        Page<FinanceRowView> result = repairRepository.findPaymentFinancePage(startOfDay(from), endOfDay(to), pageRequest);
+        Page<FinanceRowView> result = repairRepository.findRetiredFinancePage(startOfDay(from), endOfDay(to), pageRequest);
         List<FinanceRowDTO> content = result.getContent().stream().map(this::toRowDto).toList();
         return new PageDTO<>(content, result.getNumber(), result.getSize(), result.getTotalElements(), result.getTotalPages());
     }
@@ -107,8 +108,8 @@ public class FinanceService {
         for (YearMonth month : monthlyNet.keySet()) {
             LocalDateTime monthStart = month.atDay(1).atStartOfDay();
             LocalDateTime nextMonth = month.plusMonths(1).atDay(1).atStartOfDay();
-            BigDecimal income = safeMoney(repairRepository.sumPaymentIncomeBetween(monthStart, nextMonth));
-            BigDecimal partsCost = safeMoney(repairRepository.sumFirstPaymentPartsCostBetween(monthStart, nextMonth));
+            BigDecimal income = safeMoney(repairRepository.sumRetiredPaymentIncomeBetween(monthStart, nextMonth));
+            BigDecimal partsCost = safeMoney(repairRepository.sumRetiredPartsCostBetween(monthStart, nextMonth));
             monthlyNet.put(month, income.subtract(partsCost));
         }
 

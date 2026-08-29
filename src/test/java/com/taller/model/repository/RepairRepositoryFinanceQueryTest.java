@@ -16,12 +16,13 @@ class RepairRepositoryFinanceQueryTest {
             "summarizeFinanceParts",
             "summarizeMonthlyFinanceIncome",
             "summarizeMonthlyFinancePartsCost",
-            "findPaymentFinancePage",
-            "summarizePaymentFinanceRepairs",
-            "summarizePayments",
-            "summarizePaymentFinanceParts",
-            "sumPaymentIncomeBetween",
-            "sumFirstPaymentPartsCostBetween");
+            "findRetiredFinancePage",
+            "summarizeRetiredFinanceRepairs",
+            "countPaidRetiredRepairs",
+            "summarizeRetiredPayments",
+            "summarizeRetiredFinanceParts",
+            "sumRetiredPaymentIncomeBetween",
+            "sumRetiredPartsCostBetween");
 
     @Test
     void financeQueriesHaveValidHqlSyntax() {

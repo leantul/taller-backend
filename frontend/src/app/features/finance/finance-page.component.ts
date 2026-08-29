@@ -27,7 +27,7 @@ type FinanceTableColumn = {
         <span class="eyebrow">Resultado</span>
         <h1>Finanzas</h1>
       </div>
-      <p>Resumen de ingresos reales cobrados, costo de repuestos y ganancia neta dentro del rango de fechas elegido.</p>
+      <p>Órdenes retiradas en el rango, con los pagos efectivamente cobrados dentro de esas mismas fechas.</p>
     </section>
 
     <section class="finance-filters finance-toolbar">
@@ -47,7 +47,7 @@ type FinanceTableColumn = {
     </section>
 
     <section class="dashboard-grid metrics-grid finance-metrics">
-      <p-card styleClass="metric-card"><span class="metric-label">Reparaciones</span><div class="metric">{{ repairCount }}</div><small>Incluidas en el rango</small></p-card>
+      <p-card styleClass="metric-card"><span class="metric-label">Reparaciones</span><div class="metric">{{ repairCount }}</div><small>Retiradas en el rango</small></p-card>
       <p-card styleClass="metric-card"><span class="metric-label">Ingresos</span><div class="metric">{{ formatMoney(totalIncome) }}</div><small>Total cobrado real</small></p-card>
       <p-card styleClass="metric-card"><span class="metric-label">Gasto en repuestos</span><div class="metric">{{ formatMoney(totalPartsCost) }}</div><small>Suma de costos</small></p-card>
       <p-card styleClass="metric-card revenue"><span class="metric-label">Ganancia neta</span><div class="metric">{{ formatMoney(netIncome) }}</div><small>Cobrado menos repuestos</small></p-card>

@@ -27,7 +27,7 @@ type FinanceTableColumn = {
         <span class="eyebrow">Resultado</span>
         <h1>Finanzas</h1>
       </div>
-      <p>Órdenes retiradas en el rango, con los pagos efectivamente cobrados dentro de esas mismas fechas.</p>
+      <p>Movimientos reales del período: pagos cobrados y costos reconocidos por reparación.</p>
     </section>
 
     <section class="finance-filters finance-toolbar">
@@ -47,7 +47,7 @@ type FinanceTableColumn = {
     </section>
 
     <section class="dashboard-grid metrics-grid finance-metrics">
-      <p-card styleClass="metric-card"><span class="metric-label">Reparaciones</span><div class="metric">{{ repairCount }}</div><small>Retiradas en el rango</small></p-card>
+      <p-card styleClass="metric-card"><span class="metric-label">Reparaciones</span><div class="metric">{{ repairCount }}</div><small>Con actividad en el rango</small></p-card>
       <p-card styleClass="metric-card"><span class="metric-label">Ingresos</span><div class="metric">{{ formatMoney(totalIncome) }}</div><small>Total cobrado real</small></p-card>
       <p-card styleClass="metric-card"><span class="metric-label">Gasto en repuestos</span><div class="metric">{{ formatMoney(totalPartsCost) }}</div><small>Suma de costos</small></p-card>
       <p-card styleClass="metric-card revenue"><span class="metric-label">Ganancia neta</span><div class="metric">{{ formatMoney(netIncome) }}</div><small>Cobrado menos repuestos</small></p-card>
@@ -64,8 +64,8 @@ type FinanceTableColumn = {
     <section class="dashboard-grid lists finance-layout">
       <p-card header="Composición del periodo">
         <div class="ops-summary-grid finance-breakdown">
-          <div class="ops-item"><span>Ganancias por mano de obra</span><strong>{{ formatMoney(totalLabor) }}</strong><small>{{ formatPercentage(laborProfitPercentage) }} del total de ganancias</small></div>
-          <div class="ops-item"><span>Ganancias por repuestos</span><strong>{{ formatMoney(totalPartsProfit) }}</strong><small>{{ formatPercentage(partsProfitPercentage) }} del total de ganancias</small></div>
+          <div class="ops-item"><span>Ganancia realizada por mano de obra y otros</span><strong>{{ formatMoney(totalLabor) }}</strong><small>{{ formatPercentage(laborProfitPercentage) }} del total de ganancias</small></div>
+          <div class="ops-item"><span>Ganancia realizada por repuestos</span><strong>{{ formatMoney(totalPartsProfit) }}</strong><small>{{ formatPercentage(partsProfitPercentage) }} del total de ganancias</small></div>
           <div class="ops-item"><span>Presupuestos emitidos</span><strong>{{ formatMoney(totalQuoted) }}</strong></div>
           <div class="ops-item"><span>Ordenes entregadas</span><strong>{{ deliveredCount }}</strong></div>
           <div class="ops-item"><span>Órdenes sin cargo</span><strong>{{ zeroFinalAmountCount }}</strong></div>

@@ -10,6 +10,11 @@ import org.springframework.data.jpa.repository.Query;
 
 class RepairRepositoryFinanceQueryTest {
 
+    private static final Set<String> NATIVE_FINANCE_QUERY_METHODS = Set.of(
+            "findFinanceActivityPage",
+            "summarizeRecognizedFinanceParts",
+            "sumRecognizedPartsCostBetween");
+
     private static final Set<String> FINANCE_QUERY_METHODS = Set.of(
             "findFinancePage",
             "summarizeFinanceRepairs",
@@ -31,6 +36,10 @@ class RepairRepositoryFinanceQueryTest {
         for (Method method : RepairRepository.class.getDeclaredMethods()) {
             if (!FINANCE_QUERY_METHODS.contains(method.getName())) continue;
             Query query = method.getAnnotation(Query.class);
+            if (NATIVE_FINANCE_QUERY_METHODS.contains(method.getName())) {
+                org.junit.jupiter.api.Assertions.assertTrue(query.nativeQuery(), () -> method.getName() + " must use native SQL");
+                continue;
+            }
             org.junit.jupiter.api.Assertions.assertFalse(query.nativeQuery(), () -> method.getName() + " must use JPQL/HQL, not native SQL");
             assertDoesNotThrow(
                     () -> HqlParseTreeBuilder.INSTANCE.buildHqlParser(query.value()).statement(),

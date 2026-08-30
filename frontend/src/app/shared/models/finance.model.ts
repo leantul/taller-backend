@@ -3,7 +3,7 @@ export interface FinanceRow {
   clientName: string;
   date: string | null;
   income: number | string;
-  partsCost: number | string;
+  partsSale: number | string;
   net: number | string;
 }
 

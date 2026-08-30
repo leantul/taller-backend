@@ -16,6 +16,7 @@ import { CommitmentOutcome, FollowUpCommitment, FollowUpDetail, FollowUpListItem
 import { phoneDigits } from '../../shared/utils/contact.util';
 
 type ClientSuggestion = { label: string; client: Client };
+type FollowUpSort = 'createdAt' | 'name' | 'deviceDescription' | 'promisedDate' | 'commitmentCount' | 'status';
 
 @Component({
   selector: 'app-follow-ups-page',
@@ -69,7 +70,14 @@ type ClientSuggestion = { label: string; client: Client };
         </div>
         <div class="native-table-wrap">
           <table class="native-table follow-ups-table">
-            <thead><tr><th>Persona</th><th>Equipo</th><th>Promesa actual</th><th>Historial</th><th>Estado</th><th>Acciones</th></tr></thead>
+            <thead><tr>
+              <th><button class="sortable-th" type="button" (click)="sortByColumn('name')"><span>Persona</span><i [ngClass]="sortIcon('name')"></i></button></th>
+              <th><button class="sortable-th" type="button" (click)="sortByColumn('deviceDescription')"><span>Equipo</span><i [ngClass]="sortIcon('deviceDescription')"></i></button></th>
+              <th><button class="sortable-th" type="button" (click)="sortByColumn('promisedDate')"><span>Promesa actual</span><i [ngClass]="sortIcon('promisedDate')"></i></button></th>
+              <th><button class="sortable-th" type="button" (click)="sortByColumn('commitmentCount')"><span>Historial</span><i [ngClass]="sortIcon('commitmentCount')"></i></button></th>
+              <th><button class="sortable-th" type="button" (click)="sortByColumn('status')"><span>Estado</span><i [ngClass]="sortIcon('status')"></i></button></th>
+              <th>Acciones</th>
+            </tr></thead>
             <tbody>
               @for (item of items; track item.id) {
                 <tr class="clickable-row" (click)="openDetail(item.id)">
@@ -142,6 +150,8 @@ export class FollowUpsPageComponent implements OnInit, OnDestroy {
   pageSize = 10;
   totalElements = 0;
   totalPages = 0;
+  sortBy: FollowUpSort = 'createdAt';
+  sortDir: 'asc' | 'desc' = 'desc';
   readonly channelOptions = [
     { label: 'WhatsApp', value: 'WHATSAPP' }, { label: 'Instagram', value: 'INSTAGRAM' },
     { label: 'Facebook', value: 'FACEBOOK' }, { label: 'Teléfono', value: 'PHONE' }, { label: 'Otro', value: 'OTHER' }
@@ -196,6 +206,20 @@ export class FollowUpsPageComponent implements OnInit, OnDestroy {
   }
   delete(id: string): void { this.api.deleteFollowUp(id).subscribe(() => { this.messages.add({ severity: 'success', summary: 'Seguimiento eliminado' }); this.reload(); }); }
   onSearch(term: string): void { this.search$.next(term.trim()); }
+  sortByColumn(column: Exclude<FollowUpSort, 'createdAt'>): void {
+    if (this.sortBy === column) {
+      this.sortDir = this.sortDir === 'asc' ? 'desc' : 'asc';
+    } else {
+      this.sortBy = column;
+      this.sortDir = 'asc';
+    }
+    this.page = 0;
+    this.reload();
+  }
+  sortIcon(column: Exclude<FollowUpSort, 'createdAt'>): string {
+    if (this.sortBy !== column) return 'pi pi-sort-alt';
+    return this.sortDir === 'asc' ? 'pi pi-sort-amount-up-alt' : 'pi pi-sort-amount-down';
+  }
   previousPage(): void { if (this.page > 0) { this.page--; this.reload(); } }
   nextPage(): void { if (this.page + 1 < this.totalPages) { this.page++; this.reload(); } }
   resetForm(): void { this.draft = this.emptyDraft(); this.selectedClient = null; }
@@ -209,7 +233,7 @@ export class FollowUpsPageComponent implements OnInit, OnDestroy {
   get paginationLabel(): string { if (!this.totalElements) return '0 seguimientos'; const start = this.page * this.pageSize + 1; return `${start}-${Math.min(start + this.items.length - 1, this.totalElements)} de ${this.totalElements} seguimientos`; }
 
   private reload(): void {
-    this.api.getFollowUpPage(this.page, this.pageSize, this.searchTerm.trim()).subscribe((result) => {
+    this.api.getFollowUpPage(this.page, this.pageSize, this.searchTerm.trim(), this.sortBy, this.sortDir).subscribe((result) => {
       this.items = result.content; this.page = result.page; this.totalElements = result.totalElements; this.totalPages = result.totalPages;
     });
   }

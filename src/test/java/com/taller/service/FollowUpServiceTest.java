@@ -16,6 +16,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -36,6 +38,17 @@ class FollowUpServiceTest {
     @BeforeEach
     void setUp() {
         service = new FollowUpService(followUpRepository, commitmentRepository, clientRepository);
+    }
+
+    @Test
+    void findPage_forwardsSupportedGridSortingToRepository() {
+        PageRequest pageRequest = PageRequest.of(0, 10);
+        when(followUpRepository.findPage("", "promisedDate", "asc", pageRequest))
+                .thenReturn(new PageImpl<>(List.of(), pageRequest, 0));
+
+        service.findPage(0, 10, "", "promisedDate", "asc");
+
+        verify(followUpRepository).findPage("", "promisedDate", "asc", pageRequest);
     }
 
     @Test

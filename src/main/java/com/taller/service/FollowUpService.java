@@ -159,7 +159,7 @@ public class FollowUpService {
 
     private String normalizeSortBy(String sortBy) {
         return switch (sortBy == null ? "" : sortBy.trim()) {
-            case "name", "nextContactDate", "commitmentCount" -> sortBy.trim();
+            case "name", "deviceDescription", "promisedDate", "commitmentCount", "status" -> sortBy.trim();
             default -> "createdAt";
         };
     }

@@ -31,6 +31,7 @@ import java.util.Set;
 public class FinanceService {
 
     private static final int MAXIMUM_PAGE_SIZE = 100;
+    private static final LocalDateTime OPEN_ENDED_CUTOFF = LocalDateTime.of(9999, 12, 31, 0, 0);
     private static final Set<String> DETAIL_SORT_FIELDS = Set.of("clientName", "date", "income", "partsCost", "net");
 
     private final RepairRepository repairRepository;
@@ -40,18 +41,18 @@ public class FinanceService {
         LocalDateTime fromDateTime = startOfDay(from);
         LocalDateTime toDateTime = endOfDay(to);
         FinanceRepairSummaryView repairSummary = repairRepository.summarizeRetiredFinanceRepairs(fromDateTime, toDateTime);
-        FinancePaymentSummaryView paymentSummary = repairRepository.summarizeRetiredPayments(fromDateTime, toDateTime);
-        FinancePartsSummaryView partsSummary = repairRepository.summarizeRetiredFinanceParts(fromDateTime, toDateTime);
+        FinancePaymentSummaryView paymentSummary = repairRepository.summarizeFinancePayments(fromDateTime, toDateTime);
+        FinancePartsSummaryView partsSummary = repairRepository.summarizeRecognizedFinanceParts(fromDateTime, toDateTime);
 
-        long repairCount = repairSummary != null && repairSummary.getRepairCount() != null
-                ? repairSummary.getRepairCount()
-                : 0L;
-        long paidRepairCount = safeLong(repairRepository.countPaidRetiredRepairs(fromDateTime, toDateTime));
+        long repairCount = safeLong(repairRepository.countFinanceActivityRepairs(fromDateTime, toDateTime));
+        long paidRepairCount = paymentSummary != null ? safeLong(paymentSummary.getRepairCount()) : 0L;
         BigDecimal totalIncome = paymentSummary != null ? safeMoney(paymentSummary.getTotalIncome()) : BigDecimal.ZERO;
-        BigDecimal totalLabor = repairSummary != null ? safeMoney(repairSummary.getTotalLabor()) : BigDecimal.ZERO;
         BigDecimal totalQuoted = repairSummary != null ? safeMoney(repairSummary.getTotalQuoted()) : BigDecimal.ZERO;
         BigDecimal totalPartsCost = partsSummary != null ? safeMoney(partsSummary.getTotalPartsCost()) : BigDecimal.ZERO;
-        BigDecimal totalPartsProfit = partsSummary != null ? safeMoney(partsSummary.getTotalPartsProfit()) : BigDecimal.ZERO;
+        RealizedBreakdown before = fromDateTime != null ? realizedBreakdownBefore(fromDateTime) : RealizedBreakdown.ZERO;
+        RealizedBreakdown through = realizedBreakdownBefore(to != null ? to.plusDays(1).atStartOfDay() : OPEN_ENDED_CUTOFF);
+        BigDecimal totalPartsProfit = positive(through.partsProfit().subtract(before.partsProfit()));
+        BigDecimal totalLabor = positive(through.laborAndOther().subtract(before.laborAndOther()));
         BigDecimal netIncome = totalIncome.subtract(totalPartsCost);
 
         FinanceSummaryDTO summary = new FinanceSummaryDTO();
@@ -69,7 +70,7 @@ public class FinanceService {
         summary.setAverageNet(repairCount == 0
                 ? BigDecimal.ZERO
                 : netIncome.divide(BigDecimal.valueOf(repairCount), 2, RoundingMode.HALF_UP));
-        summary.setDeliveredCount(repairCount);
+        summary.setDeliveredCount(repairSummary != null ? safeLong(repairSummary.getRepairCount()) : 0L);
         summary.setMonthlyNet(buildMonthlyNetSeries());
         return summary;
     }
@@ -88,7 +89,7 @@ public class FinanceService {
                 Math.max(0, page),
                 Math.min(Math.max(1, size), MAXIMUM_PAGE_SIZE),
                 Sort.by(new Sort.Order(direction, safeSortBy), new Sort.Order(Sort.Direction.ASC, "repairId")));
-        Page<FinanceRowView> result = repairRepository.findRetiredFinancePage(startOfDay(from), endOfDay(to), pageRequest);
+        Page<FinanceRowView> result = repairRepository.findFinanceActivityPage(startOfDay(from), endOfDay(to), pageRequest);
         List<FinanceRowDTO> content = result.getContent().stream().map(this::toRowDto).toList();
         return new PageDTO<>(content, result.getNumber(), result.getSize(), result.getTotalElements(), result.getTotalPages());
     }
@@ -108,8 +109,8 @@ public class FinanceService {
         for (YearMonth month : monthlyNet.keySet()) {
             LocalDateTime monthStart = month.atDay(1).atStartOfDay();
             LocalDateTime nextMonth = month.plusMonths(1).atDay(1).atStartOfDay();
-            BigDecimal income = safeMoney(repairRepository.sumRetiredPaymentIncomeBetween(monthStart, nextMonth));
-            BigDecimal partsCost = safeMoney(repairRepository.sumRetiredPartsCostBetween(monthStart, nextMonth));
+            BigDecimal income = safeMoney(repairRepository.sumFinancePaymentIncomeBetween(monthStart, nextMonth));
+            BigDecimal partsCost = safeMoney(repairRepository.sumRecognizedPartsCostBetween(monthStart, nextMonth));
             monthlyNet.put(month, income.subtract(partsCost));
         }
 
@@ -143,6 +144,24 @@ public class FinanceService {
 
     private long safeLong(Long value) {
         return value != null ? value : 0L;
+    }
+
+    private BigDecimal positive(BigDecimal value) {
+        return value.signum() > 0 ? value : BigDecimal.ZERO;
+    }
+
+    private RealizedBreakdown realizedBreakdownBefore(LocalDateTime cutoff) {
+        BigDecimal income = safeMoney(repairRepository.sumPaymentIncomeBefore(cutoff));
+        FinancePartsSummaryView parts = repairRepository.summarizeRecognizedFinancePartsBefore(cutoff);
+        BigDecimal cost = parts != null ? safeMoney(parts.getTotalPartsCost()) : BigDecimal.ZERO;
+        BigDecimal potentialPartsProfit = parts != null ? positive(safeMoney(parts.getTotalPartsProfit())) : BigDecimal.ZERO;
+        BigDecimal realizedProfit = positive(income.subtract(cost));
+        BigDecimal partsProfit = realizedProfit.min(potentialPartsProfit);
+        return new RealizedBreakdown(partsProfit, positive(realizedProfit.subtract(partsProfit)));
+    }
+
+    private record RealizedBreakdown(BigDecimal partsProfit, BigDecimal laborAndOther) {
+        private static final RealizedBreakdown ZERO = new RealizedBreakdown(BigDecimal.ZERO, BigDecimal.ZERO);
     }
 
     private String formatMonth(YearMonth month) {

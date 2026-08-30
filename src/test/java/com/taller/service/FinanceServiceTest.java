@@ -41,32 +41,37 @@ class FinanceServiceTest {
         LocalDate to = LocalDate.of(2026, 6, 30);
         FinanceRepairSummaryView repairSummary = mock(FinanceRepairSummaryView.class);
         FinancePartsSummaryView partsSummary = mock(FinancePartsSummaryView.class);
+        FinancePartsSummaryView beforePartsSummary = mock(FinancePartsSummaryView.class);
         FinancePaymentSummaryView paymentSummary = mock(FinancePaymentSummaryView.class);
         when(repairSummary.getRepairCount()).thenReturn(4L);
+        when(paymentSummary.getRepairCount()).thenReturn(2L);
         when(paymentSummary.getTotalIncome()).thenReturn(BigDecimal.valueOf(2400));
-        when(repairSummary.getTotalLabor()).thenReturn(BigDecimal.valueOf(900));
         when(repairSummary.getTotalQuoted()).thenReturn(BigDecimal.valueOf(2700));
         when(repairSummary.getZeroFinalAmountCount()).thenReturn(1L);
         when(partsSummary.getTotalPartsCost()).thenReturn(BigDecimal.valueOf(600));
-        when(partsSummary.getTotalPartsProfit()).thenReturn(null);
+        when(partsSummary.getTotalPartsProfit()).thenReturn(BigDecimal.valueOf(500));
         when(repairRepository.summarizeRetiredFinanceRepairs(
                 LocalDateTime.of(2026, 6, 1, 0, 0),
                 LocalDateTime.of(2026, 6, 30, 23, 59, 59, 999999999)))
                 .thenReturn(repairSummary);
-        when(repairRepository.summarizeRetiredFinanceParts(
+        when(repairRepository.summarizeRecognizedFinanceParts(
                 LocalDateTime.of(2026, 6, 1, 0, 0),
                 LocalDateTime.of(2026, 6, 30, 23, 59, 59, 999999999)))
                 .thenReturn(partsSummary);
-        when(repairRepository.summarizeRetiredPayments(
+        when(repairRepository.summarizeFinancePayments(
                 LocalDateTime.of(2026, 6, 1, 0, 0),
                 LocalDateTime.of(2026, 6, 30, 23, 59, 59, 999999999)))
                 .thenReturn(paymentSummary);
-        when(repairRepository.countPaidRetiredRepairs(
+        when(repairRepository.countFinanceActivityRepairs(
                 LocalDateTime.of(2026, 6, 1, 0, 0),
                 LocalDateTime.of(2026, 6, 30, 23, 59, 59, 999999999)))
-                .thenReturn(2L);
-        when(repairRepository.sumRetiredPaymentIncomeBetween(any(), any())).thenReturn(BigDecimal.ZERO);
-        when(repairRepository.sumRetiredPartsCostBetween(any(), any())).thenReturn(BigDecimal.ZERO);
+                .thenReturn(4L);
+        when(repairRepository.sumPaymentIncomeBefore(LocalDateTime.of(2026, 6, 1, 0, 0))).thenReturn(BigDecimal.ZERO);
+        when(repairRepository.sumPaymentIncomeBefore(LocalDateTime.of(2026, 7, 1, 0, 0))).thenReturn(BigDecimal.valueOf(2400));
+        when(repairRepository.summarizeRecognizedFinancePartsBefore(LocalDateTime.of(2026, 6, 1, 0, 0))).thenReturn(beforePartsSummary);
+        when(repairRepository.summarizeRecognizedFinancePartsBefore(LocalDateTime.of(2026, 7, 1, 0, 0))).thenReturn(partsSummary);
+        when(repairRepository.sumFinancePaymentIncomeBetween(any(), any())).thenReturn(BigDecimal.ZERO);
+        when(repairRepository.sumRecognizedPartsCostBetween(any(), any())).thenReturn(BigDecimal.ZERO);
 
         FinanceSummaryDTO summary = new FinanceService(repairRepository).getSummary(from, to);
 
@@ -74,11 +79,48 @@ class FinanceServiceTest {
         assertEquals(1L, summary.getZeroFinalAmountCount());
         assertEquals(2L, summary.getPositiveFinalAmountCount());
         assertEquals(0, BigDecimal.valueOf(1800).compareTo(summary.getNetIncome()));
-        assertEquals(0, BigDecimal.ZERO.compareTo(summary.getTotalPartsProfit()));
+        assertEquals(0, BigDecimal.valueOf(500).compareTo(summary.getTotalPartsProfit()));
+        assertEquals(0, BigDecimal.valueOf(1300).compareTo(summary.getTotalLabor()));
         assertEquals(0, BigDecimal.valueOf(450).compareTo(summary.getAverageNet()));
         assertEquals(12, summary.getMonthlyNet().size());
         assertEquals(true, summary.getMonthlyNet().stream()
                 .allMatch(item -> BigDecimal.ZERO.compareTo((BigDecimal) item.getValue()) == 0));
+    }
+
+    @Test
+    void getSummary_keepsPartialPaymentNegativeUntilPartsCostIsRecovered() {
+        LocalDate from = LocalDate.of(2026, 8, 1);
+        LocalDate to = LocalDate.of(2026, 8, 31);
+        LocalDateTime fromDateTime = from.atStartOfDay();
+        LocalDateTime toDateTime = to.plusDays(1).atStartOfDay().minusNanos(1);
+        LocalDateTime nextMonth = to.plusDays(1).atStartOfDay();
+        FinanceRepairSummaryView repairs = mock(FinanceRepairSummaryView.class);
+        FinancePaymentSummaryView payments = mock(FinancePaymentSummaryView.class);
+        FinancePartsSummaryView periodParts = mock(FinancePartsSummaryView.class);
+        FinancePartsSummaryView beforeParts = mock(FinancePartsSummaryView.class);
+
+        when(repairs.getRepairCount()).thenReturn(0L);
+        when(payments.getRepairCount()).thenReturn(1L);
+        when(payments.getTotalIncome()).thenReturn(BigDecimal.valueOf(40100));
+        when(periodParts.getTotalPartsCost()).thenReturn(BigDecimal.valueOf(104101));
+        when(periodParts.getTotalPartsProfit()).thenReturn(BigDecimal.valueOf(91799));
+        when(repairRepository.summarizeRetiredFinanceRepairs(fromDateTime, toDateTime)).thenReturn(repairs);
+        when(repairRepository.summarizeFinancePayments(fromDateTime, toDateTime)).thenReturn(payments);
+        when(repairRepository.summarizeRecognizedFinanceParts(fromDateTime, toDateTime)).thenReturn(periodParts);
+        when(repairRepository.countFinanceActivityRepairs(fromDateTime, toDateTime)).thenReturn(1L);
+        when(repairRepository.sumPaymentIncomeBefore(fromDateTime)).thenReturn(BigDecimal.ZERO);
+        when(repairRepository.sumPaymentIncomeBefore(nextMonth)).thenReturn(BigDecimal.valueOf(40100));
+        when(repairRepository.summarizeRecognizedFinancePartsBefore(fromDateTime)).thenReturn(beforeParts);
+        when(repairRepository.summarizeRecognizedFinancePartsBefore(nextMonth)).thenReturn(periodParts);
+        when(repairRepository.sumFinancePaymentIncomeBetween(any(), any())).thenReturn(BigDecimal.ZERO);
+        when(repairRepository.sumRecognizedPartsCostBetween(any(), any())).thenReturn(BigDecimal.ZERO);
+
+        FinanceSummaryDTO summary = new FinanceService(repairRepository).getSummary(from, to);
+
+        assertEquals(0, BigDecimal.valueOf(-64001).compareTo(summary.getNetIncome()));
+        assertEquals(0, BigDecimal.ZERO.compareTo(summary.getTotalPartsProfit()));
+        assertEquals(0, BigDecimal.ZERO.compareTo(summary.getTotalLabor()));
+        assertEquals(1L, summary.getPositiveFinalAmountCount());
     }
 
     @Test
@@ -91,7 +133,7 @@ class FinanceServiceTest {
         when(row.getPartsCost()).thenReturn(BigDecimal.valueOf(400));
         when(row.getNet()).thenReturn(BigDecimal.valueOf(1100));
         ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
-        when(repairRepository.findRetiredFinancePage(eq(null), eq(null), pageableCaptor.capture()))
+        when(repairRepository.findFinanceActivityPage(eq(null), eq(null), pageableCaptor.capture()))
                 .thenReturn(new PageImpl<>(List.of(row), PageRequest.of(0, 100), 101));
 
         PageDTO<?> result = new FinanceService(repairRepository)
@@ -108,7 +150,7 @@ class FinanceServiceTest {
     @Test
     void getDetails_forwardsEveryAllowedSortToTheRepository() {
         List<String> sortFields = List.of("clientName", "date", "income", "partsCost", "net");
-        when(repairRepository.findRetiredFinancePage(any(), any(), any(Pageable.class)))
+        when(repairRepository.findFinanceActivityPage(any(), any(), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of()));
 
         FinanceService service = new FinanceService(repairRepository);
@@ -123,7 +165,7 @@ class FinanceServiceTest {
         }
 
         ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
-        verify(repairRepository, times(sortFields.size())).findRetiredFinancePage(
+        verify(repairRepository, times(sortFields.size())).findFinanceActivityPage(
                 eq(LocalDateTime.of(2026, 6, 1, 0, 0)),
                 eq(LocalDateTime.of(2026, 6, 30, 23, 59, 59, 999999999)),
                 pageableCaptor.capture());

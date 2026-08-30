@@ -74,6 +74,18 @@
 
 * { box-sizing: border-box; }
 
+html,
+body {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+img,
+svg,
+canvas {
+  max-width: 100%;
+}
+
 html { font-size: 15px; }
 
 body {
@@ -236,6 +248,28 @@ a { color: inherit; }
   width: 100%;
   max-width: none;
   padding: 1.25rem 1.6rem 2rem;
+}
+
+.p-card,
+.p-card-body,
+.p-dialog,
+.p-dialog-content,
+.p-autocomplete,
+.p-select,
+.p-inputnumber,
+.p-datepicker {
+  min-width: 0;
+}
+
+.p-dialog {
+  max-width: calc(100vw - 2rem) !important;
+  max-height: calc(100dvh - 2rem);
+}
+
+.p-dialog-content {
+  max-width: 100%;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
 }
 
 .app-shell:not(.is-authenticated) .app-content {
@@ -1176,6 +1210,9 @@ textarea.p-inputtext {
 
 .native-table-wrap {
   overflow-x: auto;
+  max-width: 100%;
+  overscroll-behavior-inline: contain;
+  -webkit-overflow-scrolling: touch;
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--surface);
@@ -1987,17 +2024,35 @@ textarea.p-inputtext {
   }
 
   .app-sidebar {
-    position: static;
+    position: sticky;
+    top: 0;
+    z-index: 50;
     height: auto;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: .65rem 1rem;
     padding: .75rem;
     border-right: 0;
     border-bottom: 1px solid var(--border);
+    box-shadow: 0 8px 22px var(--shadow);
+  }
+
+  .brand-lockup {
+    min-height: 2.5rem;
+    padding: 0;
+  }
+
+  .brand-logo {
+    width: 150px;
   }
 
   .app-nav {
+    grid-column: 1 / -1;
     display: flex;
     overflow-x: auto;
     padding-bottom: .25rem;
+    scrollbar-width: thin;
   }
 
   .app-nav a {
@@ -2005,6 +2060,8 @@ textarea.p-inputtext {
   }
 
   .sidebar-footer {
+    justify-self: end;
+    width: min(23rem, 100%);
     grid-template-columns: 2.3rem minmax(9rem, 1fr) 2.3rem;
   }
 
@@ -2021,13 +2078,73 @@ textarea.p-inputtext {
   .finance-layout,
   .status-board,
   .report-dialog-grid,
-  .report-form-grid.two-cols {
+    .report-form-grid.two-cols {
     grid-template-columns: 1fr;
+  }
+
+  .finance-breakdown,
+  .follow-up-commitment-form {
+    grid-template-columns: 1fr;
+  }
+
+  .follow-up-commitment-form .p-button {
+    width: 100%;
   }
 }
 
 @media (max-width: 760px) {
   html { font-size: 13px; }
+
+  .app-sidebar {
+    gap: .55rem;
+    padding: .6rem;
+  }
+
+  .brand-logo {
+    width: 132px;
+    max-height: 42px;
+  }
+
+  .sidebar-footer {
+    width: auto;
+    grid-template-columns: 2.5rem 2.5rem 2.5rem;
+  }
+
+  .sidebar-footer .user-button {
+    width: 2.5rem;
+    padding: 0;
+    justify-content: center;
+  }
+
+  .sidebar-footer .user-button span:last-child {
+    display: none;
+  }
+
+  .app-nav a {
+    min-height: 2.75rem;
+    padding: 0 .7rem;
+  }
+
+  .app-content {
+    padding: .7rem .6rem 1.25rem;
+  }
+
+  .p-card .p-card-body {
+    padding: .75rem !important;
+  }
+
+  .p-dialog {
+    width: calc(100vw - 1rem) !important;
+    max-width: calc(100vw - 1rem) !important;
+    max-height: calc(100dvh - 1rem);
+    margin: .5rem;
+  }
+
+  .p-dialog-header,
+  .p-dialog-content {
+    padding-left: .8rem !important;
+    padding-right: .8rem !important;
+  }
 
   .page-heading {
     display: block;
@@ -2045,6 +2162,27 @@ textarea.p-inputtext {
     align-items: stretch;
   }
 
+  .table-toolbar,
+  .notification-card-head,
+  .detail-section-heading,
+  .status-timeline-row {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .table-toolbar .filter-search,
+  .finance-filters .field,
+  .finance-reset,
+  .finance-toolbar .primary-button,
+  .finance-toolbar .secondary-button {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .form-toggle-button {
+    margin-left: 0;
+  }
+
   .action-hub,
   .ops-summary-grid {
     grid-template-columns: 1fr;
@@ -2059,6 +2197,11 @@ textarea.p-inputtext {
   .table-pager {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .pager-actions {
+    width: 100%;
+    justify-content: space-between;
   }
 
   .detail-grid {
@@ -2081,6 +2224,44 @@ textarea.p-inputtext {
     flex-direction: column;
   }
 
+  .notification-card {
+    padding: .85rem;
+  }
+
+  .notification-card-head time {
+    white-space: normal;
+  }
+
+  .dialog-actions,
+  .notification-detail-actions,
+  .report-banner-actions,
+  .card-inline-actions,
+  .status-card-actions {
+    width: 100%;
+  }
+
+  .dialog-actions > *,
+  .notification-detail-actions > *,
+  .report-banner-actions > *,
+  .card-inline-actions > * {
+    flex: 1 1 auto;
+  }
+
+  .column-resize-handle {
+    display: none;
+  }
+
+  .native-table th,
+  .native-table td {
+    padding: .58rem;
+  }
+
+  .chart-surface,
+  .chart-surface .p-chart {
+    min-height: 230px;
+    height: 230px;
+  }
+
   .report-dialog-banner,
   .report-card-head,
   .report-total-card {
@@ -2091,5 +2272,43 @@ textarea.p-inputtext {
   .report-total-field {
     min-width: 0;
     width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .brand-logo {
+    width: 112px;
+  }
+
+  .app-nav a {
+    gap: .45rem;
+    font-size: .82rem;
+  }
+
+  .page-heading h1 {
+    font-size: 1.45rem;
+  }
+
+  .action-hub,
+  .ops-summary,
+  .notification-card,
+  .report-dialog-banner,
+  .report-card,
+  .workshop-settings-form,
+  .settings-form {
+    padding: .75rem;
+  }
+
+  .auth-shell {
+    padding: .6rem;
+  }
+
+  .auth-card {
+    width: 100%;
+    padding: 1rem;
+  }
+
+  .status-timeline-row strong {
+    text-align: left;
   }
 }

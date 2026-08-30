@@ -15,5 +15,7 @@ public record FollowUpSaveDTO(
         String reportedProblem,
         LocalDate nextContactDate,
         FollowUpStatusEnum status,
-        String notes
+        String notes,
+        LocalDate initialPromisedDate,
+        String initialPromiseNotes
 ) { }

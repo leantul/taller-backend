@@ -33,10 +33,21 @@ public interface FollowUpRepository extends JpaRepository<FollowUp, String> {
                OR lower(c.name) LIKE lower(concat('%', :term, '%'))
                OR lower(c.lastName) LIKE lower(concat('%', :term, '%'))
             ORDER BY
-              CASE WHEN :sortBy = 'name' AND :sortDir = 'asc' THEN lower(coalesce(c.name, f.contactName)) END ASC,
-              CASE WHEN :sortBy = 'name' AND :sortDir = 'desc' THEN lower(coalesce(c.name, f.contactName)) END DESC,
-              CASE WHEN :sortBy = 'nextContactDate' AND :sortDir = 'asc' THEN f.nextContactDate END ASC,
-              CASE WHEN :sortBy = 'nextContactDate' AND :sortDir = 'desc' THEN f.nextContactDate END DESC,
+              CASE WHEN :sortBy <> 'status' AND f.status = com.taller.model.enums.FollowUpStatusEnum.CONFIRMED THEN 0
+                   WHEN :sortBy <> 'status' AND f.status = com.taller.model.enums.FollowUpStatusEnum.PENDING THEN 1
+                   WHEN :sortBy <> 'status' THEN 2 END ASC,
+              CASE WHEN :sortBy = 'status' AND :sortDir = 'asc' AND f.status = com.taller.model.enums.FollowUpStatusEnum.CONFIRMED THEN 0
+                   WHEN :sortBy = 'status' AND :sortDir = 'asc' AND f.status = com.taller.model.enums.FollowUpStatusEnum.PENDING THEN 1
+                   WHEN :sortBy = 'status' AND :sortDir = 'asc' THEN 2 END ASC,
+              CASE WHEN :sortBy = 'status' AND :sortDir = 'desc' AND f.status = com.taller.model.enums.FollowUpStatusEnum.CONFIRMED THEN 0
+                   WHEN :sortBy = 'status' AND :sortDir = 'desc' AND f.status = com.taller.model.enums.FollowUpStatusEnum.PENDING THEN 1
+                   WHEN :sortBy = 'status' AND :sortDir = 'desc' THEN 2 END DESC,
+              CASE WHEN :sortBy = 'name' AND :sortDir = 'asc' THEN lower(concat(coalesce(c.name, f.contactName), ' ', coalesce(c.lastName, ''))) END ASC,
+              CASE WHEN :sortBy = 'name' AND :sortDir = 'desc' THEN lower(concat(coalesce(c.name, f.contactName), ' ', coalesce(c.lastName, ''))) END DESC,
+              CASE WHEN :sortBy = 'deviceDescription' AND :sortDir = 'asc' THEN lower(f.deviceDescription) END ASC,
+              CASE WHEN :sortBy = 'deviceDescription' AND :sortDir = 'desc' THEN lower(f.deviceDescription) END DESC,
+              CASE WHEN :sortBy = 'promisedDate' AND :sortDir = 'asc' THEN (SELECT MAX(fc.promisedDate) FROM FollowUpCommitment fc WHERE fc.followUp = f AND fc.outcome = com.taller.model.enums.CommitmentOutcomeEnum.PENDING) END ASC,
+              CASE WHEN :sortBy = 'promisedDate' AND :sortDir = 'desc' THEN (SELECT MAX(fc.promisedDate) FROM FollowUpCommitment fc WHERE fc.followUp = f AND fc.outcome = com.taller.model.enums.CommitmentOutcomeEnum.PENDING) END DESC,
               CASE WHEN :sortBy = 'commitmentCount' AND :sortDir = 'asc' THEN (SELECT COUNT(fc.id) FROM FollowUpCommitment fc WHERE fc.followUp = f) END ASC,
               CASE WHEN :sortBy = 'commitmentCount' AND :sortDir = 'desc' THEN (SELECT COUNT(fc.id) FROM FollowUpCommitment fc WHERE fc.followUp = f) END DESC,
               f.creationDateTime DESC

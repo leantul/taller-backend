@@ -55,7 +55,8 @@ public class FollowUpService {
 
     @Transactional
     public FollowUpDetailDTO save(FollowUpSaveDTO dto) {
-        FollowUp followUp = dto.id() == null ? new FollowUp() : findEntity(dto.id());
+        boolean isNew = dto.id() == null;
+        FollowUp followUp = isNew ? new FollowUp() : findEntity(dto.id());
         Client client = dto.clientId() == null || dto.clientId().isBlank() ? null : clientRepository.findById(dto.clientId())
                 .orElseThrow(() -> new IllegalArgumentException("El cliente indicado no existe"));
         validateContact(client, dto.contactName(), dto.contactValue());
@@ -70,6 +71,9 @@ public class FollowUpService {
         followUp.setStatus(dto.status() == null ? FollowUpStatusEnum.PENDING : dto.status());
         followUp.setNotes(trimToNull(dto.notes()));
         FollowUp saved = followUpRepository.save(followUp);
+        if (isNew && dto.initialPromisedDate() != null) {
+            createCommitment(saved, dto.initialPromisedDate(), dto.initialPromiseNotes());
+        }
         return toDetailDto(saved, saved.getCommitments().stream().map(this::toCommitmentDto).toList());
     }
 
@@ -79,13 +83,7 @@ public class FollowUpService {
         commitmentRepository.findByFollowUpIdAndOutcome(followUpId, CommitmentOutcomeEnum.PENDING)
                 .forEach(existing -> existing.setOutcome(CommitmentOutcomeEnum.RESCHEDULED));
 
-        FollowUpCommitment commitment = new FollowUpCommitment();
-        commitment.setFollowUp(followUp);
-        commitment.setPromisedDate(dto.promisedDate());
-        commitment.setNotes(trimToNull(dto.notes()));
-        commitment.setOutcome(CommitmentOutcomeEnum.PENDING);
-        followUp.setStatus(FollowUpStatusEnum.CONFIRMED);
-        return toCommitmentDto(commitmentRepository.save(commitment));
+        return toCommitmentDto(createCommitment(followUp, dto.promisedDate(), dto.notes()));
     }
 
     @Transactional
@@ -111,6 +109,18 @@ public class FollowUpService {
     private FollowUp findEntity(String id) {
         return followUpRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("El seguimiento indicado no existe"));
+    }
+
+    private FollowUpCommitment createCommitment(FollowUp followUp, java.time.LocalDate promisedDate, String notes) {
+        FollowUpCommitment commitment = new FollowUpCommitment();
+        commitment.setFollowUp(followUp);
+        commitment.setPromisedDate(promisedDate);
+        commitment.setNotes(trimToNull(notes));
+        commitment.setOutcome(CommitmentOutcomeEnum.PENDING);
+        followUp.setStatus(FollowUpStatusEnum.CONFIRMED);
+        FollowUpCommitment saved = commitmentRepository.save(commitment);
+        followUp.getCommitments().add(saved);
+        return saved;
     }
 
     private void validateContact(Client client, String contactName, String contactValue) {
@@ -149,7 +159,7 @@ public class FollowUpService {
 
     private String normalizeSortBy(String sortBy) {
         return switch (sortBy == null ? "" : sortBy.trim()) {
-            case "name", "nextContactDate", "commitmentCount" -> sortBy.trim();
+            case "name", "deviceDescription", "promisedDate", "commitmentCount", "status" -> sortBy.trim();
             default -> "createdAt";
         };
     }

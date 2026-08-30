@@ -8,6 +8,7 @@
 
 ## Backend data access
 
+- Never add native SQL for application data access. Use JPQL/HQL so persistence logic remains portable and is validated against the entity model; existing native infrastructure or legacy queries are not precedent for new code.
 - Prefer DTO/projection queries for read endpoints.
 - Do not return or fetch full JPA entities for list, grid, report, dashboard, or autocomplete views unless mutation logic requires it.
 - Avoid N+1 queries. Batch-load related data by IDs when related fields are needed.

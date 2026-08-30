@@ -7,6 +7,7 @@ import { RepairApiService } from './repair-api.service';
 import { ReportingApiService } from './reporting-api.service';
 import { SoftwareCatalogApiService } from './software-catalog-api.service';
 import { WorkshopSettingsApiService } from './workshop-settings-api.service';
+import { FollowUpApiService } from './follow-up-api.service';
 
 @Injectable({ providedIn: 'root' })
 export class ApiService {
@@ -18,7 +19,8 @@ export class ApiService {
     private readonly softwareCatalog: SoftwareCatalogApiService,
     private readonly workshopSettings: WorkshopSettingsApiService,
     private readonly notifications: NotificationApiService,
-    private readonly reporting: ReportingApiService
+    private readonly reporting: ReportingApiService,
+    private readonly followUps: FollowUpApiService
   ) {}
 
   getClients = this.clients.getAll.bind(this.clients);
@@ -28,6 +30,13 @@ export class ApiService {
   searchClients = this.clients.search.bind(this.clients);
   createClient = this.clients.save.bind(this.clients);
   deleteClient = this.clients.delete.bind(this.clients);
+
+  getFollowUpPage = this.followUps.getPage.bind(this.followUps);
+  getFollowUpById = this.followUps.getById.bind(this.followUps);
+  saveFollowUp = this.followUps.save.bind(this.followUps);
+  deleteFollowUp = this.followUps.delete.bind(this.followUps);
+  addFollowUpCommitment = this.followUps.addCommitment.bind(this.followUps);
+  updateFollowUpCommitmentOutcome = this.followUps.updateCommitmentOutcome.bind(this.followUps);
 
   getDevices = this.devices.getAll.bind(this.devices);
   getDevicesByClientId = this.devices.getByClientId.bind(this.devices);

@@ -470,6 +470,23 @@ a { color: inherit; }
   margin-bottom: .75rem;
 }
 
+.follow-up-cancel-edit { width: 100%; margin-top: .55rem; }
+.table-secondary { display: block; margin-top: .2rem; color: var(--muted); font-size: .76rem; }
+.follow-up-overdue, .follow-up-risk { color: var(--danger-500); font-weight: 700; }
+.follow-up-commitment-form {
+  display: grid;
+  grid-template-columns: 12rem minmax(0, 1fr) auto;
+  gap: .75rem;
+  align-items: end;
+  margin: 1rem 0;
+  padding: .85rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-soft);
+}
+.follow-up-commitment-form .field { margin-bottom: 0; }
+.follow-ups-table { min-width: 980px; }
+
 .field label,
 .field > span {
   color: var(--text);

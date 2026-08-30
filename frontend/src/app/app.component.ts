@@ -96,6 +96,7 @@ export class AppComponent implements OnInit {
     { label: 'Clientes', icon: 'pi pi-users', path: '/clientes' },
     { label: 'Dispositivos', icon: 'pi pi-desktop', path: '/dispositivos' },
     { label: 'Reparaciones', icon: 'pi pi-wrench', path: '/reparaciones' },
+    { label: 'Seguimientos', icon: 'pi pi-calendar-clock', path: '/seguimientos' },
     { label: 'Finanzas', icon: 'pi pi-chart-line', path: '/finanzas' },
     { label: 'Estados', icon: 'pi pi-th-large', path: '/status' },
     { label: 'Avisos', icon: 'pi pi-bell', path: '/notificaciones' },

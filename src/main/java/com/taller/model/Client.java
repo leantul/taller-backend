@@ -54,4 +54,7 @@ public class Client extends BasicEntity {
 
     @OneToMany(mappedBy = "client")
     private List<Device> devices;
+
+    @OneToMany(mappedBy = "client")
+    private List<FollowUp> followUps;
 }

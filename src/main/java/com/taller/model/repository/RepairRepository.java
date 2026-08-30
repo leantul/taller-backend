@@ -189,8 +189,8 @@ public interface RepairRepository extends JpaRepository<Repair, String> {
                         OR (r.returnDateTime >= COALESCE(:from, r.returnDateTime)
                             AND r.returnDateTime <= COALESCE(:to, r.returnDateTime)
                             AND (MIN(payment.paymentDate) IS NULL OR r.returnDateTime < MIN(payment.paymentDate))))
-                       THEN (SELECT COALESCE(SUM(COALESCE(part.cost, 0) * COALESCE(part.quantity, 1)), 0)
-                             FROM RepairPart part WHERE part.repairId = r.id) ELSE 0 END AS partsCost,
+                       THEN (SELECT COALESCE(SUM(COALESCE(part.salePrice, 0) * COALESCE(part.quantity, 1)), 0)
+                             FROM RepairPart part WHERE part.repairId = r.id) ELSE 0 END AS partsSale,
                    COALESCE(SUM(CASE WHEN payment.paymentDate >= COALESCE(:from, payment.paymentDate)
                                           AND payment.paymentDate <= COALESCE(:to, payment.paymentDate)
                                      THEN COALESCE(payment.amount, 0) ELSE 0 END), 0)
@@ -201,7 +201,7 @@ public interface RepairRepository extends JpaRepository<Repair, String> {
                         OR (r.returnDateTime >= COALESCE(:from, r.returnDateTime)
                             AND r.returnDateTime <= COALESCE(:to, r.returnDateTime)
                             AND (MIN(payment.paymentDate) IS NULL OR r.returnDateTime < MIN(payment.paymentDate))))
-                       THEN (SELECT COALESCE(SUM(COALESCE(part.cost, 0) * COALESCE(part.quantity, 1)), 0)
+                       THEN (SELECT COALESCE(SUM(COALESCE(part.salePrice, 0) * COALESCE(part.quantity, 1)), 0)
                              FROM RepairPart part WHERE part.repairId = r.id) ELSE 0 END AS net
             FROM Repair r
             LEFT JOIN r.client c

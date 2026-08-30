@@ -130,8 +130,8 @@ class FinanceServiceTest {
         when(row.getClientName()).thenReturn("Ada Lovelace");
         when(row.getDate()).thenReturn(LocalDateTime.of(2026, 6, 10, 10, 0));
         when(row.getIncome()).thenReturn(BigDecimal.valueOf(1500));
-        when(row.getPartsCost()).thenReturn(BigDecimal.valueOf(400));
-        when(row.getNet()).thenReturn(BigDecimal.valueOf(1100));
+        when(row.getPartsSale()).thenReturn(BigDecimal.valueOf(700));
+        when(row.getNet()).thenReturn(BigDecimal.valueOf(800));
         ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
         when(repairRepository.findFinanceActivityPage(eq(null), eq(null), pageableCaptor.capture()))
                 .thenReturn(new PageImpl<>(List.of(row), PageRequest.of(0, 100), 101));
@@ -149,7 +149,7 @@ class FinanceServiceTest {
 
     @Test
     void getDetails_forwardsEveryAllowedSortToTheRepository() {
-        List<String> sortFields = List.of("clientName", "date", "income", "partsCost", "net");
+        List<String> sortFields = List.of("clientName", "date", "income", "partsSale", "net");
         when(repairRepository.findFinanceActivityPage(any(), any(), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of()));
 

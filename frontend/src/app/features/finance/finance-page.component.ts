@@ -10,7 +10,7 @@ import { FinanceRow, FinanceSummary } from '../../shared/models/finance.model';
 import { ThemeMode, ThemeService } from '../../core/services/theme.service';
 import { beginColumnResize, persistColumnWidths, resolveColumnWidth, restoreColumnWidths } from '../../shared/utils/resizable-columns.util';
 
-type FinanceTableColumnKey = 'clientName' | 'date' | 'income' | 'partsCost' | 'net';
+type FinanceTableColumnKey = 'clientName' | 'date' | 'income' | 'partsSale' | 'net';
 type FinanceTableColumn = {
   key: FinanceTableColumnKey;
   label: string;
@@ -103,7 +103,7 @@ type FinanceTableColumn = {
                   <td>{{ row.clientName || '-' }}</td>
                   <td>{{ row.date ? (row.date | date:'dd/MM/yyyy') : '-' }}</td>
                   <td>{{ formatMoney(row.income) }}</td>
-                  <td>{{ formatMoney(row.partsCost) }}</td>
+                  <td>{{ formatMoney(row.partsSale) }}</td>
                   <td>{{ formatMoney(row.net) }}</td>
                 </tr>
               } @empty {
@@ -151,7 +151,7 @@ export class FinancePageComponent implements OnInit, OnDestroy {
     { key: 'clientName', label: 'Cliente', width: '16rem' },
     { key: 'date', label: 'Fecha', width: '10rem' },
     { key: 'income', label: 'Ingreso', width: '10rem' },
-    { key: 'partsCost', label: 'Repuestos', width: '10rem' },
+    { key: 'partsSale', label: 'Repuestos cobrados', width: '10rem' },
     { key: 'net', label: 'Neto', width: '10rem' }
   ];
   sortColumn: FinanceTableColumnKey = 'date';

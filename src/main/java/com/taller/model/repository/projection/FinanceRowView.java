@@ -8,6 +8,6 @@ public interface FinanceRowView {
     String getClientName();
     LocalDateTime getDate();
     BigDecimal getIncome();
-    BigDecimal getPartsCost();
+    BigDecimal getPartsSale();
     BigDecimal getNet();
 }

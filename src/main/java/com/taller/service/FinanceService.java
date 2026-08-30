@@ -32,7 +32,7 @@ public class FinanceService {
 
     private static final int MAXIMUM_PAGE_SIZE = 100;
     private static final LocalDateTime OPEN_ENDED_CUTOFF = LocalDateTime.of(9999, 12, 31, 0, 0);
-    private static final Set<String> DETAIL_SORT_FIELDS = Set.of("clientName", "date", "income", "partsCost", "net");
+    private static final Set<String> DETAIL_SORT_FIELDS = Set.of("clientName", "date", "income", "partsSale", "net");
 
     private final RepairRepository repairRepository;
 
@@ -125,7 +125,7 @@ public class FinanceService {
         dto.setClientName(row.getClientName());
         dto.setDate(row.getDate());
         dto.setIncome(safeMoney(row.getIncome()));
-        dto.setPartsCost(safeMoney(row.getPartsCost()));
+        dto.setPartsSale(safeMoney(row.getPartsSale()));
         dto.setNet(safeMoney(row.getNet()));
         return dto;
     }

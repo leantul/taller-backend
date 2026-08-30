@@ -162,74 +162,56 @@ public interface RepairRepository extends JpaRepository<Repair, String> {
     List<FinanceMonthlyView> summarizeMonthlyFinancePartsCost(@Param("from") LocalDateTime from);
 
     @Query(value = """
-            SELECT r.id AS repairId,
-                   CASE WHEN c.name IS NULL AND c.lastName IS NULL THEN '-'
-                        ELSE trim(concat(COALESCE(c.name, ''), concat(' ', COALESCE(c.lastName, '')))) END AS clientName,
-                   CASE
-                       WHEN (SELECT MAX(payment.paymentDate) FROM RepairPayment payment
-                             WHERE payment.repairId = r.id
-                               AND payment.paymentDate >= COALESCE(:from, payment.paymentDate)
-                               AND payment.paymentDate <= COALESCE(:to, payment.paymentDate)) IS NULL THEN r.returnDateTime
-                       WHEN r.returnDateTime IS NULL OR r.returnDateTime < COALESCE(:from, r.returnDateTime)
-                            OR r.returnDateTime > COALESCE(:to, r.returnDateTime)
-                            OR (SELECT MAX(payment.paymentDate) FROM RepairPayment payment
-                                WHERE payment.repairId = r.id
-                                  AND payment.paymentDate >= COALESCE(:from, payment.paymentDate)
-                                  AND payment.paymentDate <= COALESCE(:to, payment.paymentDate)) >= r.returnDateTime
-                           THEN (SELECT MAX(payment.paymentDate) FROM RepairPayment payment
-                                 WHERE payment.repairId = r.id
-                                   AND payment.paymentDate >= COALESCE(:from, payment.paymentDate)
-                                   AND payment.paymentDate <= COALESCE(:to, payment.paymentDate))
-                       ELSE r.returnDateTime
-                   END AS date,
-                   (SELECT COALESCE(SUM(payment.amount), 0) FROM RepairPayment payment
-                    WHERE payment.repairId = r.id
-                      AND payment.paymentDate >= COALESCE(:from, payment.paymentDate)
-                      AND payment.paymentDate <= COALESCE(:to, payment.paymentDate)) AS income,
-                   CASE WHEN
-                       (((SELECT MIN(payment.paymentDate) FROM RepairPayment payment WHERE payment.repairId = r.id)
-                              >= COALESCE(:from, (SELECT MIN(payment.paymentDate) FROM RepairPayment payment WHERE payment.repairId = r.id))
-                         AND (SELECT MIN(payment.paymentDate) FROM RepairPayment payment WHERE payment.repairId = r.id)
-                              <= COALESCE(:to, (SELECT MIN(payment.paymentDate) FROM RepairPayment payment WHERE payment.repairId = r.id))
-                         AND (r.returnDateTime IS NULL OR (SELECT MIN(payment.paymentDate) FROM RepairPayment payment WHERE payment.repairId = r.id) <= r.returnDateTime))
-                        OR (r.returnDateTime >= COALESCE(:from, r.returnDateTime)
-                            AND r.returnDateTime <= COALESCE(:to, r.returnDateTime)
-                            AND ((SELECT MIN(payment.paymentDate) FROM RepairPayment payment WHERE payment.repairId = r.id) IS NULL
-                                 OR r.returnDateTime < (SELECT MIN(payment.paymentDate) FROM RepairPayment payment WHERE payment.repairId = r.id))))
-                       THEN COALESCE(SUM(COALESCE(part.cost, 0) * COALESCE(part.quantity, 1)), 0) ELSE 0 END AS partsCost,
-                   (SELECT COALESCE(SUM(payment.amount), 0) FROM RepairPayment payment
-                    WHERE payment.repairId = r.id
-                      AND payment.paymentDate >= COALESCE(:from, payment.paymentDate)
-                      AND payment.paymentDate <= COALESCE(:to, payment.paymentDate))
-                   - CASE WHEN
-                       (((SELECT MIN(payment.paymentDate) FROM RepairPayment payment WHERE payment.repairId = r.id)
-                              >= COALESCE(:from, (SELECT MIN(payment.paymentDate) FROM RepairPayment payment WHERE payment.repairId = r.id))
-                         AND (SELECT MIN(payment.paymentDate) FROM RepairPayment payment WHERE payment.repairId = r.id)
-                              <= COALESCE(:to, (SELECT MIN(payment.paymentDate) FROM RepairPayment payment WHERE payment.repairId = r.id))
-                         AND (r.returnDateTime IS NULL OR (SELECT MIN(payment.paymentDate) FROM RepairPayment payment WHERE payment.repairId = r.id) <= r.returnDateTime))
-                        OR (r.returnDateTime >= COALESCE(:from, r.returnDateTime)
-                            AND r.returnDateTime <= COALESCE(:to, r.returnDateTime)
-                            AND ((SELECT MIN(payment.paymentDate) FROM RepairPayment payment WHERE payment.repairId = r.id) IS NULL
-                                 OR r.returnDateTime < (SELECT MIN(payment.paymentDate) FROM RepairPayment payment WHERE payment.repairId = r.id))))
-                       THEN COALESCE(SUM(COALESCE(part.cost, 0) * COALESCE(part.quantity, 1)), 0) ELSE 0 END AS net
-            FROM Repair r LEFT JOIN r.client c LEFT JOIN r.parts part
-            WHERE EXISTS (SELECT payment.id FROM RepairPayment payment
-                          WHERE payment.repairId = r.id
-                            AND payment.paymentDate >= COALESCE(:from, payment.paymentDate)
-                            AND payment.paymentDate <= COALESCE(:to, payment.paymentDate))
-               OR (r.returnDateTime >= COALESCE(:from, r.returnDateTime)
-                   AND r.returnDateTime <= COALESCE(:to, r.returnDateTime))
-            GROUP BY r.id, c.name, c.lastName, r.returnDateTime
+            WITH payment_totals AS (
+                SELECT repair_id, MIN(payment_date) AS first_payment_date,
+                       MAX(payment_date) FILTER (WHERE (:from IS NULL OR payment_date >= :from)
+                                                  AND (:to IS NULL OR payment_date <= :to)) AS last_period_payment,
+                       COALESCE(SUM(amount) FILTER (WHERE (:from IS NULL OR payment_date >= :from)
+                                                    AND (:to IS NULL OR payment_date <= :to)), 0) AS period_income
+                FROM repair_payments GROUP BY repair_id
+            ), part_totals AS (
+                SELECT repair_id, COALESCE(SUM(COALESCE(cost, 0) * COALESCE(quantity, 1)), 0) AS parts_cost
+                FROM repair_parts GROUP BY repair_id
+            ), activity AS (
+                SELECT r.id_repair, r.id_client, r.return_date_time,
+                       pt.last_period_payment, COALESCE(pt.period_income, 0) AS period_income,
+                       COALESCE(parts.parts_cost, 0) AS parts_cost,
+                       CASE WHEN pt.first_payment_date IS NULL THEN r.return_date_time
+                            WHEN r.return_date_time IS NULL THEN pt.first_payment_date
+                            ELSE LEAST(pt.first_payment_date, r.return_date_time) END AS recognition_date
+                FROM repairs r
+                LEFT JOIN payment_totals pt ON pt.repair_id = r.id_repair
+                LEFT JOIN part_totals parts ON parts.repair_id = r.id_repair
+                WHERE pt.last_period_payment IS NOT NULL
+                   OR (r.return_date_time IS NOT NULL
+                       AND (:from IS NULL OR r.return_date_time >= :from)
+                       AND (:to IS NULL OR r.return_date_time <= :to))
+            )
+            SELECT a.id_repair AS "repairId",
+                   CASE WHEN c.name IS NULL AND c.last_name IS NULL THEN '-'
+                        ELSE trim(concat(COALESCE(c.name, ''), concat(' ', COALESCE(c.last_name, '')))) END AS "clientName",
+                   CASE WHEN a.last_period_payment IS NULL THEN a.return_date_time
+                        WHEN a.return_date_time IS NULL OR (:from IS NOT NULL AND a.return_date_time < :from)
+                             OR (:to IS NOT NULL AND a.return_date_time > :to)
+                             OR a.last_period_payment >= a.return_date_time THEN a.last_period_payment
+                        ELSE a.return_date_time END AS date,
+                   a.period_income AS income,
+                   CASE WHEN (:from IS NULL OR a.recognition_date >= :from)
+                             AND (:to IS NULL OR a.recognition_date <= :to) THEN a.parts_cost ELSE 0 END AS "partsCost",
+                   a.period_income - CASE WHEN (:from IS NULL OR a.recognition_date >= :from)
+                                               AND (:to IS NULL OR a.recognition_date <= :to) THEN a.parts_cost ELSE 0 END AS net
+            FROM activity a LEFT JOIN clients c ON c.id_client = a.id_client
             """,
             countQuery = """
-            SELECT COUNT(r) FROM Repair r
-            WHERE EXISTS (SELECT payment.id FROM RepairPayment payment
-                          WHERE payment.repairId = r.id
-                            AND payment.paymentDate >= COALESCE(:from, payment.paymentDate)
-                            AND payment.paymentDate <= COALESCE(:to, payment.paymentDate))
-               OR (r.returnDateTime >= COALESCE(:from, r.returnDateTime)
-                   AND r.returnDateTime <= COALESCE(:to, r.returnDateTime))
-            """)
+            SELECT COUNT(*) FROM repairs r
+            WHERE EXISTS (SELECT 1 FROM repair_payments payment
+                          WHERE payment.repair_id = r.id_repair
+                            AND (:from IS NULL OR payment.payment_date >= :from)
+                            AND (:to IS NULL OR payment.payment_date <= :to))
+               OR (r.return_date_time IS NOT NULL
+                   AND (:from IS NULL OR r.return_date_time >= :from)
+                   AND (:to IS NULL OR r.return_date_time <= :to))
+            """, nativeQuery = true)
     Page<FinanceRowView> findFinanceActivityPage(@Param("from") LocalDateTime from, @Param("to") LocalDateTime to, Pageable pageable);
 
     @Query("""
@@ -267,20 +249,24 @@ public interface RepairRepository extends JpaRepository<Repair, String> {
             """)
     FinancePaymentSummaryView summarizeFinancePayments(@Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
 
-    @Query("""
-            SELECT COALESCE(SUM(COALESCE(part.cost, 0) * COALESCE(part.quantity, 1)), 0) AS totalPartsCost,
-                   COALESCE(SUM((COALESCE(part.salePrice, 0) - COALESCE(part.cost, 0)) * COALESCE(part.quantity, 1)), 0) AS totalPartsProfit
-            FROM RepairPart part JOIN part.repair r
-            WHERE (((SELECT MIN(payment.paymentDate) FROM RepairPayment payment WHERE payment.repairId = r.id)
-                         >= COALESCE(:from, (SELECT MIN(payment.paymentDate) FROM RepairPayment payment WHERE payment.repairId = r.id))
-                     AND (SELECT MIN(payment.paymentDate) FROM RepairPayment payment WHERE payment.repairId = r.id)
-                         <= COALESCE(:to, (SELECT MIN(payment.paymentDate) FROM RepairPayment payment WHERE payment.repairId = r.id))
-                     AND (r.returnDateTime IS NULL OR (SELECT MIN(payment.paymentDate) FROM RepairPayment payment WHERE payment.repairId = r.id) <= r.returnDateTime))
-                    OR (r.returnDateTime >= COALESCE(:from, r.returnDateTime)
-                        AND r.returnDateTime <= COALESCE(:to, r.returnDateTime)
-                        AND ((SELECT MIN(payment.paymentDate) FROM RepairPayment payment WHERE payment.repairId = r.id) IS NULL
-                             OR r.returnDateTime < (SELECT MIN(payment.paymentDate) FROM RepairPayment payment WHERE payment.repairId = r.id))))
-            """)
+    @Query(value = """
+            WITH first_payments AS (
+                SELECT repair_id, MIN(payment_date) AS first_payment_date
+                FROM repair_payments GROUP BY repair_id
+            ), recognized AS (
+                SELECT r.id_repair,
+                       CASE WHEN fp.first_payment_date IS NULL THEN r.return_date_time
+                            WHEN r.return_date_time IS NULL THEN fp.first_payment_date
+                            ELSE LEAST(fp.first_payment_date, r.return_date_time) END AS recognition_date
+                FROM repairs r LEFT JOIN first_payments fp ON fp.repair_id = r.id_repair
+            )
+            SELECT COALESCE(SUM(COALESCE(part.cost, 0) * COALESCE(part.quantity, 1)), 0) AS "totalPartsCost",
+                   COALESCE(SUM((COALESCE(part.sale_price, 0) - COALESCE(part.cost, 0)) * COALESCE(part.quantity, 1)), 0) AS "totalPartsProfit"
+            FROM repair_parts part JOIN recognized r ON r.id_repair = part.repair_id
+            WHERE r.recognition_date IS NOT NULL
+              AND (:from IS NULL OR r.recognition_date >= :from)
+              AND (:to IS NULL OR r.recognition_date <= :to)
+            """, nativeQuery = true)
     FinancePartsSummaryView summarizeRecognizedFinanceParts(@Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
 
     @Query("""
@@ -306,16 +292,22 @@ public interface RepairRepository extends JpaRepository<Repair, String> {
             """)
     BigDecimal sumFinancePaymentIncomeBetween(@Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
 
-    @Query("""
+    @Query(value = """
+            WITH first_payments AS (
+                SELECT repair_id, MIN(payment_date) AS first_payment_date
+                FROM repair_payments GROUP BY repair_id
+            )
             SELECT COALESCE(SUM(COALESCE(part.cost, 0) * COALESCE(part.quantity, 1)), 0)
-            FROM RepairPart part JOIN part.repair r
-            WHERE (((SELECT MIN(payment.paymentDate) FROM RepairPayment payment WHERE payment.repairId = r.id) >= :from
-                     AND (SELECT MIN(payment.paymentDate) FROM RepairPayment payment WHERE payment.repairId = r.id) < :to
-                     AND (r.returnDateTime IS NULL OR (SELECT MIN(payment.paymentDate) FROM RepairPayment payment WHERE payment.repairId = r.id) <= r.returnDateTime))
-                    OR (r.returnDateTime >= :from AND r.returnDateTime < :to
-                        AND ((SELECT MIN(payment.paymentDate) FROM RepairPayment payment WHERE payment.repairId = r.id) IS NULL
-                             OR r.returnDateTime < (SELECT MIN(payment.paymentDate) FROM RepairPayment payment WHERE payment.repairId = r.id))))
-            """)
+            FROM repair_parts part
+            JOIN repairs r ON r.id_repair = part.repair_id
+            LEFT JOIN first_payments fp ON fp.repair_id = r.id_repair
+            WHERE (CASE WHEN fp.first_payment_date IS NULL THEN r.return_date_time
+                        WHEN r.return_date_time IS NULL THEN fp.first_payment_date
+                        ELSE LEAST(fp.first_payment_date, r.return_date_time) END) >= :from
+              AND (CASE WHEN fp.first_payment_date IS NULL THEN r.return_date_time
+                        WHEN r.return_date_time IS NULL THEN fp.first_payment_date
+                        ELSE LEAST(fp.first_payment_date, r.return_date_time) END) < :to
+            """, nativeQuery = true)
     BigDecimal sumRecognizedPartsCostBetween(@Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
 
     @Query("""

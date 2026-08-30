@@ -49,7 +49,10 @@ type ClientSuggestion = { label: string; client: Client };
               }
               <div class="field"><label>Equipo</label><input pInputText [(ngModel)]="draft.deviceDescription" name="deviceDescription" placeholder="Notebook Lenovo IdeaPad" required /></div>
               <div class="field"><label>Problema comentado</label><textarea class="p-inputtext" rows="3" [(ngModel)]="draft.reportedProblem" name="reportedProblem"></textarea></div>
-              <div class="field"><label>Próximo contacto</label><input class="control" type="date" [(ngModel)]="draft.nextContactDate" name="nextContactDate" /></div>
+              @if (!draft.id) {
+                <div class="field"><label>Fecha prometida (opcional)</label><input class="control" type="date" [(ngModel)]="draft.initialPromisedDate" name="initialPromisedDate" /></div>
+                <div class="field"><label>Nota de la promesa</label><input pInputText [(ngModel)]="draft.initialPromiseNotes" name="initialPromiseNotes" placeholder="Ej.: dijo que pasa por la tarde" /></div>
+              }
               <div class="field"><label>Estado</label><p-select [(ngModel)]="draft.status" name="status" [options]="statusOptions" optionLabel="label" optionValue="value"></p-select></div>
               <div class="field"><label>Notas internas</label><textarea class="p-inputtext" rows="3" [(ngModel)]="draft.notes" name="notes"></textarea></div>
               <button pButton type="submit" [label]="draft.id ? 'Guardar cambios' : 'Crear seguimiento'" icon="pi pi-check"></button>
@@ -66,14 +69,13 @@ type ClientSuggestion = { label: string; client: Client };
         </div>
         <div class="native-table-wrap">
           <table class="native-table follow-ups-table">
-            <thead><tr><th>Persona</th><th>Equipo</th><th>Próximo contacto</th><th>Promesa actual</th><th>Historial</th><th>Estado</th><th>Acciones</th></tr></thead>
+            <thead><tr><th>Persona</th><th>Equipo</th><th>Promesa actual</th><th>Historial</th><th>Estado</th><th>Acciones</th></tr></thead>
             <tbody>
               @for (item of items; track item.id) {
                 <tr class="clickable-row" (click)="openDetail(item.id)">
                   <td><strong>{{ item.displayName }}</strong><small class="table-secondary">{{ item.clientId ? 'Cliente' : (item.contactChannel || 'Contacto') }}</small></td>
                   <td>{{ item.deviceDescription }}</td>
-                  <td [class.follow-up-overdue]="isOverdue(item.nextContactDate)">{{ item.nextContactDate ? (item.nextContactDate | date:'dd/MM/yyyy') : '-' }}</td>
-                  <td>{{ item.currentPromisedDate ? (item.currentPromisedDate | date:'dd/MM/yyyy') : '-' }}</td>
+                  <td [class.follow-up-overdue]="isOverdue(item.currentPromisedDate)">{{ item.currentPromisedDate ? (item.currentPromisedDate | date:'dd/MM/yyyy') : '-' }}</td>
                   <td><span [class.follow-up-risk]="item.missedCommitmentCount >= 2">{{ item.commitmentCount }} promesa(s) · {{ item.missedCommitmentCount }} no concretada(s)</span></td>
                   <td><span class="status-pill" [ngClass]="statusClass(item.status)">{{ statusLabel(item.status) }}</span></td>
                   <td><div class="action-buttons">
@@ -82,7 +84,7 @@ type ClientSuggestion = { label: string; client: Client };
                     <button class="icon-action danger" type="button" title="Eliminar" (click)="$event.stopPropagation(); confirmDelete(item)"><i class="pi pi-trash"></i></button>
                   </div></td>
                 </tr>
-              } @empty { <tr><td class="empty-cell" colspan="7">No hay seguimientos para mostrar.</td></tr> }
+              } @empty { <tr><td class="empty-cell" colspan="6">No hay seguimientos para mostrar.</td></tr> }
             </tbody>
           </table>
         </div>
@@ -100,7 +102,6 @@ type ClientSuggestion = { label: string; client: Client };
           <div class="detail-item"><label>Persona</label><strong>{{ detail.clientName || detail.contactName }}</strong></div>
           <div class="detail-item"><label>Tipo</label><strong>{{ detail.clientId ? 'Cliente existente' : 'Contacto potencial' }}</strong></div>
           <div class="detail-item"><label>Equipo</label><strong>{{ detail.deviceDescription }}</strong></div>
-          <div class="detail-item"><label>Próximo contacto</label><strong>{{ detail.nextContactDate ? (detail.nextContactDate | date:'dd/MM/yyyy') : '-' }}</strong></div>
           @if (detail.reportedProblem) { <div class="detail-item detail-wide"><label>Problema comentado</label><div>{{ detail.reportedProblem }}</div></div> }
         </div>
         <div class="follow-up-commitment-form">
@@ -215,7 +216,7 @@ export class FollowUpsPageComponent implements OnInit, OnDestroy {
   private loadDetail(id: string, open: boolean): void {
     this.api.getFollowUpById(id).subscribe((detail) => { this.detail = detail; if (open) this.detailVisible = true; });
   }
-  private emptyDraft(): FollowUpSave { return { clientId: null, contactName: '', contactChannel: 'WHATSAPP', contactValue: '', deviceDescription: '', reportedProblem: '', nextContactDate: null, status: 'PENDING', notes: '' }; }
+  private emptyDraft(): FollowUpSave { return { clientId: null, contactName: '', contactChannel: 'WHATSAPP', contactValue: '', deviceDescription: '', reportedProblem: '', status: 'PENDING', notes: '', initialPromisedDate: null, initialPromiseNotes: '' }; }
   private today(): string {
     const now = new Date();
     const year = now.getFullYear();

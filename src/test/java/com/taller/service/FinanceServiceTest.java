@@ -13,6 +13,7 @@ import com.taller.model.repository.projection.FinancePartsSummaryView;
 import com.taller.model.repository.projection.FinancePaymentSummaryView;
 import com.taller.model.repository.projection.FinanceRepairSummaryView;
 import com.taller.model.repository.projection.FinanceRowView;
+import com.taller.resource.dto.FinanceRowDTO;
 import com.taller.resource.dto.FinanceSummaryDTO;
 import com.taller.resource.dto.PageDTO;
 import java.math.BigDecimal;
@@ -130,13 +131,13 @@ class FinanceServiceTest {
         when(row.getClientName()).thenReturn("Ada Lovelace");
         when(row.getDate()).thenReturn(LocalDateTime.of(2026, 6, 10, 10, 0));
         when(row.getIncome()).thenReturn(BigDecimal.valueOf(1500));
+        when(row.getPartsCost()).thenReturn(BigDecimal.valueOf(400));
         when(row.getPartsSale()).thenReturn(BigDecimal.valueOf(700));
-        when(row.getNet()).thenReturn(BigDecimal.valueOf(800));
         ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
         when(repairRepository.findFinanceActivityPage(eq(null), eq(null), pageableCaptor.capture()))
                 .thenReturn(new PageImpl<>(List.of(row), PageRequest.of(0, 100), 101));
 
-        PageDTO<?> result = new FinanceService(repairRepository)
+        PageDTO<FinanceRowDTO> result = new FinanceService(repairRepository)
                 .getDetails(null, null, -4, 1000, "unsupported", "sideways");
 
         Pageable pageable = pageableCaptor.getValue();
@@ -145,11 +146,13 @@ class FinanceServiceTest {
         assertEquals(Sort.Direction.DESC, pageable.getSort().getOrderFor("date").getDirection());
         assertEquals(101, result.totalElements());
         assertEquals(1, result.content().size());
+        assertEquals(0, BigDecimal.valueOf(700).compareTo(result.content().getFirst().getPartsAmount()));
+        assertEquals(0, BigDecimal.valueOf(800).compareTo(result.content().getFirst().getNet()));
     }
 
     @Test
     void getDetails_forwardsEveryAllowedSortToTheRepository() {
-        List<String> sortFields = List.of("clientName", "date", "income", "partsSale", "net");
+        List<String> sortFields = List.of("clientName", "date", "income", "partsAmount", "net");
         when(repairRepository.findFinanceActivityPage(any(), any(), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of()));
 
@@ -173,5 +176,24 @@ class FinanceServiceTest {
             Sort.Order order = pageableCaptor.getAllValues().get(index).getSort().getOrderFor(sortFields.get(index));
             assertEquals(Sort.Direction.ASC, order.getDirection());
         }
+    }
+
+    @Test
+    void recognizedPartsAmount_usesCostUntilAccumulatedIncomeReachesSale() {
+        FinanceService service = new FinanceService(repairRepository);
+        BigDecimal cost = new BigDecimal("92149.03");
+        BigDecimal sale = new BigDecimal("159900.00");
+
+        assertEquals(0, cost.compareTo(service.recognizedPartsAmount(new BigDecimal("120000.00"), cost, sale)));
+        assertEquals(0, sale.compareTo(service.recognizedPartsAmount(new BigDecimal("159900.00"), cost, sale)));
+        assertEquals(0, sale.compareTo(service.recognizedPartsAmount(new BigDecimal("200000.00"), cost, sale)));
+    }
+
+    @Test
+    void recognizedPartsAmount_treatsMissingPartsAsZero() {
+        FinanceService service = new FinanceService(repairRepository);
+
+        assertEquals(0, BigDecimal.ZERO.compareTo(service.recognizedPartsAmount(BigDecimal.ZERO, null, null)));
+        assertEquals(0, BigDecimal.TEN.compareTo(service.recognizedPartsAmount(BigDecimal.ZERO, BigDecimal.TEN, null)));
     }
 }

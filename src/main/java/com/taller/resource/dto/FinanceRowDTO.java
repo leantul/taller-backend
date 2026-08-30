@@ -13,6 +13,6 @@ public class FinanceRowDTO {
     private String clientName;
     private LocalDateTime date;
     private BigDecimal income;
-    private BigDecimal partsSale;
+    private BigDecimal partsAmount;
     private BigDecimal net;
 }

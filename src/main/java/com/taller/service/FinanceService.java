@@ -32,7 +32,7 @@ public class FinanceService {
 
     private static final int MAXIMUM_PAGE_SIZE = 100;
     private static final LocalDateTime OPEN_ENDED_CUTOFF = LocalDateTime.of(9999, 12, 31, 0, 0);
-    private static final Set<String> DETAIL_SORT_FIELDS = Set.of("clientName", "date", "income", "partsSale", "net");
+    private static final Set<String> DETAIL_SORT_FIELDS = Set.of("clientName", "date", "income", "partsAmount", "net");
 
     private final RepairRepository repairRepository;
 
@@ -124,10 +124,21 @@ public class FinanceService {
         dto.setRepairId(row.getRepairId());
         dto.setClientName(row.getClientName());
         dto.setDate(row.getDate());
-        dto.setIncome(safeMoney(row.getIncome()));
-        dto.setPartsSale(safeMoney(row.getPartsSale()));
-        dto.setNet(safeMoney(row.getNet()));
+        BigDecimal income = safeMoney(row.getIncome());
+        BigDecimal partsAmount = recognizedPartsAmount(income, row.getPartsCost(), row.getPartsSale());
+        dto.setIncome(income);
+        dto.setPartsAmount(partsAmount);
+        dto.setNet(income.subtract(partsAmount));
         return dto;
+    }
+
+    BigDecimal recognizedPartsAmount(BigDecimal income, BigDecimal partsCost, BigDecimal partsSale) {
+        BigDecimal safeIncome = safeMoney(income);
+        BigDecimal safePartsCost = safeMoney(partsCost);
+        BigDecimal safePartsSale = safeMoney(partsSale);
+        return safePartsSale.signum() > 0 && safeIncome.compareTo(safePartsSale) >= 0
+                ? safePartsSale
+                : safePartsCost;
     }
 
     private LocalDateTime startOfDay(LocalDate date) {

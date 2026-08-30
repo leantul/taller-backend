@@ -41,7 +41,8 @@ class FollowUpServiceTest {
     @Test
     void save_allowsPotentialContactWithoutCreatingClient() {
         FollowUpSaveDTO request = new FollowUpSaveDTO(null, null, " usuario.redes ", "INSTAGRAM",
-                "@usuario", " Notebook Lenovo ", "No enciende", LocalDate.of(2026, 9, 2), null, null);
+                "@usuario", " Notebook Lenovo ", "No enciende", LocalDate.of(2026, 9, 2), null, null,
+                null, null);
         when(followUpRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
         service.save(request);
@@ -66,7 +67,7 @@ class FollowUpServiceTest {
         when(followUpRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
         service.save(new FollowUpSaveDTO(null, "client-1", null, null, null,
-                "PC", null, null, FollowUpStatusEnum.PENDING, null));
+                "PC", null, null, FollowUpStatusEnum.PENDING, null, null, null));
 
         ArgumentCaptor<FollowUp> captor = ArgumentCaptor.forClass(FollowUp.class);
         verify(followUpRepository).save(captor.capture());
@@ -76,12 +77,29 @@ class FollowUpServiceTest {
     @Test
     void save_rejectsUnidentifiablePotentialContact() {
         FollowUpSaveDTO request = new FollowUpSaveDTO(null, null, "Persona", "WHATSAPP", " ",
-                "Notebook", null, null, null, null);
+                "Notebook", null, null, null, null, null, null);
 
         IllegalArgumentException error = assertThrows(IllegalArgumentException.class, () -> service.save(request));
 
         assertEquals("Indicá cómo contactar a la persona", error.getMessage());
         verify(followUpRepository, never()).save(any());
+    }
+
+    @Test
+    void save_registersInitialPromiseUsingCommitmentHistory() {
+        LocalDate promisedDate = LocalDate.of(2026, 9, 12);
+        when(followUpRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(commitmentRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        service.save(new FollowUpSaveDTO(null, null, "Persona", "WHATSAPP", "111",
+                "Notebook", null, null, FollowUpStatusEnum.PENDING, null, promisedDate, "Por la mañana"));
+
+        ArgumentCaptor<FollowUpCommitment> captor = ArgumentCaptor.forClass(FollowUpCommitment.class);
+        verify(commitmentRepository).save(captor.capture());
+        assertEquals(promisedDate, captor.getValue().getPromisedDate());
+        assertEquals("Por la mañana", captor.getValue().getNotes());
+        assertEquals(CommitmentOutcomeEnum.PENDING, captor.getValue().getOutcome());
+        assertEquals(FollowUpStatusEnum.CONFIRMED, captor.getValue().getFollowUp().getStatus());
     }
 
     @Test

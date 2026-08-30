@@ -14,6 +14,8 @@ export interface FollowUpSave {
   nextContactDate?: string | null;
   status?: FollowUpStatus;
   notes?: string;
+  initialPromisedDate?: string | null;
+  initialPromiseNotes?: string;
 }
 
 export interface FollowUpListItem {

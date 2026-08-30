@@ -198,17 +198,8 @@ public interface RepairRepository extends JpaRepository<Repair, String> {
                    END AS partsAmount,
                    COALESCE(SUM(CASE WHEN payment.paymentDate <= COALESCE(:to, payment.paymentDate)
                                      THEN COALESCE(payment.amount, 0) ELSE 0 END), 0)
-                   - CASE WHEN (SELECT COALESCE(SUM(COALESCE(part.salePrice, 0) * COALESCE(part.quantity, 1)), 0)
-                                FROM RepairPart part WHERE part.repairId = r.id) > 0
-                                    AND COALESCE(SUM(CASE WHEN payment.paymentDate <= COALESCE(:to, payment.paymentDate)
-                                                 THEN COALESCE(payment.amount, 0) ELSE 0 END), 0)
-                                    >= (SELECT COALESCE(SUM(COALESCE(part.salePrice, 0) * COALESCE(part.quantity, 1)), 0)
-                                        FROM RepairPart part WHERE part.repairId = r.id)
-                          THEN (SELECT COALESCE(SUM(COALESCE(part.salePrice, 0) * COALESCE(part.quantity, 1)), 0)
-                                FROM RepairPart part WHERE part.repairId = r.id)
-                          ELSE (SELECT COALESCE(SUM(COALESCE(part.cost, 0) * COALESCE(part.quantity, 1)), 0)
-                                FROM RepairPart part WHERE part.repairId = r.id)
-                     END AS net
+                   - (SELECT COALESCE(SUM(COALESCE(part.cost, 0) * COALESCE(part.quantity, 1)), 0)
+                      FROM RepairPart part WHERE part.repairId = r.id) AS net
             FROM Repair r
             LEFT JOIN r.client c
             LEFT JOIN RepairPayment payment ON payment.repairId = r.id

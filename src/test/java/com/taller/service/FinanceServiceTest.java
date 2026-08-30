@@ -147,7 +147,7 @@ class FinanceServiceTest {
         assertEquals(101, result.totalElements());
         assertEquals(1, result.content().size());
         assertEquals(0, BigDecimal.valueOf(700).compareTo(result.content().getFirst().getPartsAmount()));
-        assertEquals(0, BigDecimal.valueOf(800).compareTo(result.content().getFirst().getNet()));
+        assertEquals(0, BigDecimal.valueOf(1100).compareTo(result.content().getFirst().getNet()));
     }
 
     @Test
@@ -185,8 +185,11 @@ class FinanceServiceTest {
         BigDecimal sale = new BigDecimal("159900.00");
 
         assertEquals(0, cost.compareTo(service.recognizedPartsAmount(new BigDecimal("120000.00"), cost, sale)));
+        assertEquals(0, new BigDecimal("27850.97").compareTo(service.currentNet(new BigDecimal("120000.00"), cost)));
         assertEquals(0, sale.compareTo(service.recognizedPartsAmount(new BigDecimal("159900.00"), cost, sale)));
+        assertEquals(0, new BigDecimal("67750.97").compareTo(service.currentNet(new BigDecimal("159900.00"), cost)));
         assertEquals(0, sale.compareTo(service.recognizedPartsAmount(new BigDecimal("200000.00"), cost, sale)));
+        assertEquals(0, new BigDecimal("107850.97").compareTo(service.currentNet(new BigDecimal("200000.00"), cost)));
     }
 
     @Test
@@ -195,5 +198,6 @@ class FinanceServiceTest {
 
         assertEquals(0, BigDecimal.ZERO.compareTo(service.recognizedPartsAmount(BigDecimal.ZERO, null, null)));
         assertEquals(0, BigDecimal.TEN.compareTo(service.recognizedPartsAmount(BigDecimal.ZERO, BigDecimal.TEN, null)));
+        assertEquals(0, BigDecimal.TEN.compareTo(service.currentNet(BigDecimal.TEN, null)));
     }
 }

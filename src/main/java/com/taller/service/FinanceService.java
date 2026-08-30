@@ -128,7 +128,7 @@ public class FinanceService {
         BigDecimal partsAmount = recognizedPartsAmount(income, row.getPartsCost(), row.getPartsSale());
         dto.setIncome(income);
         dto.setPartsAmount(partsAmount);
-        dto.setNet(income.subtract(partsAmount));
+        dto.setNet(currentNet(income, row.getPartsCost()));
         return dto;
     }
 
@@ -139,6 +139,10 @@ public class FinanceService {
         return safePartsSale.signum() > 0 && safeIncome.compareTo(safePartsSale) >= 0
                 ? safePartsSale
                 : safePartsCost;
+    }
+
+    BigDecimal currentNet(BigDecimal income, BigDecimal partsCost) {
+        return safeMoney(income).subtract(safeMoney(partsCost));
     }
 
     private LocalDateTime startOfDay(LocalDate date) {

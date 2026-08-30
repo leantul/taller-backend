@@ -179,30 +179,27 @@ public interface RepairRepository extends JpaRepository<Repair, String> {
                                          THEN payment.paymentDate ELSE NULL END)
                        ELSE r.returnDateTime
                    END AS date,
-                   COALESCE(SUM(CASE WHEN payment.paymentDate >= COALESCE(:from, payment.paymentDate)
-                                          AND payment.paymentDate <= COALESCE(:to, payment.paymentDate)
+                   COALESCE(SUM(CASE WHEN payment.paymentDate <= COALESCE(:to, payment.paymentDate)
                                      THEN COALESCE(payment.amount, 0) ELSE 0 END), 0) AS income,
-                   CASE WHEN
-                       ((MIN(payment.paymentDate) >= COALESCE(:from, MIN(payment.paymentDate))
-                         AND MIN(payment.paymentDate) <= COALESCE(:to, MIN(payment.paymentDate))
-                         AND (r.returnDateTime IS NULL OR MIN(payment.paymentDate) <= r.returnDateTime))
-                        OR (r.returnDateTime >= COALESCE(:from, r.returnDateTime)
-                            AND r.returnDateTime <= COALESCE(:to, r.returnDateTime)
-                            AND (MIN(payment.paymentDate) IS NULL OR r.returnDateTime < MIN(payment.paymentDate))))
-                       THEN (SELECT COALESCE(SUM(COALESCE(part.salePrice, 0) * COALESCE(part.quantity, 1)), 0)
-                             FROM RepairPart part WHERE part.repairId = r.id) ELSE 0 END AS partsSale,
-                   COALESCE(SUM(CASE WHEN payment.paymentDate >= COALESCE(:from, payment.paymentDate)
-                                          AND payment.paymentDate <= COALESCE(:to, payment.paymentDate)
+                   (SELECT COALESCE(SUM(COALESCE(part.cost, 0) * COALESCE(part.quantity, 1)), 0)
+                    FROM RepairPart part WHERE part.repairId = r.id) AS partsCost,
+                   (SELECT COALESCE(SUM(COALESCE(part.salePrice, 0) * COALESCE(part.quantity, 1)), 0)
+                    FROM RepairPart part WHERE part.repairId = r.id) AS partsSale,
+                   CASE WHEN (SELECT COALESCE(SUM(COALESCE(part.salePrice, 0) * COALESCE(part.quantity, 1)), 0)
+                              FROM RepairPart part WHERE part.repairId = r.id) > 0
+                                  AND COALESCE(SUM(CASE WHEN payment.paymentDate <= COALESCE(:to, payment.paymentDate)
+                                               THEN COALESCE(payment.amount, 0) ELSE 0 END), 0)
+                                  >= (SELECT COALESCE(SUM(COALESCE(part.salePrice, 0) * COALESCE(part.quantity, 1)), 0)
+                                      FROM RepairPart part WHERE part.repairId = r.id)
+                        THEN (SELECT COALESCE(SUM(COALESCE(part.salePrice, 0) * COALESCE(part.quantity, 1)), 0)
+                              FROM RepairPart part WHERE part.repairId = r.id)
+                        ELSE (SELECT COALESCE(SUM(COALESCE(part.cost, 0) * COALESCE(part.quantity, 1)), 0)
+                              FROM RepairPart part WHERE part.repairId = r.id)
+                   END AS partsAmount,
+                   COALESCE(SUM(CASE WHEN payment.paymentDate <= COALESCE(:to, payment.paymentDate)
                                      THEN COALESCE(payment.amount, 0) ELSE 0 END), 0)
-                   - CASE WHEN
-                       ((MIN(payment.paymentDate) >= COALESCE(:from, MIN(payment.paymentDate))
-                         AND MIN(payment.paymentDate) <= COALESCE(:to, MIN(payment.paymentDate))
-                         AND (r.returnDateTime IS NULL OR MIN(payment.paymentDate) <= r.returnDateTime))
-                        OR (r.returnDateTime >= COALESCE(:from, r.returnDateTime)
-                            AND r.returnDateTime <= COALESCE(:to, r.returnDateTime)
-                            AND (MIN(payment.paymentDate) IS NULL OR r.returnDateTime < MIN(payment.paymentDate))))
-                       THEN (SELECT COALESCE(SUM(COALESCE(part.salePrice, 0) * COALESCE(part.quantity, 1)), 0)
-                             FROM RepairPart part WHERE part.repairId = r.id) ELSE 0 END AS net
+                   - (SELECT COALESCE(SUM(COALESCE(part.cost, 0) * COALESCE(part.quantity, 1)), 0)
+                      FROM RepairPart part WHERE part.repairId = r.id) AS net
             FROM Repair r
             LEFT JOIN r.client c
             LEFT JOIN RepairPayment payment ON payment.repairId = r.id

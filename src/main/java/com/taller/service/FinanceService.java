@@ -1,6 +1,7 @@
 package com.taller.service;
 
 import com.taller.model.repository.RepairRepository;
+import com.taller.model.repository.projection.FinanceActivitySummaryView;
 import com.taller.model.repository.projection.FinancePaymentSummaryView;
 import com.taller.model.repository.projection.FinancePartsSummaryView;
 import com.taller.model.repository.projection.FinanceRepairSummaryView;
@@ -41,14 +42,14 @@ public class FinanceService {
         LocalDateTime fromDateTime = startOfDay(from);
         LocalDateTime toDateTime = endOfDay(to);
         FinanceRepairSummaryView repairSummary = repairRepository.summarizeRetiredFinanceRepairs(fromDateTime, toDateTime);
+        FinanceActivitySummaryView activitySummary = repairRepository.summarizeFinanceActivity(fromDateTime, toDateTime);
         FinancePaymentSummaryView paymentSummary = repairRepository.summarizeFinancePayments(fromDateTime, toDateTime);
-        FinancePartsSummaryView partsSummary = repairRepository.summarizeRecognizedFinanceParts(fromDateTime, toDateTime);
 
         long repairCount = safeLong(repairRepository.countFinanceActivityRepairs(fromDateTime, toDateTime));
         long paidRepairCount = paymentSummary != null ? safeLong(paymentSummary.getRepairCount()) : 0L;
-        BigDecimal totalIncome = paymentSummary != null ? safeMoney(paymentSummary.getTotalIncome()) : BigDecimal.ZERO;
+        BigDecimal totalIncome = activitySummary != null ? safeMoney(activitySummary.getTotalIncome()) : BigDecimal.ZERO;
         BigDecimal totalQuoted = repairSummary != null ? safeMoney(repairSummary.getTotalQuoted()) : BigDecimal.ZERO;
-        BigDecimal totalPartsCost = partsSummary != null ? safeMoney(partsSummary.getTotalPartsCost()) : BigDecimal.ZERO;
+        BigDecimal totalPartsCost = activitySummary != null ? safeMoney(activitySummary.getTotalPartsCost()) : BigDecimal.ZERO;
         RealizedBreakdown before = fromDateTime != null ? realizedBreakdownBefore(fromDateTime) : RealizedBreakdown.ZERO;
         RealizedBreakdown through = realizedBreakdownBefore(to != null ? to.plusDays(1).atStartOfDay() : OPEN_ENDED_CUTOFF);
         BigDecimal totalPartsProfit = positive(through.partsProfit().subtract(before.partsProfit()));
@@ -133,12 +134,7 @@ public class FinanceService {
     }
 
     BigDecimal recognizedPartsAmount(BigDecimal income, BigDecimal partsCost, BigDecimal partsSale) {
-        BigDecimal safeIncome = safeMoney(income);
-        BigDecimal safePartsCost = safeMoney(partsCost);
-        BigDecimal safePartsSale = safeMoney(partsSale);
-        return safePartsSale.signum() > 0 && safeIncome.compareTo(safePartsSale) >= 0
-                ? safePartsSale
-                : safePartsCost;
+        return safeMoney(partsCost);
     }
 
     BigDecimal currentNet(BigDecimal income, BigDecimal partsCost) {

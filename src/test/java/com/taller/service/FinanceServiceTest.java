@@ -10,6 +10,7 @@ import static org.mockito.Mockito.when;
 
 import com.taller.model.repository.RepairRepository;
 import com.taller.model.repository.projection.FinancePartsSummaryView;
+import com.taller.model.repository.projection.FinanceActivitySummaryView;
 import com.taller.model.repository.projection.FinancePaymentSummaryView;
 import com.taller.model.repository.projection.FinanceRepairSummaryView;
 import com.taller.model.repository.projection.FinanceRowView;
@@ -41,24 +42,24 @@ class FinanceServiceTest {
         LocalDate from = LocalDate.of(2026, 6, 1);
         LocalDate to = LocalDate.of(2026, 6, 30);
         FinanceRepairSummaryView repairSummary = mock(FinanceRepairSummaryView.class);
-        FinancePartsSummaryView partsSummary = mock(FinancePartsSummaryView.class);
+        FinanceActivitySummaryView activitySummary = mock(FinanceActivitySummaryView.class);
         FinancePartsSummaryView beforePartsSummary = mock(FinancePartsSummaryView.class);
+        FinancePartsSummaryView throughPartsSummary = mock(FinancePartsSummaryView.class);
         FinancePaymentSummaryView paymentSummary = mock(FinancePaymentSummaryView.class);
         when(repairSummary.getRepairCount()).thenReturn(4L);
+        when(activitySummary.getTotalIncome()).thenReturn(BigDecimal.valueOf(2400));
+        when(activitySummary.getTotalPartsCost()).thenReturn(BigDecimal.valueOf(600));
         when(paymentSummary.getRepairCount()).thenReturn(2L);
-        when(paymentSummary.getTotalIncome()).thenReturn(BigDecimal.valueOf(2400));
         when(repairSummary.getTotalQuoted()).thenReturn(BigDecimal.valueOf(2700));
         when(repairSummary.getZeroFinalAmountCount()).thenReturn(1L);
-        when(partsSummary.getTotalPartsCost()).thenReturn(BigDecimal.valueOf(600));
-        when(partsSummary.getTotalPartsProfit()).thenReturn(BigDecimal.valueOf(500));
         when(repairRepository.summarizeRetiredFinanceRepairs(
                 LocalDateTime.of(2026, 6, 1, 0, 0),
                 LocalDateTime.of(2026, 6, 30, 23, 59, 59, 999999999)))
                 .thenReturn(repairSummary);
-        when(repairRepository.summarizeRecognizedFinanceParts(
+        when(repairRepository.summarizeFinanceActivity(
                 LocalDateTime.of(2026, 6, 1, 0, 0),
                 LocalDateTime.of(2026, 6, 30, 23, 59, 59, 999999999)))
-                .thenReturn(partsSummary);
+                .thenReturn(activitySummary);
         when(repairRepository.summarizeFinancePayments(
                 LocalDateTime.of(2026, 6, 1, 0, 0),
                 LocalDateTime.of(2026, 6, 30, 23, 59, 59, 999999999)))
@@ -70,7 +71,9 @@ class FinanceServiceTest {
         when(repairRepository.sumPaymentIncomeBefore(LocalDateTime.of(2026, 6, 1, 0, 0))).thenReturn(BigDecimal.ZERO);
         when(repairRepository.sumPaymentIncomeBefore(LocalDateTime.of(2026, 7, 1, 0, 0))).thenReturn(BigDecimal.valueOf(2400));
         when(repairRepository.summarizeRecognizedFinancePartsBefore(LocalDateTime.of(2026, 6, 1, 0, 0))).thenReturn(beforePartsSummary);
-        when(repairRepository.summarizeRecognizedFinancePartsBefore(LocalDateTime.of(2026, 7, 1, 0, 0))).thenReturn(partsSummary);
+        when(throughPartsSummary.getTotalPartsCost()).thenReturn(BigDecimal.valueOf(600));
+        when(throughPartsSummary.getTotalPartsProfit()).thenReturn(BigDecimal.valueOf(500));
+        when(repairRepository.summarizeRecognizedFinancePartsBefore(LocalDateTime.of(2026, 7, 1, 0, 0))).thenReturn(throughPartsSummary);
         when(repairRepository.sumFinancePaymentIncomeBetween(any(), any())).thenReturn(BigDecimal.ZERO);
         when(repairRepository.sumRecognizedPartsCostBetween(any(), any())).thenReturn(BigDecimal.ZERO);
 
@@ -89,38 +92,40 @@ class FinanceServiceTest {
     }
 
     @Test
-    void getSummary_keepsPartialPaymentNegativeUntilPartsCostIsRecovered() {
+    void getSummary_usesAccumulatedRepairAmountsForTheSameActivityShownInTheGrid() {
         LocalDate from = LocalDate.of(2026, 8, 1);
         LocalDate to = LocalDate.of(2026, 8, 31);
         LocalDateTime fromDateTime = from.atStartOfDay();
         LocalDateTime toDateTime = to.plusDays(1).atStartOfDay().minusNanos(1);
         LocalDateTime nextMonth = to.plusDays(1).atStartOfDay();
         FinanceRepairSummaryView repairs = mock(FinanceRepairSummaryView.class);
-        FinancePaymentSummaryView payments = mock(FinancePaymentSummaryView.class);
-        FinancePartsSummaryView periodParts = mock(FinancePartsSummaryView.class);
+        FinanceActivitySummaryView activitySummary = mock(FinanceActivitySummaryView.class);
         FinancePartsSummaryView beforeParts = mock(FinancePartsSummaryView.class);
+        FinancePartsSummaryView throughParts = mock(FinancePartsSummaryView.class);
+        FinancePaymentSummaryView paymentSummary = mock(FinancePaymentSummaryView.class);
 
         when(repairs.getRepairCount()).thenReturn(0L);
-        when(payments.getRepairCount()).thenReturn(1L);
-        when(payments.getTotalIncome()).thenReturn(BigDecimal.valueOf(40100));
-        when(periodParts.getTotalPartsCost()).thenReturn(BigDecimal.valueOf(104101));
-        when(periodParts.getTotalPartsProfit()).thenReturn(BigDecimal.valueOf(91799));
+        when(activitySummary.getTotalIncome()).thenReturn(BigDecimal.valueOf(195900));
+        when(activitySummary.getTotalPartsCost()).thenReturn(BigDecimal.valueOf(104101));
+        when(paymentSummary.getRepairCount()).thenReturn(1L);
         when(repairRepository.summarizeRetiredFinanceRepairs(fromDateTime, toDateTime)).thenReturn(repairs);
-        when(repairRepository.summarizeFinancePayments(fromDateTime, toDateTime)).thenReturn(payments);
-        when(repairRepository.summarizeRecognizedFinanceParts(fromDateTime, toDateTime)).thenReturn(periodParts);
+        when(repairRepository.summarizeFinanceActivity(fromDateTime, toDateTime)).thenReturn(activitySummary);
+        when(repairRepository.summarizeFinancePayments(fromDateTime, toDateTime)).thenReturn(paymentSummary);
         when(repairRepository.countFinanceActivityRepairs(fromDateTime, toDateTime)).thenReturn(1L);
         when(repairRepository.sumPaymentIncomeBefore(fromDateTime)).thenReturn(BigDecimal.ZERO);
-        when(repairRepository.sumPaymentIncomeBefore(nextMonth)).thenReturn(BigDecimal.valueOf(40100));
+        when(repairRepository.sumPaymentIncomeBefore(nextMonth)).thenReturn(BigDecimal.valueOf(195900));
         when(repairRepository.summarizeRecognizedFinancePartsBefore(fromDateTime)).thenReturn(beforeParts);
-        when(repairRepository.summarizeRecognizedFinancePartsBefore(nextMonth)).thenReturn(periodParts);
+        when(throughParts.getTotalPartsCost()).thenReturn(BigDecimal.valueOf(104101));
+        when(throughParts.getTotalPartsProfit()).thenReturn(BigDecimal.valueOf(91799));
+        when(repairRepository.summarizeRecognizedFinancePartsBefore(nextMonth)).thenReturn(throughParts);
         when(repairRepository.sumFinancePaymentIncomeBetween(any(), any())).thenReturn(BigDecimal.ZERO);
         when(repairRepository.sumRecognizedPartsCostBetween(any(), any())).thenReturn(BigDecimal.ZERO);
 
         FinanceSummaryDTO summary = new FinanceService(repairRepository).getSummary(from, to);
 
-        assertEquals(0, BigDecimal.valueOf(-64001).compareTo(summary.getNetIncome()));
-        assertEquals(0, BigDecimal.ZERO.compareTo(summary.getTotalPartsProfit()));
-        assertEquals(0, BigDecimal.ZERO.compareTo(summary.getTotalLabor()));
+        assertEquals(0, BigDecimal.valueOf(195900).compareTo(summary.getTotalIncome()));
+        assertEquals(0, BigDecimal.valueOf(104101).compareTo(summary.getTotalPartsCost()));
+        assertEquals(0, BigDecimal.valueOf(91799).compareTo(summary.getNetIncome()));
         assertEquals(1L, summary.getPositiveFinalAmountCount());
     }
 
@@ -146,7 +151,7 @@ class FinanceServiceTest {
         assertEquals(Sort.Direction.DESC, pageable.getSort().getOrderFor("date").getDirection());
         assertEquals(101, result.totalElements());
         assertEquals(1, result.content().size());
-        assertEquals(0, BigDecimal.valueOf(700).compareTo(result.content().getFirst().getPartsAmount()));
+        assertEquals(0, BigDecimal.valueOf(400).compareTo(result.content().getFirst().getPartsAmount()));
         assertEquals(0, BigDecimal.valueOf(1100).compareTo(result.content().getFirst().getNet()));
     }
 
@@ -179,16 +184,16 @@ class FinanceServiceTest {
     }
 
     @Test
-    void recognizedPartsAmount_usesCostUntilAccumulatedIncomeReachesSale() {
+    void recognizedPartsAmount_alwaysReturnsThePartsCost() {
         FinanceService service = new FinanceService(repairRepository);
         BigDecimal cost = new BigDecimal("92149.03");
         BigDecimal sale = new BigDecimal("159900.00");
 
         assertEquals(0, cost.compareTo(service.recognizedPartsAmount(new BigDecimal("120000.00"), cost, sale)));
         assertEquals(0, new BigDecimal("27850.97").compareTo(service.currentNet(new BigDecimal("120000.00"), cost)));
-        assertEquals(0, sale.compareTo(service.recognizedPartsAmount(new BigDecimal("159900.00"), cost, sale)));
+        assertEquals(0, cost.compareTo(service.recognizedPartsAmount(new BigDecimal("159900.00"), cost, sale)));
         assertEquals(0, new BigDecimal("67750.97").compareTo(service.currentNet(new BigDecimal("159900.00"), cost)));
-        assertEquals(0, sale.compareTo(service.recognizedPartsAmount(new BigDecimal("200000.00"), cost, sale)));
+        assertEquals(0, cost.compareTo(service.recognizedPartsAmount(new BigDecimal("200000.00"), cost, sale)));
         assertEquals(0, new BigDecimal("107850.97").compareTo(service.currentNet(new BigDecimal("200000.00"), cost)));
     }
 

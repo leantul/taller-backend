@@ -13,6 +13,7 @@ import com.taller.model.repository.projection.FinancePaymentSummaryView;
 import com.taller.model.repository.projection.FinancePartsSummaryView;
 import com.taller.model.repository.projection.FinanceRepairSummaryView;
 import com.taller.model.repository.projection.FinanceRowView;
+import com.taller.model.repository.projection.FinanceActivitySummaryView;
 import com.taller.model.repository.projection.RepairListView;
 import com.taller.model.repository.projection.RepairStatusCountView;
 import com.taller.model.repository.projection.StatusBoardRepairView;
@@ -220,6 +221,25 @@ public interface RepairRepository extends JpaRepository<Repair, String> {
                    AND r.returnDateTime <= COALESCE(:to, r.returnDateTime))
             """)
     Page<FinanceRowView> findFinanceActivityPage(@Param("from") LocalDateTime from, @Param("to") LocalDateTime to, Pageable pageable);
+
+    @Query("""
+            SELECT COUNT(r) AS repairCount,
+                   COALESCE(SUM((SELECT COALESCE(SUM(COALESCE(payment.amount, 0)), 0)
+                                 FROM RepairPayment payment
+                                 WHERE payment.repairId = r.id
+                                   AND payment.paymentDate <= COALESCE(:to, payment.paymentDate))), 0) AS totalIncome,
+                   COALESCE(SUM((SELECT COALESCE(SUM(COALESCE(part.cost, 0) * COALESCE(part.quantity, 1)), 0)
+                                 FROM RepairPart part
+                                 WHERE part.repairId = r.id)), 0) AS totalPartsCost
+            FROM Repair r
+            WHERE EXISTS (SELECT payment.id FROM RepairPayment payment
+                          WHERE payment.repairId = r.id
+                            AND payment.paymentDate >= COALESCE(:from, payment.paymentDate)
+                            AND payment.paymentDate <= COALESCE(:to, payment.paymentDate))
+               OR (r.returnDateTime >= COALESCE(:from, r.returnDateTime)
+                   AND r.returnDateTime <= COALESCE(:to, r.returnDateTime))
+            """)
+    FinanceActivitySummaryView summarizeFinanceActivity(@Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
 
     @Query("""
             SELECT COUNT(r) AS repairCount, 0 AS totalIncome,

@@ -1,2 +1,2 @@
-org.springframework.boot.EnvironmentPostProcessor=\
+org.springframework.boot.env.EnvironmentPostProcessor=\
 com.taller.config.DbUrlEnvironmentPostProcessor

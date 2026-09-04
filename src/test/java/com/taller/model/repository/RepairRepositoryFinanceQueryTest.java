@@ -17,6 +17,7 @@ class RepairRepositoryFinanceQueryTest {
             "summarizeMonthlyFinanceIncome",
             "summarizeMonthlyFinancePartsCost",
             "findFinanceActivityPage",
+            "summarizeFinanceActivity",
             "summarizeRetiredFinanceRepairs",
             "countFinanceActivityRepairs",
             "summarizeFinancePayments",

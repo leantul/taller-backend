@@ -33,18 +33,13 @@ class RepairRepositoryFinanceQueryTest {
             Query query = method.getAnnotation(Query.class);
             org.junit.jupiter.api.Assertions.assertFalse(query.nativeQuery(), () -> method.getName() + " must use JPQL/HQL, not native SQL");
             assertDoesNotThrow(
-                    () -> parseHql(query.value()),
+                    () -> HqlParseTreeBuilder.INSTANCE.buildHqlParser(query.value()).statement(),
                     () -> method.getName() + " has invalid HQL");
             if (!query.countQuery().isBlank()) {
                 assertDoesNotThrow(
-                        () -> parseHql(query.countQuery()),
+                        () -> HqlParseTreeBuilder.INSTANCE.buildHqlParser(query.countQuery()).statement(),
                         () -> method.getName() + " has invalid count HQL");
             }
         }
-    }
-
-    private void parseHql(String hql) {
-        HqlParseTreeBuilder parserBuilder = HqlParseTreeBuilder.INSTANCE;
-        parserBuilder.buildHqlParser(hql, parserBuilder.buildHqlLexer(hql)).statement();
     }
 }

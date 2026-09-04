@@ -17,12 +17,17 @@ class FollowUpRepositoryQueryTest {
             Query query = method.getAnnotation(Query.class);
             if (query == null) continue;
             assertFalse(query.nativeQuery(), () -> method.getName() + " must use JPQL/HQL, not native SQL");
-            assertDoesNotThrow(() -> HqlParseTreeBuilder.INSTANCE.buildHqlParser(query.value()).statement(),
+            assertDoesNotThrow(() -> parseHql(query.value()),
                     () -> method.getName() + " has invalid HQL");
             if (!query.countQuery().isBlank()) {
-                assertDoesNotThrow(() -> HqlParseTreeBuilder.INSTANCE.buildHqlParser(query.countQuery()).statement(),
+                assertDoesNotThrow(() -> parseHql(query.countQuery()),
                         () -> method.getName() + " has invalid count HQL");
             }
         }
+    }
+
+    private void parseHql(String hql) {
+        HqlParseTreeBuilder parserBuilder = HqlParseTreeBuilder.INSTANCE;
+        parserBuilder.buildHqlParser(hql, parserBuilder.buildHqlLexer(hql)).statement();
     }
 }

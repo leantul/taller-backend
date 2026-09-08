@@ -171,6 +171,14 @@ export class DashboardPageComponent implements OnInit, OnDestroy {
     return Number.isFinite(parsed) ? parsed : 0;
   }
 
+  formatDate(value: string | null | undefined): string {
+    if (!value) {
+      return '-';
+    }
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString('es-AR');
+  }
+
   private refreshCharts(remount: boolean): void {
     const textColor = this.themeMode === 'dark' ? '#eef2f3' : '#1d2529';
     const borderColor = this.themeMode === 'dark' ? '#303940' : '#d7d2c8';

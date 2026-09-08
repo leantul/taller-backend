@@ -14,10 +14,8 @@ public class DashboardOverviewDTO {
     private long waitingPickupCount;
     private long inProgressCount;
     private long quotedPendingCount;
-    private List<DashboardSeriesItemDTO> deviceTypes;
-    private List<DashboardSeriesItemDTO> repairStatuses;
-    private List<DashboardRecentClientDTO> recentClients;
-    private List<DashboardRecentDeviceDTO> recentDevices;
-    private List<DashboardRecentRepairDTO> recentRepairs;
+    private List<DashboardSeriesItemDTO> monthlyReceivedRepairs;
+    private double averageTurnaroundDays;
+    private long overdueOpenRepairs;
     private List<DashboardInactiveDeviceDTO> inactiveDevices;
 }

@@ -115,22 +115,6 @@ public interface ClientRepository extends JpaRepository<Client, String> {
                    c.lastName AS lastName,
                    c.reference AS reference,
                    c.email AS email,
-                   c.phone AS phone,
-                   MIN(dt.name) AS deviceTypeName
-            FROM Client c
-            JOIN c.devices d
-            LEFT JOIN d.deviceType dt
-            GROUP BY c.id, c.name, c.lastName, c.reference, c.email, c.phone, c.creationDateTime
-            ORDER BY c.creationDateTime DESC
-            """)
-    List<ClientBasicView> findTop5WithDevicesBasic(Pageable pageable);
-
-    @Query("""
-            SELECT c.id AS id,
-                   c.name AS name,
-                   c.lastName AS lastName,
-                   c.reference AS reference,
-                   c.email AS email,
                    c.phone AS phone
             FROM Client c
             WHERE c.id IN ?1

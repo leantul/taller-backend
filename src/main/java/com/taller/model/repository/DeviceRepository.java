@@ -164,27 +164,8 @@ public interface DeviceRepository extends JpaRepository<Device, String> {
                    d.deviceType.name AS deviceTypeName,
                    d.clientId AS clientId
             FROM Device d
-            ORDER BY d.creationDateTime DESC
-            """)
-    List<DeviceBasicView> findBasicLatest(Pageable pageable);
-
-    @Query("""
-            SELECT d.id AS id,
-                   d.brand AS brand,
-                   d.model AS model,
-                   d.serialNumber AS serialNumber,
-                   d.deviceTypeId AS deviceTypeId,
-                   d.deviceType.name AS deviceTypeName,
-                   d.clientId AS clientId
-            FROM Device d
             WHERE d.id IN ?1
             """)
     List<DeviceBasicView> findBasicByIdIn(Collection<String> ids);
 
-    @Query("""
-            SELECT d.deviceType.name AS deviceTypeName, COUNT(d) AS total
-            FROM Device d
-            GROUP BY d.deviceType.name
-            """)
-    List<com.taller.model.repository.projection.DeviceTypeCountView> countByDeviceType();
 }

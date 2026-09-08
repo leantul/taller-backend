@@ -18,7 +18,7 @@ import { DashboardOverview } from '../../shared/models/dashboard.model';
         <span class="eyebrow">Taller activo</span>
         <h1>Resumen operativo</h1>
       </div>
-      <p>Lectura rápida de carga de trabajo y últimos movimientos del taller.</p>
+      <p>Lectura rápida de carga de trabajo, evolución y demoras del taller.</p>
     </section>
 
     <section class="dashboard-topline">
@@ -70,69 +70,19 @@ import { DashboardOverview } from '../../shared/models/dashboard.model';
       <p-card styleClass="metric-card"><span class="metric-label">Clientes</span><div class="metric">{{ overview.clientCount }}</div><small>Total registrados</small></p-card>
       <p-card styleClass="metric-card"><span class="metric-label">Dispositivos</span><div class="metric">{{ overview.deviceCount }}</div><small>Equipos cargados</small></p-card>
       <p-card styleClass="metric-card"><span class="metric-label">Reparaciones</span><div class="metric">{{ overview.repairCount }}</div><small>Ordenes históricas</small></p-card>
+      <p-card styleClass="metric-card"><span class="metric-label">Tiempo de ciclo</span><div class="metric">{{ overview.averageTurnaroundDays | number:'1.1-1':'es-AR' }} días</div><small>Promedio de recepción a retiro</small></p-card>
+      <p-card styleClass="metric-card"><span class="metric-label">Órdenes demoradas</span><div class="metric metric-warning">{{ overview.overdueOpenRepairs }}</div><small>Abiertas hace más de 7 días</small></p-card>
     </section>
 
     <section class="dashboard-grid charts" *ngIf="dataReady">
-      <p-card header="Equipos por tipo">
+      <p-card header="Reparaciones recibidas por mes" styleClass="dashboard-wide-card">
         <div class="chart-surface">
-          <p-chart *ngIf="chartsVisible" type="doughnut" [data]="deviceTypeChartData" [options]="doughnutChartOptions"></p-chart>
-        </div>
-      </p-card>
-      <p-card header="Reparaciones por estado">
-        <div class="chart-surface">
-          <p-chart *ngIf="chartsVisible" type="doughnut" [data]="repairStatusChartData" [options]="doughnutChartOptions"></p-chart>
+          <p-chart *ngIf="chartsVisible" type="line" [data]="monthlyReceivedChartData" [options]="monthlyReceivedChartOptions"></p-chart>
         </div>
       </p-card>
     </section>
 
-    <section class="dashboard-grid lists" *ngIf="dataReady">
-      <p-card header="Últimos 5 clientes">
-        <div class="native-table-wrap">
-          <table class="native-table dashboard-table">
-            <thead><tr><th>Nombre</th><th>Tipo de dispositivo</th></tr></thead>
-            <tbody>
-              <tr *ngFor="let item of overview.recentClients; trackBy: recentClientTrack">
-                <td>{{ item.name }}</td>
-                <td>{{ item.deviceType }}</td>
-              </tr>
-              <tr *ngIf="!overview.recentClients.length"><td class="empty-cell" colspan="2">Sin datos recientes.</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </p-card>
-
-      <p-card header="Últimos 5 dispositivos">
-        <div class="native-table-wrap">
-          <table class="native-table dashboard-table">
-            <thead><tr><th>Tipo</th><th>Marca</th><th>Modelo</th></tr></thead>
-            <tbody>
-              <tr *ngFor="let item of overview.recentDevices; trackBy: recentDeviceTrack">
-                <td>{{ item.deviceTypeName }}</td>
-                <td>{{ item.brand }}</td>
-                <td>{{ item.model }}</td>
-              </tr>
-              <tr *ngIf="!overview.recentDevices.length"><td class="empty-cell" colspan="3">Sin dispositivos recientes.</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </p-card>
-
-      <p-card header="Últimas 5 reparaciones">
-        <div class="native-table-wrap">
-          <table class="native-table dashboard-table">
-            <thead><tr><th>Fecha</th><th>Cliente</th><th>Monto</th></tr></thead>
-            <tbody>
-              <tr *ngFor="let item of overview.recentRepairs; trackBy: recentRepairTrack">
-                <td>{{ formatDate(item.date) }}</td>
-                <td>{{ item.client }}</td>
-                <td>{{ item.price != null ? (asMoney(item.price) | currency:'ARS':'symbol':'1.2-2':'es-AR') : '-' }}</td>
-              </tr>
-              <tr *ngIf="!overview.recentRepairs.length"><td class="empty-cell" colspan="3">Sin reparaciones entregadas.</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </p-card>
-
+    <section class="dashboard-grid lists dashboard-inactive-list" *ngIf="dataReady">
       <p-card header="Top 5 equipos inactivos">
         <div class="native-table-wrap">
           <table class="native-table dashboard-table">
@@ -158,19 +108,16 @@ export class DashboardPageComponent implements OnInit, OnDestroy {
     waitingPickupCount: 0,
     inProgressCount: 0,
     quotedPendingCount: 0,
-    deviceTypes: [],
-    repairStatuses: [],
-    recentClients: [],
-    recentDevices: [],
-    recentRepairs: [],
+    monthlyReceivedRepairs: [],
+    averageTurnaroundDays: 0,
+    overdueOpenRepairs: 0,
     inactiveDevices: []
   };
   dataReady = false;
   chartsVisible = false;
   themeMode: ThemeMode;
-  deviceTypeChartData: any = { labels: [], datasets: [] };
-  repairStatusChartData: any = { labels: [], datasets: [] };
-  doughnutChartOptions: any = {};
+  monthlyReceivedChartData: any = { labels: [], datasets: [] };
+  monthlyReceivedChartOptions: any = {};
 
   private readonly subscriptions = new Subscription();
 
@@ -200,12 +147,10 @@ export class DashboardPageComponent implements OnInit, OnDestroy {
         this.zone.run(() => {
           this.overview = {
             ...overview,
-            recentClients: overview.recentClients || [],
-            recentDevices: overview.recentDevices || [],
-            recentRepairs: overview.recentRepairs || [],
             inactiveDevices: overview.inactiveDevices || [],
-            deviceTypes: overview.deviceTypes || [],
-            repairStatuses: overview.repairStatuses || []
+            monthlyReceivedRepairs: overview.monthlyReceivedRepairs || [],
+            averageTurnaroundDays: this.asMoney(overview.averageTurnaroundDays),
+            overdueOpenRepairs: this.asMoney(overview.overdueOpenRepairs)
           };
           this.dataReady = true;
           this.changeDetector.detectChanges();
@@ -219,9 +164,6 @@ export class DashboardPageComponent implements OnInit, OnDestroy {
     this.subscriptions.unsubscribe();
   }
 
-  recentClientTrack = (_: number, item: DashboardOverview['recentClients'][number]) => item.id;
-  recentDeviceTrack = (_: number, item: DashboardOverview['recentDevices'][number]) => item.id;
-  recentRepairTrack = (_: number, item: DashboardOverview['recentRepairs'][number]) => item.repairId;
   inactiveDeviceTrack = (_: number, item: DashboardOverview['inactiveDevices'][number]) => item.name;
 
   asMoney(value: unknown): number {
@@ -241,36 +183,30 @@ export class DashboardPageComponent implements OnInit, OnDestroy {
     const textColor = this.themeMode === 'dark' ? '#eef2f3' : '#1d2529';
     const borderColor = this.themeMode === 'dark' ? '#303940' : '#d7d2c8';
     const brandColor = '#0c8a9f';
-    const accentColor = '#d79324';
-    const successColor = '#177245';
-    const dangerColor = '#b73636';
-    const infoColor = '#2364aa';
-    const palette = [brandColor, accentColor, successColor, infoColor, '#8b5cf6', '#ef4444', '#14b8a6', '#f97316'];
-
-    this.deviceTypeChartData = {
-      labels: this.overview.deviceTypes.map((row) => row.label),
+    this.monthlyReceivedChartData = {
+      labels: this.overview.monthlyReceivedRepairs.map((row) => row.label),
       datasets: [{
-        data: this.overview.deviceTypes.map((row) => this.asMoney(row.value)),
-        backgroundColor: palette.slice(0, Math.max(this.overview.deviceTypes.length, 1)),
-        borderColor: this.themeMode === 'dark' ? '#171b1f' : '#ffffff',
-        borderWidth: 2
+        label: 'Reparaciones recibidas',
+        data: this.overview.monthlyReceivedRepairs.map((row) => this.asMoney(row.value)),
+        borderColor: brandColor,
+        backgroundColor: this.themeMode === 'dark' ? 'rgba(32, 190, 212, .18)' : 'rgba(12, 138, 159, .16)',
+        borderWidth: 3,
+        pointBackgroundColor: brandColor,
+        pointBorderColor: this.themeMode === 'dark' ? '#171b1f' : '#ffffff',
+        pointBorderWidth: 2,
+        pointRadius: 4,
+        tension: .35,
+        fill: true
       }]
     };
 
-    this.repairStatusChartData = {
-      labels: this.overview.repairStatuses.map((row) => row.label),
-      datasets: [{
-        data: this.overview.repairStatuses.map((row) => this.asMoney(row.value)),
-        backgroundColor: [infoColor, brandColor, accentColor, successColor, dangerColor, '#6b7280'],
-        borderColor: this.themeMode === 'dark' ? '#171b1f' : '#ffffff',
-        borderWidth: 2
-      }]
-    };
-
-    this.doughnutChartOptions = {
+    this.monthlyReceivedChartOptions = {
       responsive: true,
       maintainAspectRatio: false,
-      cutout: '62%',
+      scales: {
+        x: { ticks: { color: textColor }, grid: { display: false } },
+        y: { beginAtZero: true, ticks: { color: textColor, precision: 0 }, grid: { color: borderColor } }
+      },
       plugins: {
         legend: {
           position: 'bottom',

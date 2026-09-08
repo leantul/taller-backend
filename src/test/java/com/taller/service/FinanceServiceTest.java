@@ -130,6 +130,43 @@ class FinanceServiceTest {
     }
 
     @Test
+    void getSummary_derivesRealizedLaborFromNetInsteadOfRegisteredLabor() {
+        LocalDate from = LocalDate.of(2026, 9, 1);
+        LocalDate to = LocalDate.of(2026, 9, 30);
+        LocalDateTime fromDateTime = from.atStartOfDay();
+        LocalDateTime toDateTime = to.plusDays(1).atStartOfDay().minusNanos(1);
+        LocalDateTime nextMonth = to.plusDays(1).atStartOfDay();
+        FinanceRepairSummaryView repairs = mock(FinanceRepairSummaryView.class);
+        FinanceActivitySummaryView activitySummary = mock(FinanceActivitySummaryView.class);
+        FinancePartsSummaryView beforeParts = mock(FinancePartsSummaryView.class);
+        FinancePartsSummaryView throughParts = mock(FinancePartsSummaryView.class);
+        FinancePaymentSummaryView paymentSummary = mock(FinancePaymentSummaryView.class);
+
+        // Includes a no-charge repair with labor registered; it must not inflate realized labor.
+        when(activitySummary.getTotalIncome()).thenReturn(BigDecimal.valueOf(381000));
+        when(activitySummary.getTotalPartsCost()).thenReturn(BigDecimal.valueOf(104101));
+        when(paymentSummary.getRepairCount()).thenReturn(4L);
+        when(repairRepository.summarizeRetiredFinanceRepairs(fromDateTime, toDateTime)).thenReturn(repairs);
+        when(repairRepository.summarizeFinanceActivity(fromDateTime, toDateTime)).thenReturn(activitySummary);
+        when(repairRepository.summarizeFinancePayments(fromDateTime, toDateTime)).thenReturn(paymentSummary);
+        when(repairRepository.countFinanceActivityRepairs(fromDateTime, toDateTime)).thenReturn(5L);
+        when(repairRepository.sumPaymentIncomeBefore(fromDateTime)).thenReturn(BigDecimal.ZERO);
+        when(repairRepository.sumPaymentIncomeBefore(nextMonth)).thenReturn(BigDecimal.valueOf(381000));
+        when(repairRepository.summarizeRecognizedFinancePartsBefore(fromDateTime)).thenReturn(beforeParts);
+        when(throughParts.getTotalPartsCost()).thenReturn(BigDecimal.valueOf(104101));
+        when(throughParts.getTotalPartsProfit()).thenReturn(BigDecimal.ZERO);
+        when(repairRepository.summarizeRecognizedFinancePartsBefore(nextMonth)).thenReturn(throughParts);
+        when(repairRepository.sumFinancePaymentIncomeBetween(any(), any())).thenReturn(BigDecimal.ZERO);
+        when(repairRepository.sumRecognizedPartsCostBetween(any(), any())).thenReturn(BigDecimal.ZERO);
+
+        FinanceSummaryDTO summary = new FinanceService(repairRepository).getSummary(from, to);
+
+        assertEquals(0, BigDecimal.valueOf(276899).compareTo(summary.getNetIncome()));
+        assertEquals(0, BigDecimal.valueOf(276899).compareTo(summary.getTotalLabor()));
+        assertEquals(0, summary.getNetIncome().compareTo(summary.getTotalLabor().add(summary.getTotalPartsProfit())));
+    }
+
+    @Test
     void getDetails_clampsPaginationAndUsesWhitelistedBackendSort() {
         FinanceRowView row = mock(FinanceRowView.class);
         when(row.getRepairId()).thenReturn("repair-1");

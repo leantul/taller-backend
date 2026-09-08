@@ -10,4 +10,5 @@ FROM eclipse-temurin:21-jre
 WORKDIR /app
 COPY --from=build /app/target/*.war app.war
 EXPOSE 8080
-ENTRYPOINT ["java", "-jar", "/app/app.war"]
+ENV JAVA_OPTS="-XX:MaxRAMPercentage=65.0"
+ENTRYPOINT ["sh", "-c", "exec java $JAVA_OPTS -jar /app/app.war"]

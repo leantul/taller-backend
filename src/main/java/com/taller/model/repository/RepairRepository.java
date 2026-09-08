@@ -864,7 +864,7 @@ public interface RepairRepository extends JpaRepository<Repair, String> {
 
     @Query("""
             SELECT COALESCE(
-                AVG(FUNCTION('date_part', 'epoch', FUNCTION('age', r.returnDateTime, r.receiveDateTime)) / 86400.0),
+                AVG(timestampdiff(hour, r.receiveDateTime, r.returnDateTime)) / 24.0,
                 0.0
             )
             FROM Repair r

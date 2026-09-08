@@ -83,9 +83,6 @@ export class ApiService {
   markNotificationAsRead = this.notifications.markAsRead.bind(this.notifications);
 
   getDashboardOverview = this.reporting.getDashboardOverview.bind(this.reporting);
-  getLatestClients = this.reporting.getLatestClients.bind(this.reporting);
-  getLatestDevices = this.reporting.getLatestDevices.bind(this.reporting);
-  getLatestRepairs = this.reporting.getLatestRepairs.bind(this.reporting);
   getFinanceSummary = this.reporting.getFinanceSummary.bind(this.reporting);
   getFinanceDetails = this.reporting.getFinanceDetails.bind(this.reporting);
 }

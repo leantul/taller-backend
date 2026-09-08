@@ -15,6 +15,7 @@ import com.taller.model.repository.projection.FinanceRepairSummaryView;
 import com.taller.model.repository.projection.FinanceRowView;
 import com.taller.model.repository.projection.FinanceActivitySummaryView;
 import com.taller.model.repository.projection.RepairListView;
+import com.taller.model.repository.projection.RepairMonthlyCountView;
 import com.taller.model.repository.projection.RepairStatusCountView;
 import com.taller.model.repository.projection.StatusBoardRepairView;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -728,36 +729,6 @@ public interface RepairRepository extends JpaRepository<Repair, String> {
                    r.quoteNotes AS quoteNotes,
                    r.approved AS approved,
                    r.rejected AS rejected,
-                   r.readyNotifiedAt AS readyNotifiedAt,
-                   c.name AS clientName,
-                   c.lastName AS clientLastName,
-                   c.phone AS clientPhone,
-                   d.deviceType.name AS deviceTypeName,
-                   d.brand AS deviceBrand,
-                   d.model AS deviceModel
-            FROM Repair r
-            LEFT JOIN r.client c
-            LEFT JOIN r.device d
-            ORDER BY r.creationDateTime DESC
-            """)
-    List<RepairListView> findLatestRows(Pageable pageable);
-
-    @Query("""
-            SELECT r.id AS id,
-                   r.idDevice AS idDevice,
-                   r.idClient AS idClient,
-                   r.description AS description,
-                   r.orderNumber AS orderNumber,
-                   r.status AS status,
-                   r.receiveDateTime AS receiveDateTime,
-                   r.returnDateTime AS returnDateTime,
-                   r.price AS price,
-                   r.laborAmount AS laborAmount,
-                   r.extraAmount AS extraAmount,
-                   r.quotedAmount AS quotedAmount,
-                   r.quoteNotes AS quoteNotes,
-                   r.approved AS approved,
-                   r.rejected AS rejected,
                    r.readyNotifiedAt AS readyNotifiedAt
             FROM Repair r
             WHERE lower(r.orderNumber) LIKE lower(concat('%', ?1, '%'))
@@ -874,37 +845,47 @@ public interface RepairRepository extends JpaRepository<Repair, String> {
     List<Repair> findByStatusAndReturnDateTimeIsNotNullOrderByReturnDateTimeDesc(RepairStatusEnum status);
 
     @Query("""
-            SELECT r.id AS id,
-                   r.idDevice AS idDevice,
-                   r.idClient AS idClient,
-                   r.description AS description,
-                   r.orderNumber AS orderNumber,
-                   r.status AS status,
-                   r.receiveDateTime AS receiveDateTime,
-                   r.returnDateTime AS returnDateTime,
-                   r.price AS price,
-                   r.laborAmount AS laborAmount,
-                   r.extraAmount AS extraAmount,
-                   r.quotedAmount AS quotedAmount,
-                   r.quoteNotes AS quoteNotes,
-                   r.approved AS approved,
-                   r.rejected AS rejected,
-                   r.readyNotifiedAt AS readyNotifiedAt,
-                   c.name AS clientName,
-                   c.lastName AS clientLastName
-            FROM Repair r
-            LEFT JOIN r.client c
-            WHERE r.status = com.taller.model.enums.RepairStatusEnum.RETIRADA
-            ORDER BY COALESCE(r.returnDateTime, r.receiveDateTime) DESC
-            """)
-    List<RepairListView> findLatestDeliveredRows(Pageable pageable);
-
-    @Query("""
             SELECT r.status AS status, COUNT(r) AS total
             FROM Repair r
             GROUP BY r.status
             """)
     List<RepairStatusCountView> countByStatus();
+
+    @Query("""
+            SELECT FUNCTION('date_trunc', 'month', r.receiveDateTime) AS month, COUNT(r) AS total
+            FROM Repair r
+            WHERE r.receiveDateTime >= :from
+              AND r.receiveDateTime < :to
+            GROUP BY FUNCTION('date_trunc', 'month', r.receiveDateTime)
+            """)
+    List<RepairMonthlyCountView> countReceivedByMonth(
+            @Param("from") LocalDateTime from,
+            @Param("to") LocalDateTime to);
+
+    @Query("""
+            SELECT COALESCE(
+                AVG(FUNCTION('date_part', 'epoch', FUNCTION('age', r.returnDateTime, r.receiveDateTime)) / 86400.0),
+                0.0
+            )
+            FROM Repair r
+            WHERE r.status = com.taller.model.enums.RepairStatusEnum.RETIRADA
+              AND r.receiveDateTime IS NOT NULL
+              AND r.returnDateTime IS NOT NULL
+            """)
+    Double averageCompletedTurnaroundDays();
+
+    @Query("""
+            SELECT COUNT(r)
+            FROM Repair r
+            WHERE r.status NOT IN (
+                com.taller.model.enums.RepairStatusEnum.POR_RECIBIR,
+                com.taller.model.enums.RepairStatusEnum.RETIRADA,
+                com.taller.model.enums.RepairStatusEnum.RETIRADA_FALTA_COBRAR
+            )
+              AND r.receiveDateTime IS NOT NULL
+              AND r.receiveDateTime < :cutoff
+            """)
+    long countOverdueOpenRepairs(@Param("cutoff") LocalDateTime cutoff);
 
     @Query("""
             SELECT r.idDevice AS deviceId,

@@ -384,8 +384,16 @@ a { color: inherit; }
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
 }
 
+.dashboard-wide-card {
+  width: 100%;
+}
+
 .dashboard-grid.lists {
   grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.dashboard-inactive-list {
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .metrics-grid {
@@ -496,6 +504,10 @@ a { color: inherit; }
   font-size: 1.65rem;
   font-weight: 700;
   line-height: 1;
+}
+
+.metric-warning {
+  color: #c27810;
 }
 
 .field {

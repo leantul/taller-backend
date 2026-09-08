@@ -53,8 +53,8 @@ public class FinanceService {
         RealizedBreakdown before = fromDateTime != null ? realizedBreakdownBefore(fromDateTime) : RealizedBreakdown.ZERO;
         RealizedBreakdown through = realizedBreakdownBefore(to != null ? to.plusDays(1).atStartOfDay() : OPEN_ENDED_CUTOFF);
         BigDecimal totalPartsProfit = positive(through.partsProfit().subtract(before.partsProfit()));
-        BigDecimal totalLabor = positive(through.laborAndOther().subtract(before.laborAndOther()));
         BigDecimal netIncome = totalIncome.subtract(totalPartsCost);
+        BigDecimal totalLabor = netIncome.subtract(totalPartsProfit);
 
         FinanceSummaryDTO summary = new FinanceSummaryDTO();
         summary.setFrom(from);
@@ -168,11 +168,11 @@ public class FinanceService {
         BigDecimal potentialPartsProfit = parts != null ? positive(safeMoney(parts.getTotalPartsProfit())) : BigDecimal.ZERO;
         BigDecimal realizedProfit = positive(income.subtract(cost));
         BigDecimal partsProfit = realizedProfit.min(potentialPartsProfit);
-        return new RealizedBreakdown(partsProfit, positive(realizedProfit.subtract(partsProfit)));
+        return new RealizedBreakdown(partsProfit);
     }
 
-    private record RealizedBreakdown(BigDecimal partsProfit, BigDecimal laborAndOther) {
-        private static final RealizedBreakdown ZERO = new RealizedBreakdown(BigDecimal.ZERO, BigDecimal.ZERO);
+    private record RealizedBreakdown(BigDecimal partsProfit) {
+        private static final RealizedBreakdown ZERO = new RealizedBreakdown(BigDecimal.ZERO);
     }
 
     private String formatMonth(YearMonth month) {

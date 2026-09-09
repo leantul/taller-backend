@@ -231,7 +231,12 @@ public interface RepairRepository extends JpaRepository<Repair, String> {
                                    AND payment.paymentDate <= COALESCE(:to, payment.paymentDate))), 0) AS totalIncome,
                    COALESCE(SUM((SELECT COALESCE(SUM(COALESCE(part.cost, 0) * COALESCE(part.quantity, 1)), 0)
                                  FROM RepairPart part
-                                 WHERE part.repairId = r.id)), 0) AS totalPartsCost
+                                 WHERE part.repairId = r.id)), 0) AS totalPartsCost,
+                   COALESCE(SUM(COALESCE(r.laborAmount, 0)), 0) AS totalLabor,
+                   COALESCE(SUM((SELECT COALESCE(SUM((COALESCE(part.salePrice, 0) - COALESCE(part.cost, 0))
+                                                          * COALESCE(part.quantity, 1)), 0)
+                                 FROM RepairPart part
+                                 WHERE part.repairId = r.id)), 0) AS totalPartsProfit
             FROM Repair r
             WHERE EXISTS (SELECT payment.id FROM RepairPayment payment
                           WHERE payment.repairId = r.id

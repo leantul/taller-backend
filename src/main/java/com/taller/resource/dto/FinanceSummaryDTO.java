@@ -17,6 +17,7 @@ public class FinanceSummaryDTO {
     private BigDecimal totalPartsCost;
     private BigDecimal totalLabor;
     private BigDecimal totalPartsProfit;
+    private BigDecimal totalAdjustment;
     private BigDecimal totalQuoted;
     private long zeroFinalAmountCount;
     private long positiveFinalAmountCount;

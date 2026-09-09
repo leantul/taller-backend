@@ -3,7 +3,6 @@ package com.taller.service;
 import com.taller.model.repository.RepairRepository;
 import com.taller.model.repository.projection.FinanceActivitySummaryView;
 import com.taller.model.repository.projection.FinancePaymentSummaryView;
-import com.taller.model.repository.projection.FinancePartsSummaryView;
 import com.taller.model.repository.projection.FinanceRepairSummaryView;
 import com.taller.model.repository.projection.FinanceRowView;
 import com.taller.resource.dto.DashboardSeriesItemDTO;
@@ -32,7 +31,6 @@ import java.util.Set;
 public class FinanceService {
 
     private static final int MAXIMUM_PAGE_SIZE = 100;
-    private static final LocalDateTime OPEN_ENDED_CUTOFF = LocalDateTime.of(9999, 12, 31, 0, 0);
     private static final Set<String> DETAIL_SORT_FIELDS = Set.of("clientName", "date", "income", "partsAmount", "net");
 
     private final RepairRepository repairRepository;
@@ -50,11 +48,10 @@ public class FinanceService {
         BigDecimal totalIncome = activitySummary != null ? safeMoney(activitySummary.getTotalIncome()) : BigDecimal.ZERO;
         BigDecimal totalQuoted = repairSummary != null ? safeMoney(repairSummary.getTotalQuoted()) : BigDecimal.ZERO;
         BigDecimal totalPartsCost = activitySummary != null ? safeMoney(activitySummary.getTotalPartsCost()) : BigDecimal.ZERO;
-        RealizedBreakdown before = fromDateTime != null ? realizedBreakdownBefore(fromDateTime) : RealizedBreakdown.ZERO;
-        RealizedBreakdown through = realizedBreakdownBefore(to != null ? to.plusDays(1).atStartOfDay() : OPEN_ENDED_CUTOFF);
-        BigDecimal totalPartsProfit = positive(through.partsProfit().subtract(before.partsProfit()));
+        BigDecimal totalLabor = activitySummary != null ? safeMoney(activitySummary.getTotalLabor()) : BigDecimal.ZERO;
+        BigDecimal totalPartsProfit = activitySummary != null ? safeMoney(activitySummary.getTotalPartsProfit()) : BigDecimal.ZERO;
         BigDecimal netIncome = totalIncome.subtract(totalPartsCost);
-        BigDecimal totalLabor = netIncome.subtract(totalPartsProfit);
+        BigDecimal totalAdjustment = netIncome.subtract(totalLabor).subtract(totalPartsProfit);
 
         FinanceSummaryDTO summary = new FinanceSummaryDTO();
         summary.setFrom(from);
@@ -64,6 +61,7 @@ public class FinanceService {
         summary.setTotalPartsCost(totalPartsCost);
         summary.setTotalLabor(totalLabor);
         summary.setTotalPartsProfit(totalPartsProfit);
+        summary.setTotalAdjustment(totalAdjustment);
         summary.setTotalQuoted(totalQuoted);
         summary.setZeroFinalAmountCount(repairSummary != null ? safeLong(repairSummary.getZeroFinalAmountCount()) : 0L);
         summary.setPositiveFinalAmountCount(paidRepairCount);
@@ -110,8 +108,11 @@ public class FinanceService {
         for (YearMonth month : monthlyNet.keySet()) {
             LocalDateTime monthStart = month.atDay(1).atStartOfDay();
             LocalDateTime nextMonth = month.plusMonths(1).atDay(1).atStartOfDay();
-            BigDecimal income = safeMoney(repairRepository.sumFinancePaymentIncomeBetween(monthStart, nextMonth));
-            BigDecimal partsCost = safeMoney(repairRepository.sumRecognizedPartsCostBetween(monthStart, nextMonth));
+            FinanceActivitySummaryView activity = repairRepository.summarizeFinanceActivity(
+                    monthStart,
+                    nextMonth.minusNanos(1));
+            BigDecimal income = activity != null ? safeMoney(activity.getTotalIncome()) : BigDecimal.ZERO;
+            BigDecimal partsCost = activity != null ? safeMoney(activity.getTotalPartsCost()) : BigDecimal.ZERO;
             monthlyNet.put(month, income.subtract(partsCost));
         }
 
@@ -155,24 +156,6 @@ public class FinanceService {
 
     private long safeLong(Long value) {
         return value != null ? value : 0L;
-    }
-
-    private BigDecimal positive(BigDecimal value) {
-        return value.signum() > 0 ? value : BigDecimal.ZERO;
-    }
-
-    private RealizedBreakdown realizedBreakdownBefore(LocalDateTime cutoff) {
-        BigDecimal income = safeMoney(repairRepository.sumPaymentIncomeBefore(cutoff));
-        FinancePartsSummaryView parts = repairRepository.summarizeRecognizedFinancePartsBefore(cutoff);
-        BigDecimal cost = parts != null ? safeMoney(parts.getTotalPartsCost()) : BigDecimal.ZERO;
-        BigDecimal potentialPartsProfit = parts != null ? positive(safeMoney(parts.getTotalPartsProfit())) : BigDecimal.ZERO;
-        BigDecimal realizedProfit = positive(income.subtract(cost));
-        BigDecimal partsProfit = realizedProfit.min(potentialPartsProfit);
-        return new RealizedBreakdown(partsProfit);
-    }
-
-    private record RealizedBreakdown(BigDecimal partsProfit) {
-        private static final RealizedBreakdown ZERO = new RealizedBreakdown(BigDecimal.ZERO);
     }
 
     private String formatMonth(YearMonth month) {

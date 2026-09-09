@@ -7,4 +7,6 @@ public interface FinanceActivitySummaryView {
     Long getRepairCount();
     BigDecimal getTotalIncome();
     BigDecimal getTotalPartsCost();
+    BigDecimal getTotalLabor();
+    BigDecimal getTotalPartsProfit();
 }

@@ -66,6 +66,7 @@ type FinanceTableColumn = {
         <div class="ops-summary-grid finance-breakdown">
           <div class="ops-item"><span>Ganancia realizada por mano de obra</span><strong>{{ formatMoney(totalLabor) }}</strong><small>{{ formatPercentage(laborProfitPercentage) }} del total de ganancias</small></div>
           <div class="ops-item"><span>Ganancia realizada por repuestos</span><strong>{{ formatMoney(totalPartsProfit) }}</strong><small>{{ formatPercentage(partsProfitPercentage) }} del total de ganancias</small></div>
+          <div class="ops-item"><span>Diferencias / ajustes</span><strong>{{ formatMoney(totalAdjustment) }}</strong><small>{{ formatPercentage(adjustmentPercentage) }} del total de ganancias</small></div>
           <div class="ops-item"><span>Presupuestos emitidos</span><strong>{{ formatMoney(totalQuoted) }}</strong></div>
           <div class="ops-item"><span>Ordenes entregadas</span><strong>{{ deliveredCount }}</strong></div>
           <div class="ops-item"><span>Órdenes sin cargo</span><strong>{{ zeroFinalAmountCount }}</strong></div>
@@ -133,6 +134,7 @@ export class FinancePageComponent implements OnInit, OnDestroy {
   totalPartsCost = 0;
   totalLabor = 0;
   totalPartsProfit = 0;
+  totalAdjustment = 0;
   totalQuoted = 0;
   zeroFinalAmountCount = 0;
   positiveFinalAmountCount = 0;
@@ -281,6 +283,7 @@ export class FinancePageComponent implements OnInit, OnDestroy {
     this.totalPartsCost = this.asMoney(summary.totalPartsCost);
     this.totalLabor = this.asMoney(summary.totalLabor);
     this.totalPartsProfit = this.asMoney(summary.totalPartsProfit);
+    this.totalAdjustment = this.asMoney(summary.totalAdjustment);
     this.totalQuoted = this.asMoney(summary.totalQuoted);
     this.zeroFinalAmountCount = summary.zeroFinalAmountCount || 0;
     this.positiveFinalAmountCount = summary.positiveFinalAmountCount || 0;
@@ -302,6 +305,10 @@ export class FinancePageComponent implements OnInit, OnDestroy {
 
   get partsProfitPercentage(): number {
     return this.profitPercentage(this.totalPartsProfit);
+  }
+
+  get adjustmentPercentage(): number {
+    return this.profitPercentage(this.totalAdjustment);
   }
 
   previousPage(): void {
@@ -328,8 +335,7 @@ export class FinancePageComponent implements OnInit, OnDestroy {
   }
 
   private profitPercentage(value: number): number {
-    const totalProfit = this.totalLabor + this.totalPartsProfit;
-    return totalProfit === 0 ? 0 : value / totalProfit;
+    return this.netIncome === 0 ? 0 : value / this.netIncome;
   }
 
   sortIcon(column: FinanceTableColumnKey): string {

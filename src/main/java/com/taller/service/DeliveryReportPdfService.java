@@ -20,13 +20,17 @@ import org.springframework.stereotype.Service;
 @Service
 public class DeliveryReportPdfService {
 
+    private static final int MAX_REPORT_ITEMS = 200;
+    private static final int MAX_REPORT_TEXT_CHARACTERS = 200_000;
+    private static final int MAX_PDF_BYTES = 10 * 1024 * 1024;
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy");
     private static final String DEFAULT_REPORT_TITLE = "REPORTE DE REPARACIÓN";
     private static final String WHATSAPP_ICON_ASSET_PATH = "report/whatsapp-icon.png";
     private static final String INSTAGRAM_ICON_ASSET_PATH = "report/instagram-icon.png";
 
     public byte[] generate(RepairReportDTO report, WorkshopSettings settings) {
-        try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
+        validateReportSize(report, settings);
+        try (ByteArrayOutputStream outputStream = new BoundedByteArrayOutputStream(MAX_PDF_BYTES)) {
             PdfRendererBuilder builder = new PdfRendererBuilder();
             builder.useFastMode();
             builder.withHtmlContent(buildHtml(report, settings), null);
@@ -35,6 +39,78 @@ public class DeliveryReportPdfService {
             return outputStream.toByteArray();
         } catch (Exception exception) {
             throw new IllegalStateException("No se pudo generar el PDF del reporte", exception);
+        }
+    }
+
+    private void validateReportSize(RepairReportDTO report, WorkshopSettings settings) {
+        int hardwareItemCount = sizeOf(report.getHardwareItems());
+        int softwareItemCount = sizeOf(report.getSoftwareItems());
+        if (hardwareItemCount + softwareItemCount > MAX_REPORT_ITEMS) {
+            throw new IllegalArgumentException("El reporte supera el máximo de %d elementos".formatted(MAX_REPORT_ITEMS));
+        }
+
+        long textCharacters = textLength(
+                report.getOrderNumber(), report.getClientName(), report.getClientLastName(), report.getClientPhone(),
+                report.getClientEmail(), report.getDeviceTypeName(), report.getDeviceBrand(), report.getDeviceModel(),
+                report.getDeviceSerialNumber(), report.getReportedIssue(), report.getWorkPerformed(),
+                report.getFinalObservations(), settings.getBusinessName(), settings.getWhatsapp(),
+                settings.getInstagram(), settings.getReportTitle()
+        );
+        if (report.getHardwareItems() != null) {
+            textCharacters += report.getHardwareItems().stream()
+                    .mapToLong(item -> item == null ? 0 : textLength(item.getPartName(), item.getDetail()))
+                    .sum();
+        }
+        if (report.getSoftwareItems() != null) {
+            textCharacters += report.getSoftwareItems().stream()
+                    .mapToLong(item -> item == null ? 0 : textLength(item.getSoftwareName(), item.getDetail()))
+                    .sum();
+        }
+        if (textCharacters > MAX_REPORT_TEXT_CHARACTERS) {
+            throw new IllegalArgumentException(
+                    "El contenido del reporte supera el máximo de %d caracteres".formatted(MAX_REPORT_TEXT_CHARACTERS)
+            );
+        }
+    }
+
+    private int sizeOf(List<?> values) {
+        return values == null ? 0 : values.size();
+    }
+
+    private long textLength(String... values) {
+        long total = 0;
+        for (String value : values) {
+            if (value != null) {
+                total += value.length();
+            }
+        }
+        return total;
+    }
+
+    private static final class BoundedByteArrayOutputStream extends ByteArrayOutputStream {
+        private final int maxBytes;
+
+        private BoundedByteArrayOutputStream(int maxBytes) {
+            super(Math.min(maxBytes, 64 * 1024));
+            this.maxBytes = maxBytes;
+        }
+
+        @Override
+        public synchronized void write(int value) {
+            ensureCapacityWithinLimit(1);
+            super.write(value);
+        }
+
+        @Override
+        public synchronized void write(byte[] bytes, int offset, int length) {
+            ensureCapacityWithinLimit(length);
+            super.write(bytes, offset, length);
+        }
+
+        private void ensureCapacityWithinLimit(int additionalBytes) {
+            if (additionalBytes > maxBytes - count) {
+                throw new IllegalStateException("El PDF generado supera el máximo de %d bytes".formatted(maxBytes));
+            }
         }
     }
 

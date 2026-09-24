@@ -416,6 +416,7 @@ type DeviceTableColumn = {
   `
 })
 export class DevicesPageComponent implements OnInit, OnDestroy {
+  private stopColumnResize?: () => void;
   @ViewChild(RepairDetailDialogComponent) private repairDetailDialog?: RepairDetailDialogComponent;
   devices: Device[] = [];
   filteredDevices: (Device & { clientName?: string })[] = [];
@@ -498,6 +499,7 @@ export class DevicesPageComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.stopColumnResize?.();
     this.pageRequest?.unsubscribe();
     this.searchSubscription?.unsubscribe();
   }
@@ -885,7 +887,8 @@ export class DevicesPageComponent implements OnInit, OnDestroy {
   }
 
   startColumnResize(event: MouseEvent, columnKey: DeviceTableColumnKey): void {
-    beginColumnResize(event, columnKey, this.deviceColumns, () => {
+    this.stopColumnResize?.();
+    this.stopColumnResize = beginColumnResize(event, columnKey, this.deviceColumns, () => {
       this.persistColumnWidths();
       this.changeDetector.detectChanges();
     });

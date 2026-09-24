@@ -126,6 +126,7 @@ type FinanceTableColumn = {
   `
 })
 export class FinancePageComponent implements OnInit, OnDestroy {
+  private stopColumnResize?: () => void;
   draftFromDate = '';
   draftToDate = '';
   financeRows: FinanceRow[] = [];
@@ -190,6 +191,7 @@ export class FinancePageComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.stopColumnResize?.();
     this.detailsRequest?.unsubscribe();
     this.summaryRequest?.unsubscribe();
     this.subscriptions.unsubscribe();
@@ -348,7 +350,8 @@ export class FinancePageComponent implements OnInit, OnDestroy {
   }
 
   startColumnResize(event: MouseEvent, columnKey: FinanceTableColumnKey): void {
-    beginColumnResize(event, columnKey, this.financeColumns, () => {
+    this.stopColumnResize?.();
+    this.stopColumnResize = beginColumnResize(event, columnKey, this.financeColumns, () => {
       this.persistColumnWidths();
       this.changeDetector.detectChanges();
     });

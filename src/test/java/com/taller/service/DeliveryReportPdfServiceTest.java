@@ -1,6 +1,7 @@
 package com.taller.service;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.taller.model.WorkshopSettings;
@@ -68,6 +69,25 @@ class DeliveryReportPdfServiceTest {
 
         assertFalse(text.contains("Repuestos cambiados"));
         assertFalse(text.contains("Software instalado"));
+    }
+
+    @Test
+    void generate_rejectsReportsWithTooManyItems() {
+        RepairReportDTO report = reportWithHardwareItems();
+        report.setHardwareItems(java.util.stream.IntStream.range(0, 201)
+                .mapToObj(index -> hardwareItem("Repuesto " + index, 100, false))
+                .toList());
+        report.setSoftwareItems(List.of());
+
+        assertThrows(IllegalArgumentException.class, () -> deliveryReportPdfService.generate(report, settings()));
+    }
+
+    @Test
+    void generate_rejectsOversizedTextContent() {
+        RepairReportDTO report = reportWithHardwareItems();
+        report.setReportedIssue("a".repeat(200_001));
+
+        assertThrows(IllegalArgumentException.class, () -> deliveryReportPdfService.generate(report, settings()));
     }
 
     private RepairReportDTO reportWithHardwareItems(RepairReportHardwareItemDTO... hardwareItems) {

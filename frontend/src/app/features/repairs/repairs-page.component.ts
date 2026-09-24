@@ -62,6 +62,7 @@ type RepairTableColumn = {
   templateUrl: './repairs-page.component.html'
 })
 export class RepairsPageComponent implements OnInit, OnDestroy {
+  private stopColumnResize?: () => void;
   @ViewChild(RepairDetailDialogComponent) private repairDetailDialog?: RepairDetailDialogComponent;
   @ViewChild(DeliveryReportDialogComponent) private deliveryReportDialog?: DeliveryReportDialogComponent;
   repairs: Repair[] = [];
@@ -187,6 +188,7 @@ export class RepairsPageComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.stopColumnResize?.();
     this.pageRequest?.unsubscribe();
     this.searchSubscription?.unsubscribe();
     this.clientSearchSubscription?.unsubscribe();
@@ -702,7 +704,8 @@ export class RepairsPageComponent implements OnInit, OnDestroy {
   }
 
   startColumnResize(event: MouseEvent, columnKey: RepairTableColumnKey): void {
-    beginColumnResize(event, columnKey, this.repairColumns, () => {
+    this.stopColumnResize?.();
+    this.stopColumnResize = beginColumnResize(event, columnKey, this.repairColumns, () => {
       this.persistColumnWidths();
       this.changeDetector.detectChanges();
     });

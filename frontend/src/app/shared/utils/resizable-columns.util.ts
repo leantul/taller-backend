@@ -39,11 +39,11 @@ export function beginColumnResize<K extends string>(
   columnKey: K,
   columns: ReadonlyArray<ResizableColumn<K>>,
   onWidthChange: () => void
-): void {
+): () => void {
   event.preventDefault();
   event.stopPropagation();
   const header = (event.currentTarget as HTMLElement).closest('th');
-  if (!header) return;
+  if (!header) return () => {};
 
   const resizeStartX = event.clientX;
   const resizeStartWidth = header.getBoundingClientRect().width;
@@ -57,11 +57,12 @@ export function beginColumnResize<K extends string>(
     }
   };
 
-  const onMouseUp = () => {
-    window.removeEventListener('mousemove', onMouseMove);
-    window.removeEventListener('mouseup', onMouseUp);
-  };
+  const abortController = new AbortController();
+  const stopResize = () => abortController.abort();
 
-  window.addEventListener('mousemove', onMouseMove);
-  window.addEventListener('mouseup', onMouseUp);
+  window.addEventListener('mousemove', onMouseMove, { signal: abortController.signal });
+  window.addEventListener('mouseup', stopResize, { once: true, signal: abortController.signal });
+  window.addEventListener('blur', stopResize, { once: true, signal: abortController.signal });
+
+  return stopResize;
 }

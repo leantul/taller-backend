@@ -174,6 +174,7 @@ type ClientTableColumn = {
   `
 })
 export class ClientsPageComponent implements OnInit, OnDestroy {
+  private stopColumnResize?: () => void;
   @ViewChild(RepairDetailDialogComponent) private repairDetailDialog?: RepairDetailDialogComponent;
   private readonly destroy$ = new Subject<void>();
   private readonly search$ = new Subject<string>();
@@ -215,7 +216,12 @@ export class ClientsPageComponent implements OnInit, OnDestroy {
     this.search$.pipe(debounceTime(300), distinctUntilChanged(), takeUntil(this.destroy$)).subscribe(() => { this.currentPage = 0; this.reload(); });
     this.reload();
   }
-  ngOnDestroy(): void { this.pageRequest?.unsubscribe(); this.destroy$.next(); this.destroy$.complete(); }
+  ngOnDestroy(): void {
+    this.stopColumnResize?.();
+    this.pageRequest?.unsubscribe();
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
 
   save(): void {
     this.api.createClient(this.draft).subscribe({
@@ -284,7 +290,8 @@ export class ClientsPageComponent implements OnInit, OnDestroy {
   }
 
   startColumnResize(event: MouseEvent, columnKey: ClientTableColumnKey): void {
-    beginColumnResize(event, columnKey, this.clientColumns, () => {
+    this.stopColumnResize?.();
+    this.stopColumnResize = beginColumnResize(event, columnKey, this.clientColumns, () => {
       this.persistColumnWidths();
       this.changeDetector.detectChanges();
     });

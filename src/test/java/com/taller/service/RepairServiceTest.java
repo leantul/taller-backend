@@ -458,6 +458,25 @@ class RepairServiceTest {
     }
 
     @Test
+    void updateStatus_pickupOfFullyPaidRepairDoesNotCreateAnotherPayment() {
+        Repair existing = existingRepair(null);
+        existing.setStatus(RepairStatusEnum.COBRADO_ESPERANDO_RETIRO);
+        existing.setPrice(new BigDecimal("100"));
+        RepairPayment paid = RepairPayment.builder().amount(new BigDecimal("100"))
+                .paymentDate(LocalDateTime.of(2026, 9, 30, 18, 0)).build();
+        when(repairRepository.findById("id-1")).thenReturn(Optional.of(existing));
+        when(repairPaymentRepository.findByRepairId("id-1")).thenReturn(List.of(paid));
+        LocalDateTime pickup = LocalDateTime.of(2026, 10, 1, 10, 0);
+
+        repairService.updateStatus("id-1", RepairStatusEnum.RETIRADA, null, pickup);
+
+        assertEquals(RepairStatusEnum.RETIRADA, existing.getStatus());
+        assertEquals(pickup, existing.getReturnDateTime());
+        assertEquals(LocalDateTime.of(2026, 9, 30, 18, 0), paid.getPaymentDate());
+        verify(repairPaymentRepository, never()).save(any());
+    }
+
+    @Test
     void updateStatus_toRetiradaUsesSelectedReturnDate() {
         Repair existing = existingRepair(null);
         LocalDateTime selectedReturnDate = LocalDateTime.of(2026, 6, 21, 18, 30);

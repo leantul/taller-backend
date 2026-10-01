@@ -163,88 +163,74 @@ public interface RepairRepository extends JpaRepository<Repair, String> {
             """)
     List<FinanceMonthlyView> summarizeMonthlyFinancePartsCost(@Param("from") LocalDateTime from);
 
+    // Shared per-repair expressions keep summary, detail and monthly net on the same basis.
+    // Costs/composition belong to the first payment or an earlier unpaid pickup, never both.
+    String FINANCE_RECOGNITION_DATE = """
+            (CASE WHEN r.returnDateTime IS NULL
+                        OR (SELECT MIN(p.paymentDate) FROM RepairPayment p WHERE p.repairId = r.id) <= r.returnDateTime
+                  THEN (SELECT MIN(p.paymentDate) FROM RepairPayment p WHERE p.repairId = r.id)
+                  ELSE r.returnDateTime END)
+            """;
+    String FINANCE_RECOGNIZED_IN_RANGE = FINANCE_RECOGNITION_DATE
+            + " >= COALESCE(:from, " + FINANCE_RECOGNITION_DATE + ") AND "
+            + FINANCE_RECOGNITION_DATE + " <= COALESCE(:to, " + FINANCE_RECOGNITION_DATE + ")";
+    String FINANCE_PERIOD_INCOME = """
+            (SELECT COALESCE(SUM(COALESCE(p.amount, 0)), 0) FROM RepairPayment p
+             WHERE p.repairId = r.id
+               AND p.paymentDate >= COALESCE(:from, p.paymentDate)
+               AND p.paymentDate <= COALESCE(:to, p.paymentDate))
+            """;
+    String FINANCE_PERIOD_PARTS_COST = "(CASE WHEN " + FINANCE_RECOGNIZED_IN_RANGE + " THEN " + """
+            (SELECT COALESCE(SUM(COALESCE(part.cost, 0) * COALESCE(part.quantity, 1)), 0)
+             FROM RepairPart part WHERE part.repairId = r.id)
+            """ + " ELSE 0 END)";
+    String FINANCE_PERIOD_PARTS_SALE = "(CASE WHEN " + FINANCE_RECOGNIZED_IN_RANGE + " THEN " + """
+            (SELECT COALESCE(SUM(COALESCE(part.salePrice, 0) * COALESCE(part.quantity, 1)), 0)
+             FROM RepairPart part WHERE part.repairId = r.id)
+            """ + " ELSE 0 END)";
+    String FINANCE_PERIOD_PARTS_PROFIT = "(CASE WHEN " + FINANCE_RECOGNIZED_IN_RANGE + " THEN " + """
+            (SELECT COALESCE(SUM((COALESCE(part.salePrice, 0) - COALESCE(part.cost, 0)) * COALESCE(part.quantity, 1)), 0)
+             FROM RepairPart part WHERE part.repairId = r.id)
+            """ + " ELSE 0 END)";
+    String FINANCE_PERIOD_LABOR = "(CASE WHEN " + FINANCE_RECOGNIZED_IN_RANGE
+            + " THEN COALESCE(r.laborAmount, 0) ELSE 0 END)";
+    String FINANCE_LAST_PERIOD_PAYMENT = """
+            (SELECT MAX(p.paymentDate) FROM RepairPayment p WHERE p.repairId = r.id
+               AND p.paymentDate >= COALESCE(:from, p.paymentDate)
+               AND p.paymentDate <= COALESCE(:to, p.paymentDate))
+            """;
+    String FINANCE_ACTIVITY_WHERE = """
+            WHERE EXISTS (SELECT p.id FROM RepairPayment p WHERE p.repairId = r.id
+                            AND p.paymentDate >= COALESCE(:from, p.paymentDate)
+                            AND p.paymentDate <= COALESCE(:to, p.paymentDate))
+               OR (r.returnDateTime >= COALESCE(:from, r.returnDateTime)
+                   AND r.returnDateTime <= COALESCE(:to, r.returnDateTime))
+            """;
+
     @Query(value = """
             SELECT r.id AS repairId,
                    CASE WHEN c.name IS NULL AND c.lastName IS NULL THEN '-'
                         ELSE trim(concat(COALESCE(c.name, ''), concat(' ', COALESCE(c.lastName, '')))) END AS clientName,
-                   CASE
-                       WHEN MAX(CASE WHEN payment.paymentDate >= COALESCE(:from, payment.paymentDate)
-                                          AND payment.paymentDate <= COALESCE(:to, payment.paymentDate)
-                                     THEN payment.paymentDate ELSE NULL END) IS NULL THEN r.returnDateTime
-                       WHEN r.returnDateTime IS NULL OR r.returnDateTime < COALESCE(:from, r.returnDateTime)
-                            OR r.returnDateTime > COALESCE(:to, r.returnDateTime)
-                            OR MAX(CASE WHEN payment.paymentDate >= COALESCE(:from, payment.paymentDate)
-                                             AND payment.paymentDate <= COALESCE(:to, payment.paymentDate)
-                                        THEN payment.paymentDate ELSE NULL END) >= r.returnDateTime
-                           THEN MAX(CASE WHEN payment.paymentDate >= COALESCE(:from, payment.paymentDate)
-                                              AND payment.paymentDate <= COALESCE(:to, payment.paymentDate)
-                                         THEN payment.paymentDate ELSE NULL END)
-                       ELSE r.returnDateTime
-                   END AS date,
-                   COALESCE(SUM(CASE WHEN payment.paymentDate <= COALESCE(:to, payment.paymentDate)
-                                     THEN COALESCE(payment.amount, 0) ELSE 0 END), 0) AS income,
-                   (SELECT COALESCE(SUM(COALESCE(part.cost, 0) * COALESCE(part.quantity, 1)), 0)
-                    FROM RepairPart part WHERE part.repairId = r.id) AS partsCost,
-                   (SELECT COALESCE(SUM(COALESCE(part.salePrice, 0) * COALESCE(part.quantity, 1)), 0)
-                    FROM RepairPart part WHERE part.repairId = r.id) AS partsSale,
-                   CASE WHEN (SELECT COALESCE(SUM(COALESCE(part.salePrice, 0) * COALESCE(part.quantity, 1)), 0)
-                              FROM RepairPart part WHERE part.repairId = r.id) > 0
-                                  AND COALESCE(SUM(CASE WHEN payment.paymentDate <= COALESCE(:to, payment.paymentDate)
-                                               THEN COALESCE(payment.amount, 0) ELSE 0 END), 0)
-                                  >= (SELECT COALESCE(SUM(COALESCE(part.salePrice, 0) * COALESCE(part.quantity, 1)), 0)
-                                      FROM RepairPart part WHERE part.repairId = r.id)
-                        THEN (SELECT COALESCE(SUM(COALESCE(part.salePrice, 0) * COALESCE(part.quantity, 1)), 0)
-                              FROM RepairPart part WHERE part.repairId = r.id)
-                        ELSE (SELECT COALESCE(SUM(COALESCE(part.cost, 0) * COALESCE(part.quantity, 1)), 0)
-                              FROM RepairPart part WHERE part.repairId = r.id)
-                   END AS partsAmount,
-                   COALESCE(SUM(CASE WHEN payment.paymentDate <= COALESCE(:to, payment.paymentDate)
-                                     THEN COALESCE(payment.amount, 0) ELSE 0 END), 0)
-                   - (SELECT COALESCE(SUM(COALESCE(part.cost, 0) * COALESCE(part.quantity, 1)), 0)
-                      FROM RepairPart part WHERE part.repairId = r.id) AS net
-            FROM Repair r
-            LEFT JOIN r.client c
-            LEFT JOIN RepairPayment payment ON payment.repairId = r.id
-            GROUP BY r.id, c.name, c.lastName, r.returnDateTime
-            HAVING MAX(CASE WHEN payment.paymentDate >= COALESCE(:from, payment.paymentDate)
-                                 AND payment.paymentDate <= COALESCE(:to, payment.paymentDate)
-                            THEN payment.paymentDate ELSE NULL END) IS NOT NULL
-                OR (r.returnDateTime >= COALESCE(:from, r.returnDateTime)
-                    AND r.returnDateTime <= COALESCE(:to, r.returnDateTime))
-            """,
-            countQuery = """
-            SELECT COUNT(r) FROM Repair r
-            WHERE EXISTS (SELECT payment.id FROM RepairPayment payment
-                          WHERE payment.repairId = r.id
-                            AND payment.paymentDate >= COALESCE(:from, payment.paymentDate)
-                            AND payment.paymentDate <= COALESCE(:to, payment.paymentDate))
-               OR (r.returnDateTime >= COALESCE(:from, r.returnDateTime)
-                   AND r.returnDateTime <= COALESCE(:to, r.returnDateTime))
-            """)
+            """ + "CASE WHEN " + FINANCE_LAST_PERIOD_PAYMENT + " IS NULL THEN r.returnDateTime "
+            + "WHEN r.returnDateTime IS NULL OR r.returnDateTime < COALESCE(:from, r.returnDateTime) "
+            + "OR r.returnDateTime > COALESCE(:to, r.returnDateTime) "
+            + "OR " + FINANCE_LAST_PERIOD_PAYMENT + " >= r.returnDateTime THEN " + FINANCE_LAST_PERIOD_PAYMENT
+            + " ELSE r.returnDateTime END AS date, "
+            + FINANCE_PERIOD_INCOME + " AS income, "
+            + FINANCE_PERIOD_PARTS_COST + " AS partsCost, "
+            + FINANCE_PERIOD_PARTS_SALE + " AS partsSale, "
+            + FINANCE_PERIOD_PARTS_COST + " AS partsAmount, "
+            + "(" + FINANCE_PERIOD_INCOME + " - " + FINANCE_PERIOD_PARTS_COST + ") AS net "
+            + "FROM Repair r LEFT JOIN r.client c " + FINANCE_ACTIVITY_WHERE,
+            countQuery = "SELECT COUNT(r) FROM Repair r " + FINANCE_ACTIVITY_WHERE)
     Page<FinanceRowView> findFinanceActivityPage(@Param("from") LocalDateTime from, @Param("to") LocalDateTime to, Pageable pageable);
 
-    @Query("""
-            SELECT COUNT(r) AS repairCount,
-                   COALESCE(SUM((SELECT COALESCE(SUM(COALESCE(payment.amount, 0)), 0)
-                                 FROM RepairPayment payment
-                                 WHERE payment.repairId = r.id
-                                   AND payment.paymentDate <= COALESCE(:to, payment.paymentDate))), 0) AS totalIncome,
-                   COALESCE(SUM((SELECT COALESCE(SUM(COALESCE(part.cost, 0) * COALESCE(part.quantity, 1)), 0)
-                                 FROM RepairPart part
-                                 WHERE part.repairId = r.id)), 0) AS totalPartsCost,
-                   COALESCE(SUM(COALESCE(r.laborAmount, 0)), 0) AS totalLabor,
-                   COALESCE(SUM((SELECT COALESCE(SUM((COALESCE(part.salePrice, 0) - COALESCE(part.cost, 0))
-                                                          * COALESCE(part.quantity, 1)), 0)
-                                 FROM RepairPart part
-                                 WHERE part.repairId = r.id)), 0) AS totalPartsProfit
-            FROM Repair r
-            WHERE EXISTS (SELECT payment.id FROM RepairPayment payment
-                          WHERE payment.repairId = r.id
-                            AND payment.paymentDate >= COALESCE(:from, payment.paymentDate)
-                            AND payment.paymentDate <= COALESCE(:to, payment.paymentDate))
-               OR (r.returnDateTime >= COALESCE(:from, r.returnDateTime)
-                   AND r.returnDateTime <= COALESCE(:to, r.returnDateTime))
-            """)
+    @Query("SELECT COUNT(r) AS repairCount, "
+            + "COALESCE(SUM(" + FINANCE_PERIOD_INCOME + "), 0) AS totalIncome, "
+            + "COALESCE(SUM(" + FINANCE_PERIOD_PARTS_COST + "), 0) AS totalPartsCost, "
+            + "COALESCE(SUM(" + FINANCE_PERIOD_LABOR + "), 0) AS totalLabor, "
+            + "COALESCE(SUM(" + FINANCE_PERIOD_PARTS_PROFIT + "), 0) AS totalPartsProfit "
+            + "FROM Repair r " + FINANCE_ACTIVITY_WHERE)
     FinanceActivitySummaryView summarizeFinanceActivity(@Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
 
     @Query("""
@@ -261,16 +247,7 @@ public interface RepairRepository extends JpaRepository<Repair, String> {
             """)
     FinanceRepairSummaryView summarizeRetiredFinanceRepairs(@Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
 
-    @Query("""
-            SELECT COUNT(r)
-            FROM Repair r
-            WHERE EXISTS (SELECT payment.id FROM RepairPayment payment
-                          WHERE payment.repairId = r.id
-                            AND payment.paymentDate >= COALESCE(:from, payment.paymentDate)
-                            AND payment.paymentDate <= COALESCE(:to, payment.paymentDate))
-               OR (r.returnDateTime >= COALESCE(:from, r.returnDateTime)
-                   AND r.returnDateTime <= COALESCE(:to, r.returnDateTime))
-            """)
+    @Query("SELECT COUNT(r) FROM Repair r " + FINANCE_ACTIVITY_WHERE)
     Long countFinanceActivityRepairs(@Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
 
     @Query("""

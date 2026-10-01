@@ -87,7 +87,7 @@ class FinanceServiceTest {
     }
 
     @Test
-    void getSummary_usesAccumulatedRepairAmountsForTheSameActivityShownInTheGrid() {
+    void getSummary_usesPeriodAmountsForTheSameActivityShownInTheGrid() {
         LocalDate from = LocalDate.of(2026, 8, 1);
         LocalDate to = LocalDate.of(2026, 8, 31);
         LocalDateTime fromDateTime = from.atStartOfDay();

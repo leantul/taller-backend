@@ -163,6 +163,7 @@ public interface RepairRepository extends JpaRepository<Repair, String> {
             """)
     List<FinanceMonthlyView> summarizeMonthlyFinancePartsCost(@Param("from") LocalDateTime from);
 
+    // Finance queries use [from, to): to is the start of the day after the UI end date.
     // Shared per-repair expressions keep summary, detail and monthly net on the same basis.
     // Costs/composition belong to the first payment or an earlier unpaid pickup, never both.
     String FINANCE_RECOGNITION_DATE = """
@@ -173,12 +174,12 @@ public interface RepairRepository extends JpaRepository<Repair, String> {
             """;
     String FINANCE_RECOGNIZED_IN_RANGE = FINANCE_RECOGNITION_DATE
             + " >= COALESCE(:from, " + FINANCE_RECOGNITION_DATE + ") AND "
-            + FINANCE_RECOGNITION_DATE + " <= COALESCE(:to, " + FINANCE_RECOGNITION_DATE + ")";
+            + "(cast(:to as LocalDateTime) IS NULL OR " + FINANCE_RECOGNITION_DATE + " < :to)";
     String FINANCE_PERIOD_INCOME = """
             (SELECT COALESCE(SUM(COALESCE(p.amount, 0)), 0) FROM RepairPayment p
              WHERE p.repairId = r.id
                AND p.paymentDate >= COALESCE(:from, p.paymentDate)
-               AND p.paymentDate <= COALESCE(:to, p.paymentDate))
+               AND (cast(:to as LocalDateTime) IS NULL OR p.paymentDate < :to))
             """;
     String FINANCE_PERIOD_PARTS_COST = "(CASE WHEN " + FINANCE_RECOGNIZED_IN_RANGE + " THEN " + """
             (SELECT COALESCE(SUM(COALESCE(part.cost, 0) * COALESCE(part.quantity, 1)), 0)
@@ -197,14 +198,14 @@ public interface RepairRepository extends JpaRepository<Repair, String> {
     String FINANCE_LAST_PERIOD_PAYMENT = """
             (SELECT MAX(p.paymentDate) FROM RepairPayment p WHERE p.repairId = r.id
                AND p.paymentDate >= COALESCE(:from, p.paymentDate)
-               AND p.paymentDate <= COALESCE(:to, p.paymentDate))
+               AND (cast(:to as LocalDateTime) IS NULL OR p.paymentDate < :to))
             """;
     String FINANCE_ACTIVITY_WHERE = """
             WHERE EXISTS (SELECT p.id FROM RepairPayment p WHERE p.repairId = r.id
                             AND p.paymentDate >= COALESCE(:from, p.paymentDate)
-                            AND p.paymentDate <= COALESCE(:to, p.paymentDate))
+                            AND (cast(:to as LocalDateTime) IS NULL OR p.paymentDate < :to))
                OR (r.returnDateTime >= COALESCE(:from, r.returnDateTime)
-                   AND r.returnDateTime <= COALESCE(:to, r.returnDateTime))
+                   AND (cast(:to as LocalDateTime) IS NULL OR r.returnDateTime < :to))
             """;
 
     @Query(value = """
@@ -213,7 +214,7 @@ public interface RepairRepository extends JpaRepository<Repair, String> {
                         ELSE trim(concat(COALESCE(c.name, ''), concat(' ', COALESCE(c.lastName, '')))) END AS clientName,
             """ + "CASE WHEN " + FINANCE_LAST_PERIOD_PAYMENT + " IS NULL THEN r.returnDateTime "
             + "WHEN r.returnDateTime IS NULL OR r.returnDateTime < COALESCE(:from, r.returnDateTime) "
-            + "OR r.returnDateTime > COALESCE(:to, r.returnDateTime) "
+            + "OR r.returnDateTime >= :to "
             + "OR " + FINANCE_LAST_PERIOD_PAYMENT + " >= r.returnDateTime THEN " + FINANCE_LAST_PERIOD_PAYMENT
             + " ELSE r.returnDateTime END AS date, "
             + FINANCE_PERIOD_INCOME + " AS income, "
@@ -243,7 +244,7 @@ public interface RepairRepository extends JpaRepository<Repair, String> {
             WHERE (r.status = com.taller.model.enums.RepairStatusEnum.RETIRADA
                    OR r.status = com.taller.model.enums.RepairStatusEnum.RETIRADA_FALTA_COBRAR)
               AND r.returnDateTime >= COALESCE(:from, r.returnDateTime)
-              AND r.returnDateTime <= COALESCE(:to, r.returnDateTime)
+              AND (cast(:to as LocalDateTime) IS NULL OR r.returnDateTime < :to)
             """)
     FinanceRepairSummaryView summarizeRetiredFinanceRepairs(@Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
 
@@ -255,7 +256,7 @@ public interface RepairRepository extends JpaRepository<Repair, String> {
                    COALESCE(SUM(payment.amount), 0) AS totalIncome
             FROM RepairPayment payment
             WHERE payment.paymentDate >= COALESCE(:from, payment.paymentDate)
-              AND payment.paymentDate <= COALESCE(:to, payment.paymentDate)
+              AND (cast(:to as LocalDateTime) IS NULL OR payment.paymentDate < :to)
             """)
     FinancePaymentSummaryView summarizeFinancePayments(@Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
 

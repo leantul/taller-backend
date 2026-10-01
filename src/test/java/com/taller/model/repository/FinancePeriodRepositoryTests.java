@@ -32,7 +32,7 @@ abstract class FinancePeriodRepositoryTests {
     @Test
     void paidBeforePickupIsRecognizedOnlyInPaymentMonth() {
         Repair repair = repair(null, "100", "40", "60", "40");
-        payment(repair, "100", LocalDateTime.of(2026, 9, 30, 23, 59, 59));
+        payment(repair, "100", LocalDateTime.of(2026, 9, 30, 23, 59, 59, 999999000));
         assertPeriod(SEPTEMBER, "100", "40", "60", "40", "20");
 
         repair.setStatus(RepairStatusEnum.RETIRADA);
@@ -40,6 +40,8 @@ abstract class FinancePeriodRepositoryTests {
         entities.flush();
         assertPeriod(SEPTEMBER, "100", "40", "60", "40", "20");
         assertPeriod(OCTOBER, "0", "0", "0", "0", "0");
+        assertEquals(0L, finance.getSummary(SEPTEMBER, OCTOBER.minusDays(1)).getDeliveredCount());
+        assertEquals(0L, finance.getSummary(OCTOBER, OCTOBER.plusMonths(1).minusDays(1)).getPositiveFinalAmountCount());
         assertEquals(1L, finance.getSummary(OCTOBER, OCTOBER.plusMonths(1).minusDays(1)).getDeliveredCount());
         assertEquals(OCTOBER.atStartOfDay(), rows(OCTOBER, OCTOBER.plusMonths(1).minusDays(1)).get(0).getDate());
     }

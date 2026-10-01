@@ -53,19 +53,19 @@ class FinanceServiceTest {
         when(repairSummary.getZeroFinalAmountCount()).thenReturn(1L);
         when(repairRepository.summarizeRetiredFinanceRepairs(
                 LocalDateTime.of(2026, 6, 1, 0, 0),
-                LocalDateTime.of(2026, 6, 30, 23, 59, 59, 999999999)))
+                LocalDateTime.of(2026, 7, 1, 0, 0)))
                 .thenReturn(repairSummary);
         when(repairRepository.summarizeFinanceActivity(
                 LocalDateTime.of(2026, 6, 1, 0, 0),
-                LocalDateTime.of(2026, 6, 30, 23, 59, 59, 999999999)))
+                LocalDateTime.of(2026, 7, 1, 0, 0)))
                 .thenReturn(activitySummary);
         when(repairRepository.summarizeFinancePayments(
                 LocalDateTime.of(2026, 6, 1, 0, 0),
-                LocalDateTime.of(2026, 6, 30, 23, 59, 59, 999999999)))
+                LocalDateTime.of(2026, 7, 1, 0, 0)))
                 .thenReturn(paymentSummary);
         when(repairRepository.countFinanceActivityRepairs(
                 LocalDateTime.of(2026, 6, 1, 0, 0),
-                LocalDateTime.of(2026, 6, 30, 23, 59, 59, 999999999)))
+                LocalDateTime.of(2026, 7, 1, 0, 0)))
                 .thenReturn(4L);
 
         FinanceSummaryDTO summary = new FinanceService(repairRepository).getSummary(from, to);
@@ -91,7 +91,7 @@ class FinanceServiceTest {
         LocalDate from = LocalDate.of(2026, 8, 1);
         LocalDate to = LocalDate.of(2026, 8, 31);
         LocalDateTime fromDateTime = from.atStartOfDay();
-        LocalDateTime toDateTime = to.plusDays(1).atStartOfDay().minusNanos(1);
+        LocalDateTime toDateTime = to.plusDays(1).atStartOfDay();
         FinanceRepairSummaryView repairs = mock(FinanceRepairSummaryView.class);
         FinanceActivitySummaryView activitySummary = mock(FinanceActivitySummaryView.class);
         FinancePaymentSummaryView paymentSummary = mock(FinancePaymentSummaryView.class);
@@ -123,7 +123,7 @@ class FinanceServiceTest {
         LocalDate from = LocalDate.of(2026, 9, 1);
         LocalDate to = LocalDate.of(2026, 9, 30);
         LocalDateTime fromDateTime = from.atStartOfDay();
-        LocalDateTime toDateTime = to.plusDays(1).atStartOfDay().minusNanos(1);
+        LocalDateTime toDateTime = to.plusDays(1).atStartOfDay();
         FinanceRepairSummaryView repairs = mock(FinanceRepairSummaryView.class);
         FinanceActivitySummaryView activitySummary = mock(FinanceActivitySummaryView.class);
         FinancePaymentSummaryView paymentSummary = mock(FinancePaymentSummaryView.class);
@@ -200,7 +200,7 @@ class FinanceServiceTest {
         ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
         verify(repairRepository, times(sortFields.size())).findFinanceActivityPage(
                 eq(LocalDateTime.of(2026, 6, 1, 0, 0)),
-                eq(LocalDateTime.of(2026, 6, 30, 23, 59, 59, 999999999)),
+                eq(LocalDateTime.of(2026, 7, 1, 0, 0)),
                 pageableCaptor.capture());
         for (int index = 0; index < sortFields.size(); index++) {
             Sort.Order order = pageableCaptor.getAllValues().get(index).getSort().getOrderFor(sortFields.get(index));

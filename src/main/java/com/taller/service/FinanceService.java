@@ -38,7 +38,7 @@ public class FinanceService {
     @Transactional(readOnly = true)
     public FinanceSummaryDTO getSummary(LocalDate from, LocalDate to) {
         LocalDateTime fromDateTime = startOfDay(from);
-        LocalDateTime toDateTime = endOfDay(to);
+        LocalDateTime toDateTime = exclusiveEnd(to);
         FinanceRepairSummaryView repairSummary = repairRepository.summarizeRetiredFinanceRepairs(fromDateTime, toDateTime);
         FinanceActivitySummaryView activitySummary = repairRepository.summarizeFinanceActivity(fromDateTime, toDateTime);
         FinancePaymentSummaryView paymentSummary = repairRepository.summarizeFinancePayments(fromDateTime, toDateTime);
@@ -88,7 +88,7 @@ public class FinanceService {
                 Math.max(0, page),
                 Math.min(Math.max(1, size), MAXIMUM_PAGE_SIZE),
                 Sort.by(new Sort.Order(direction, safeSortBy), new Sort.Order(Sort.Direction.ASC, "repairId")));
-        Page<FinanceRowView> result = repairRepository.findFinanceActivityPage(startOfDay(from), endOfDay(to), pageRequest);
+        Page<FinanceRowView> result = repairRepository.findFinanceActivityPage(startOfDay(from), exclusiveEnd(to), pageRequest);
         List<FinanceRowDTO> content = result.getContent().stream().map(this::toRowDto).toList();
         return new PageDTO<>(content, result.getNumber(), result.getSize(), result.getTotalElements(), result.getTotalPages());
     }
@@ -110,7 +110,7 @@ public class FinanceService {
             LocalDateTime nextMonth = month.plusMonths(1).atDay(1).atStartOfDay();
             FinanceActivitySummaryView activity = repairRepository.summarizeFinanceActivity(
                     monthStart,
-                    nextMonth.minusNanos(1));
+                    nextMonth);
             BigDecimal income = activity != null ? safeMoney(activity.getTotalIncome()) : BigDecimal.ZERO;
             BigDecimal partsCost = activity != null ? safeMoney(activity.getTotalPartsCost()) : BigDecimal.ZERO;
             monthlyNet.put(month, income.subtract(partsCost));
@@ -146,8 +146,8 @@ public class FinanceService {
         return date != null ? date.atStartOfDay() : null;
     }
 
-    private LocalDateTime endOfDay(LocalDate date) {
-        return date != null ? date.plusDays(1).atStartOfDay().minusNanos(1) : null;
+    private LocalDateTime exclusiveEnd(LocalDate date) {
+        return date != null ? date.plusDays(1).atStartOfDay() : null;
     }
 
     private BigDecimal safeMoney(BigDecimal value) {
